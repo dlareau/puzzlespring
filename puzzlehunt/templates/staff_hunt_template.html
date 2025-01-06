@@ -1,0 +1,114 @@
+{% extends 'staff_hunt_base.html' %}
+
+{% block staff_content %}
+  <div x-data="{ modal:false, templateText:''}">
+  <div class="columns is-multiline">
+    <div class="column subtitle pb-0">Hunt Template Editor:</div>
+    <div class="column is-narrow pb-0">
+      <div id="validateResponse"></div>
+    </div>
+    <div class="column is-narrow pb-0">
+      <button class="button is-primary" style="width: 200px;"
+              hx-post="{% url 'puzzlehunt:staff:hunt_template' hunt.pk %}"
+              hx-target="#staff-content-container"
+              hx-select="#staff-content-container"
+              hx-swap="outerHTML"
+              hx-vals="js:{template_text: editor.getValue()}"
+              hx-trigger="click, keyup[(ctrlKey||metaKey)&&key=='s'] from:body"
+      >
+        Save
+      </button>
+    </div>
+    <div class="column is-12">
+      <form id="previewForm" hx-preserve 
+            action="{% url 'puzzlehunt:staff:preview_template' hunt.pk %}"
+            target="preview_frame" method="post">
+        {% csrf_token %}
+        <div class="field is-horizontal">
+          <div class="field-body">
+            <div class="field has-addons">
+              <div class="control">
+                <a class="button is-static">
+                  Unlocked:
+                </a>
+              </div>
+              <div class="control is-expanded">
+                <input class="input" type="text" name="unlocked" value="{{ puzzle_numbers|join:", " }}">
+              </div>
+            </div>
+            <div class="field has-addons">
+              <div class="control">
+                <a class="button is-static">
+                  Solved:
+                </a>
+              </div>
+              <div class="control is-expanded">
+                <input class="input" type="text" name="solved" value="{{ puzzle_numbers|join:", " }}">
+              </div>
+            </div>
+            <div class="field is-grouped is-narrow">
+              <div class="control">
+                <input
+                  type="submit"
+                  value="Preview"
+                  class="button"
+                  style="width: 200px;"
+                  @click="templateText = editor.getValue(); modal = true"
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <input type="text" name="template_text" value="" hidden x-model="templateText">
+      </form>
+    </div>
+  </div>
+
+  <div class="modal is-active" x-cloak x-show="modal" x-transition.opacity.duration.300ms>
+    <div class="modal-background" @click="modal = false"></div>  {# Hide the modal when you click out of it #}
+    <div class="modal-content" style="width: 90%; height: 90vh">
+        <iframe src="" style="width: 99%; height: 99%;" name="preview_frame"></iframe>
+      </div>
+      <button class="modal-close is-large" aria-label="close" @click="modal = false"></button>
+    </div>
+  </div>
+  <div class="block" id="template-editor"></div>
+  <textarea id="template-text" style="display: none;">{{ template_text|safe }}</textarea>
+  </div>
+{% endblock %}
+
+{% block extra_body %}
+  
+  <script>
+    let editor;
+    var Range = ace.require("ace/range").Range
+
+    function initializeEditor() {
+      editor = ace.edit("template-editor");
+      window.editor = editor; // Store reference globally
+      editor.session.setTabSize(2);
+      editor.session.setUseSoftTabs(true);
+      editor.setTheme("ace/theme/chrome");
+      editor.session.setMode("ace/mode/django");
+      editor.setValue(document.getElementById('template-text').value);
+      editor.selection.clearSelection();
+      editor.setFontSize(15);
+    }
+
+    initializeEditor();
+
+    document.body.addEventListener('htmx:afterSettle', function(evt) {
+      if (evt.detail.target.id === 'staff-content-container') {
+        editor.destroy();
+        initializeEditor();
+      }
+    });
+  
+
+    document.addEventListener("keydown", function(e) {
+      if (e.key === 's' && (navigator.userAgent.includes('Mac') ? e.metaKey : e.ctrlKey)) {
+        e.preventDefault();
+      }
+    }, false);
+  </script>
+{% endblock %}

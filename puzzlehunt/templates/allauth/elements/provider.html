@@ -1,0 +1,12 @@
+{% load static %}
+{% load allauth %}
+<form method="POST" action="{{ attrs.href }}">
+  <input name="csrfmiddlewaretoken" value={{ attrs.csrf_token }} type="hidden" />
+  <button type="submit" class="button mt-2 is-fullwidth"
+     title="{{ attrs.name }}">
+    <figure class="image is-24x24">
+      <img src="{% static 'puzzlehunt/logos/'|add:attrs.provider_id|add:'.png' %}" />
+    </figure>
+    &nbsp; Continue with {{ attrs.name }}
+  </button>
+</form>

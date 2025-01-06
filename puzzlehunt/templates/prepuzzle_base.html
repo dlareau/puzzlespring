@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title_meta_elements %}
+  {% with title=puzzle.name %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
+
+{% block base_includes %}
+<script>
+function check_answer(callback, user_answer) {
+  fetch("{% url 'puzzlehunt:prepuzzle_check' puzzle.pk %}", {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: new URLSearchParams({
+      'answer': user_answer
+    })
+  })
+  .then(response => response.text())
+  .then(text => {
+    const response = JSON.parse(text);
+    callback(response);
+  })
+  .catch(error => {
+    alert(error.message);
+  });
+}
+</script>
+{% endblock base_includes %}
+
+{% block content %}
+{% endblock %}

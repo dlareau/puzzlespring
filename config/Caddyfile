@@ -1,0 +1,26 @@
+{$DOMAIN} {
+    # Handle SSE endpoints through pushpin
+    handle /sse/* {
+        reverse_proxy pushpin:7999
+    }
+
+    # Static files with caching
+    handle_path /static/* {
+        root * /static/
+        file_server
+    }
+
+    # Forward everything else to Django
+    handle {
+        reverse_proxy app:8000 {
+            @accel header X-Accel-Redirect *
+            handle_response @accel {
+                uri strip_prefix /media
+                root    * /media
+                rewrite * {rp.header.X-Accel-Redirect}
+                method  * GET
+                file_server
+            }
+        }
+    }
+} 

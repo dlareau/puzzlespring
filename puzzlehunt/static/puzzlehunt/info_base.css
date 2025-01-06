@@ -1,0 +1,32 @@
+html {
+    background: url(/static/puzzlehunt/info_background.jpg) ;
+    background-size: 2500px 2500px;
+}
+
+#qa h5 {
+    border-bottom: 1px dashed;
+}
+
+#qa p {
+    padding-left: 1rem;
+}
+
+@media screen and (max-width: 768px) {
+    td.team_name {
+        overflow-wrap: anywhere;
+    }
+}
+
+#user-detail-container .asterisk {
+    display: none;
+}
+
+.sidebar-divider {
+  border-right: 1px solid #dbdbdb;
+}
+
+@media screen and (max-width: 768px) {
+  .sidebar-divider {
+    border-right: none;
+  }
+}

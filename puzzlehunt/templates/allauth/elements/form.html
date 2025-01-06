@@ -1,0 +1,16 @@
+{% load allauth %}
+<div class="my-3">
+  {% for err in attrs.form.non_field_errors %}
+    <div class="notification is-danger">{{ err }}</div>
+  {% endfor %}
+  <form class="{% block form_class %}{% if not attrs.no_visible_fields %}block{% endif %}{% endblock %}"
+        method="{{ attrs.method }}"
+        action="{{ attrs.action }}">
+    {% slot body %}
+    {% endslot %}
+    <div>
+      {% slot actions %}
+      {% endslot %}
+    </div>
+  </form>
+</div>

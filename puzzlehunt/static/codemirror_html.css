@@ -1,0 +1,9 @@
+.CodeMirror.cm-s-default {
+    height: 600px;
+    border: 1px solid black;
+}
+
+#id_template_helptext {
+    margin-left: 0px;
+    padding-left: 0px;
+}

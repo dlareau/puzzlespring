@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load hunt_tags %}
+{% load static %}
+
+
+{% block includes %}
+  <link rel="stylesheet" type="text/css" href="{% static "puzzlehunt/staff_base.css" %}">
+  <script src="{% static "bulma-js/bulma-tagsinput.js" %}"></script>
+  <link rel="stylesheet" type="text/css" href="{% static "bulma-tooltip.min.css" %}">
+  <script src="/static/ace-src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+  <script src="/static/sorttable.js"></script>
+  <script src="https://unpkg.com/htmx-ext-head-support@2.0.1/head-support.js"></script>
+{% endblock includes %}
+
+{% block content_wrapper %}
+  <div class="bulma full-height" x-data="{sidebarOpen: $persist(true)}">
+    <div class="mr-5 full-height">
+      <div class="columns full-height">
+        <div x-show="!sidebarOpen" id="collapse-box-right" @click="sidebarOpen = ! sidebarOpen">
+          <span class="icon is-small">
+            <i class="fa fa-angle-right"></i>
+          </span>
+        </div>
+        <div x-show="sidebarOpen"
+             id="sidebar-container"
+             class="column has-background-grey-lighter p-5"
+        >
+          <div id="collapse-box-left" @click="sidebarOpen = ! sidebarOpen">
+            <span class="icon is-small">
+              <i class="fa fa-angle-left"></i>
+            </span>
+          </div>
+          <aside class="menu">
+            <p class="menu-label">
+              General
+            </p>
+            <ul class="menu-list">
+              <li><a href="/admin">Django Admin</a></li>
+              <li><a class="{% active_page request "hunts" %}"
+                      href="{% url 'puzzlehunt:staff:hunts' hunt.id %}">
+                Hunts
+              </a></li>
+              <li><a class="{% active_page request "search" %}" 
+                     href="{% url 'puzzlehunt:staff:search' hunt.id %}">
+                Search
+              </a></li>
+            </ul>
+            <hr class="has-background-grey">
+            <div x-data="{ isActive: false, selectedHunt: '{{ hunt.name }}' }" class="dropdown mb-3" :class="{ 'is-active': isActive }">
+              <div class="dropdown-trigger">
+                <button class="button" style="max-width: 170px; white-space: normal; height: auto; min-height: 2.5em" 
+                        aria-haspopup="true" 
+                        aria-controls="hunt-dropdown"
+                        @click="isActive = !isActive">
+                  <span style="white-space: normal; word-wrap: break-word;" x-text="selectedHunt"></span>
+                  <span class="icon is-small">
+                    <i class="fa fa-angle-down" aria-hidden="true"></i>
+                  </span>
+                </button>
+              </div>
+              <div class="dropdown-menu" id="hunt-dropdown" role="menu">
+                <div class="dropdown-content" style="max-height: 300px; overflow-y: auto;">
+                  {% set_all_hunts %}
+                  {% for hunt in tmpl_all_hunts %}
+                    <a class="dropdown-item" 
+                       @click="selectedHunt = '{{ hunt.name }}'; isActive = false"
+                       href="{% url 'puzzlehunt:staff:'|add:request.resolver_match.url_name hunt.id %}">
+                      {{ hunt.name }}
+                    </a>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            <p class="menu-label">
+              Hunt Running
+            </p>
+            <ul class="menu-list">
+              <li><a class="{% active_page request "progress" %}"
+                     href="{% url 'puzzlehunt:staff:progress' hunt.id %}">
+                Progress
+              </a></li>
+              <li><a class="{% active_page request "feed" %}"
+                     href="{% url 'puzzlehunt:staff:feed' hunt.id %}">
+                Feed
+              </a></li>
+              <li><a class="{% active_page request "hints_view" %}"
+                     href="{% url 'puzzlehunt:staff:hints_view' hunt.id %}">
+                Hints
+              </a></li>
+              <li><a class="{% active_page request "charts" %}"
+                     href="{% url 'puzzlehunt:staff:charts' hunt.id %}">
+                Charts
+              </a></li>
+            </ul>
+            <p class="menu-label">
+              Hunt Setup
+            </p>
+            <ul class="menu-list">
+              <li><a class="{% active_page request "hunt_template" %}"
+                     href="{% url 'puzzlehunt:staff:hunt_template' hunt.id %}">
+                Hunt Template
+              </a></li>
+              <li><a class="{% active_page request "hunt_puzzles" %}"
+                     href="{% url 'puzzlehunt:staff:hunt_puzzles' hunt.id %}">
+                Puzzles
+              </a></li>
+              <li><a class="{% active_page request "hunt_config" %}"
+              href="{% url 'puzzlehunt:staff:hunt_config' hunt.id %}">
+                Hunt Config
+              </a></li>
+            </ul>
+          </aside>
+        </div>
+        <div id="staff-content-container"
+             :class="{'sidebarOpen': sidebarOpen, 'column': true, 'mt-5': true}"
+             class="sidebarOpen column mt-5"
+             hx-disinherit="hx-indicator">
+          {% block staff_content %}
+          {% endblock %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock content_wrapper %}
+
+{% block footer %}
+{% endblock %}

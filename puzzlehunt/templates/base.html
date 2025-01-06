@@ -1,0 +1,93 @@
+{% load static %}
+{% load django_htmx %}
+{% load hunt_tags %}
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <!-- Meta elements for embedding -->
+    {% block title_meta_elements%}
+      {% if title %}
+        <title>{{title}}</title>
+        <meta property="og:title" content="{{title}}">
+        <meta name="twitter:title" content="{{title}}">
+      {% else %}
+        <title>{% block title %}{{title}}{% site_title %}{% endblock title %}</title>
+        <meta property="og:title" content="{% block og_title %}{% site_title %}{% endblock %}">
+        <meta name="twitter:title" content="{% block twitter_title %}{% site_title %}{% endblock %}">
+      {%endif%}
+    {% endblock title_meta_elements %}
+    
+    <meta property="og:description" content="{% block og_description %}{% site_title %} - Online Puzzle Hunt{% endblock %}">
+    <meta name="twitter:description" content="{% block twitter_description %}{% site_title %} - Online Puzzle Hunt{% endblock %}">
+    <meta name="description" content="{% block meta_description %}{% site_title %} - Online Puzzle Hunt{% endblock %}">
+
+    <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'puzzlehunt/embed_logo.jpg' %}{% endblock %}">
+    <meta name="twitter:image" content="{% block twitter_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'puzzlehunt/embed_logo.jpg' %}{% endblock %}">
+
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:url" content="{% block og_url %}{{ request.build_absolute_uri }}{% endblock %}">
+    <meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}">
+
+    <link rel="shortcut icon" href="{% static "huntserver/favicon.ico" %}" />
+
+    {% block base_includes %}{% endblock base_includes %}
+    <link rel="stylesheet" type="text/css" href="{% static "puzzlehunt/normalize.css" %}">
+    {% block bulma_includes %}
+      {#  TODO: Use static template tag:  #}
+      <link rel="stylesheet" href="/static/custom_bulma.css">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.0.0/animate.min.css"/>
+      <script src="{% static "bulma-js/bulma-toast.min.js" %}"></script>
+      <script>
+        bulmaToast.setDefaults({
+          duration: 3000,
+          position: 'top-center',
+          dismissible: true, 
+          animate: { in: 'fadeIn', out: 'fadeOut' }
+        });
+      </script>
+    {% endblock bulma_includes %}
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="/static/alpinejs.js"></script>
+    <script src="/static/htmx.min.js"></script>
+    <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script> {# TODO: download #}
+    {% django_htmx_script %}
+    {% block includes %} {% endblock includes %}
+    {% block extra_head %}{% endblock extra_head %}
+  </head>
+
+  <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <div class="bulma">
+      {% include "components/_navbar.html" %}
+      {% include "components/_message_container.html" %}
+    </div>
+    {% block content_wrapper %}
+      <div>
+        <section class="section">
+          <div class="container mt-5">
+            {% block content %} {% endblock content %}
+          </div>
+        </section>
+      </div>
+    {% endblock content_wrapper %}
+    {% block footer %}
+      <div class="bulma">
+        <footer class="footer">
+          <div class="content has-text-centered has-text-grey">
+            <p style="width: fit-content; margin: auto; padding: 5px 10px; box-shadow: 1px 1px 3px; border-radius: 5px;" class="has-background-light">
+              {% site_title %} is powered by
+              <a href="https://github.com/dlareau/puzzlespring" class="has-text-link-dark">PuzzleSpring</a>.
+            </p>
+          </div>
+        </footer>
+      </div>
+    {% endblock footer %}
+  {% block extra_body %}
+  {% endblock extra_body %}
+	</body>
+</html>

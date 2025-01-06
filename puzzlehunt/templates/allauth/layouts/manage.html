@@ -1,0 +1,66 @@
+{% extends 'info_base.html' %}
+{% load hunt_tags %}
+
+{% block title %}
+  {% block head_title %} {% endblock %}
+{% endblock %}
+
+{% block content_wrapper %}
+<div class="bulma">
+  <section class="section">
+    <div class="container mt-5">
+      <div id="content-box" class="has-background-light px-6 py-5">
+        <div class="columns">
+          {% if request.path != "/accounts/logout/" %}
+            <div class="column is-3 sidebar-divider">
+              <aside class="menu">
+                <ul class="menu-list">
+                  <li>
+                    <a href="{% url 'puzzlehunt:user_detail_view' %}" class="{% active_page request "user_detail_view" %}">
+                      <span class="icon is-small"><i class="fa fa-user" aria-hidden="true"></i></span>
+                      <span>User</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{% url 'account_set_password' %}" class="{% active_page request "account_change_password" %} {% active_page request "account_set_password" %}">
+                      <span class="icon is-small"><i class="fa fa-lock" aria-hidden="true"></i></span>
+                      <span>Password</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{% url 'account_email' %}" class="{% active_page request "account_email" %}">
+                      <span class="icon is-small"><i class="fa fa-envelope" aria-hidden="true"></i></span>
+                      <span>Emails</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{% url 'socialaccount_connections' %}" class="{% active_page request "socialaccount_connections" %}">
+                      <span class="icon is-small"><i class="fa fa-address-book" aria-hidden="true"></i></span>
+                      <span>External Accounts</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{% url 'puzzlehunt:team_view' 'current' %}" class="{% active_page request "team_view" %}">
+                      <span class="icon is-small"><i class="fa fa-group" aria-hidden="true"></i></span>
+                      <span>Teams</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="{% url 'puzzlehunt:notification_view' %}" class="{% active_page request "notification_view" %}">
+                      <span class="icon is-small"><i class="fa fa-bell" aria-hidden="true"></i></span>
+                      <span>Notifications</span>
+                    </a>
+                  </li>
+                </ul>
+              </aside>
+            </div>
+          {% endif %}
+          <div class="column {% if request.path != "/accounts/logout/" %}is-9{% endif %}">
+            {% block content %}{% endblock content %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

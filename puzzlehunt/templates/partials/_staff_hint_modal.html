@@ -1,0 +1,100 @@
+<div id="staff-hint-modal-contents" x-data="{ activeTab: 'answer' }">
+  <div class="modal-background" @click="modal = false"></div>
+  <div class="modal-content box">
+    <!-- Info Section -->
+    <div class="content">
+      <h5 class="mb-2">Team: <span class="is-size-6 has-text-grey">{{ hint.team.name }}</span></h5>
+      <h5>Puzzle: <span class="is-size-6 has-text-grey">{{ hint.puzzle.name }}</span></h5>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs is-boxed">
+      <ul>
+        <li :class="{ 'is-active': activeTab === 'answer' }">
+          <a @click.prevent="activeTab = 'answer'">Answer Hint</a>
+        </li>
+        <li :class="{ 'is-active': activeTab === 'previous-submissions' }">
+          <a @click.prevent="activeTab = 'previous-submissions'">Previous Submissions</a>
+        </li>
+        {% if previous_hints %}
+          <li :class="{ 'is-active': activeTab === 'previous-hints' }">
+            <a @click.prevent="activeTab = 'previous-hints'">Previous Hints</a>
+          </li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <!-- Tab Contents -->
+    <div>
+      <!-- Answer Hint Tab -->
+      <div x-show="activeTab === 'answer'">
+        <div class="field">
+          <label class="label">Hint Request</label>
+          <div class="control">
+            <p>{{ hint.request|linebreaksbr }}</p>
+          </div>
+        </div>
+        <form id="hint-response-form" class='sub_form' method="post">
+          <div class="field">
+            <label class="label" for="response_area" >Your Response</label>
+            <div class="control">
+              <textarea id="modal-hint-response" name="response" class="textarea"
+                        placeholder="Hint Response" maxlength="1000" rows="8"
+              >{{ hint.response }}</textarea>
+            </div>
+          </div>
+          <div class="field is-grouped is-grouped-right">
+            <div class="control">
+              <button id="modal-submit-button"
+                      class="button is-primary"
+                      hx-swap="outerHTML transition:true"
+                      hx-post="{% url 'puzzlehunt:staff:hints_respond' hint.pk %}"
+                      hx-target="#hint-row-{{ hint.pk }}"
+                      @click="modal = false">
+                Submit
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Team Info Tab -->
+      <div x-show="activeTab === 'previous-submissions'">
+        {% if previous_submissions|length > 0 %}
+          <table class="table is-fullwidth">
+            <thead>
+              <tr>
+                <th>Submission</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for submission in previous_submissions %}
+                <tr>
+                  <td>{{ submission.submission_text }}</td>
+                  <td>{{ submission.submission_time|date:"H:iA - m/d/y" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p>No previous submissions</p>
+        {% endif %}
+      </div>
+
+      <!-- Previous hints tab -->
+      <div x-show="activeTab === 'previous-hints'">
+        {% for p_hint in previous_hints %}
+          {% if forloop.counter != 1 %} <hr class="has-background-grey"> {% endif %}
+          <div class="box" style="word-break: break-word">
+            <p><strong>Request:</strong> <br> {{ p_hint.request|linebreaksbr }}</p>
+            <br>
+            <p><strong>Response:</strong> <br> {{ p_hint.response|linebreaksbr }}</p>
+          </div>
+        {% empty %}
+          <p>No previous hints</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>

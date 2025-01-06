@@ -1,0 +1,124 @@
+{% extends 'staff_hunt_base.html' %}
+
+{% block staff_content %}
+  <div x-data="{compact: $persist(false)}" hx-ext="sse" sse-connect="{% url 'puzzlehunt:staff_events' %}">
+    <div class="mb-4" hx-include=".feed-parameter, #team-puzzle-select"
+       hx-swap="outerHTML settle:0" hx-target="#feed_items" hx-select="#feed_items"
+    >
+      <div class="level mb-0">
+        <div class="field" style="flex-grow: 1">
+          <label class="label is-small">Filters</label>
+          <div class="control">
+            <div class="select " style="width: 100%; height: auto">
+              <select id="team-puzzle-select" multiple type="tags" name="tags">
+                {% for puzzle in hunt.puzzle_set.all %}
+                  <option {% if puzzle.pk in puzzle_tags %} selected {% endif %} value="p:{{ puzzle.pk }}">
+                    Puzzle: {{ puzzle.name }}
+                  </option>
+                {% endfor %}
+                {% for team in hunt.team_set.all %}
+                  <option {% if team.pk in team_tags %} selected {% endif %} value="t:{{ team.pk }}">
+                    Team: {{ team.name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="field is-grouped ml-4 mt-3">
+          <div class="control">
+            <button class="button is-link" hx-get="{% url 'puzzlehunt:staff:feed' hunt.id %}" hx-push-url="true">
+              Filter
+            </button>
+          </div>
+          <div class="control">
+            <button class="button is-link is-light"
+                    @click="document.getElementById('team-puzzle-select').BulmaTagsInput().removeAll()"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="level">
+        <div class="level-left" x-data="{checkboxes: 'all'}">
+          <input type="hidden" name="checkboxes" x-bind:value="checkboxes" class="feed-parameter">
+          <div class="field">
+            <label class="label is-small">Event Types</label>
+            <div class="control">
+              <div class="buttons has-addons">
+                {% for type in types %}
+                  <label class="button is-small" :class="active ? 'is-link' : ''"
+                         x-data="{ active: {% if type in display_checkboxes %} true {% else %} false {% endif %} }"
+                  >
+                    {{ type.label }}
+                    <input  hidden x-model="active" type="checkbox" @click="checkboxes = checkbox_to_csv()"
+                            class="type-checkbox" name="{{ type.value }}"
+                            hx-get="{% url 'puzzlehunt:staff:feed' hunt.id %}" hx-push-url="true"
+                    >
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="level-right">
+          <div class="field">
+            <label class="label is-small">Items per page</label>
+            <div class="control">
+              <div class="select">
+                <select name="numItems" class="feed-parameter"
+                        hx-get="{% url 'puzzlehunt:staff:feed' hunt.id %}" hx-push-url="true"
+                >
+                  <option {% if num_items == 10 %} selected {% endif %}>10</option>
+                  <option {% if num_items == 25 %} selected {% endif %}>25</option>
+                  <option {% if num_items == 50 %} selected {% endif %}>50</option>
+                  <option {% if num_items == 100 %} selected {% endif %}>100</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="field mt-3 ml-2">
+            <label class="checkbox">
+              <input type="checkbox" x-model="compact">
+              Compact?
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="feed_items"
+         hx-trigger="sse:events"
+         hx-get=""
+         hx-select="#feed_items"
+         hx-swap="outerHTML"
+         hx-disinherit="*"
+    >
+      {% for item in feed_items %}
+        {% include "components/_feed_item.html" %}
+      {% endfor %}
+    </div>
+  </div>
+  <div id="feed-paginator" {% if request.htmx and not request.htmx.boosted %} hx-swap-oob="true" {% endif %}>
+    {% include "components/_paginator.html" with page_info=feed_items %}
+  </div>
+  <script>
+    function checkbox_to_csv() {
+        let array = [];
+        let checkboxes = document.getElementsByClassName('type-checkbox');
+        for (let i = 0; i < checkboxes.length; i++) {
+            if (checkboxes[i].checked) {
+                array.push(checkboxes[i].name);
+            }
+        }
+        return array.join(',');
+    }
+
+    BulmaTagsInput.attach('input[type="tags"], select[type="tags"]', {
+        caseSensitive:false,
+        freeInput: true,
+        selectable: false,
+    });
+  </script>
+{% endblock %}
+

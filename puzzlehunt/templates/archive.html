@@ -1,0 +1,67 @@
+{% extends 'info_base.html' %}
+{% load hunt_tags %}
+
+{% block content %}
+<div class="container px-4">
+  <h1 class="title has-text-centered mb-5">Puzzle Hunt CMU Archives</h1>
+  
+  <p class="mb-6">
+    Below are the puzzle hunts we have run, listed in reverse chronological order back to 2007. (Playable back to 2015)
+  </p>
+
+  <div class="table-container">
+    <table class="table is-fullwidth is-hoverable">
+      <thead>
+        <tr>
+          <th>Hunt Name</th>
+          <th>Other Pages</th>
+          <th>Puzzles</th>
+          <th>Teams</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for hunt in hunts reversed %}
+        <tr>
+          <td>
+            <a href="{% url 'puzzlehunt:hunt_view' hunt.id %}" class="has-text-weight-semibold">
+              {{hunt.name}}
+            </a>
+            <br>
+            <small>
+              <span style="display: inline-block">
+                {{ hunt.display_start_date|date:"m/d/y" }} {{ hunt.display_start_date|time:"P" }} &mdash;
+              </span>
+              <span style="display: inline-block">
+                {% if hunt.display_start_date|date != hunt.display_end_date|date %}
+                  {{ hunt.display_end_date|date:"m/d/y" }}
+                {% endif %}
+                {{ hunt.display_end_date|time:"P" }}
+              </span>
+            </small>
+          </td>
+          <td>
+            <small>
+              <a href="{% url 'puzzlehunt:hunt_leaderboard' hunt.id %}">Leaderboard</a>
+              {% if hunt.info_page_file %}
+                <br>
+                <a href="{% url 'puzzlehunt:hunt_info' hunt.id %}">Information</a>
+              {% endif %}
+              {% if hunt.update_set.all %}
+                <br>
+                <a href="{% url 'puzzlehunt:hunt_updates' hunt.id %}">Updates</a>
+              {% endif %}
+              {% if hunt.prepuzzle %}
+                <br>
+                <a href="{% url 'puzzlehunt:hunt_prepuzzle' hunt.id %}">Prepuzzle</a>
+              {% endif %}
+            </small>
+          </td>
+          <td>{{hunt.num_puzzles}}</td>
+          <td>{{hunt.num_teams}}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

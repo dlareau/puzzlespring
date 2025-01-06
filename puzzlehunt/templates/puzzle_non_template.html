@@ -1,0 +1,25 @@
+{% extends 'puzzle_base.html' %}
+
+{% block content %}
+  <div id="puzzle-container">
+    <div id="puzzle-padding">
+      {# template file types are covered by the view logic #}
+      {% if puzzle.main_file.extension == "html" %}
+        <script src="https://unpkg.com/htmx-ext-head-support@2.0.1/head-support.js"></script>
+        <div hx-get="{{ puzzle.main_file.file.url }}"
+             hx-trigger="load"
+             hx-ext="head-support"
+             id="puzzle-content"
+             class="puzzle-body" {# This class is added for historical compatibility #}
+        ></div>
+      {% elif puzzle.main_file.extension == "pdf" %}
+        <embed src="{{ puzzle.main_file.file.url }}"
+          width="100%" 
+          height="1000px" 
+          type="application/pdf"
+        ></embed>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
+

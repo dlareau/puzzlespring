@@ -1,0 +1,42 @@
+<form hx-post="{% url 'puzzlehunt:staff:hunt_hint_unlocking' hunt.pk %}">
+  {% csrf_token %}
+  {{ formset.management_form }}
+  {% for form in formset %}
+    <div class="field is-horizontal">
+      <div class="field-label is-normal" style="width: 100px; flex-basis: inherit; flex-grow: inherit;">
+        <label class=label>Hint #{{ forloop.counter }}</label>
+      </div>
+      <div class="field-body">
+        <div class="field has-addons is-narrow" x-data="{option: ''}">
+          <div class="control">
+        <span class="select {% if form.unlock_type.errors %} is-danger {% endif %}">
+          <select x-model="option" name="{{ form.unlock_type.html_name }}">
+            {% for option in form.unlock_type %}
+              {{ option }}
+            {% endfor %}
+          </select>
+        </span>
+          </div>
+          <div class="control">
+            <a class="button is-static" x-show="option != 'INT'">at</a>
+            <a class="button is-static" x-show="option == 'INT'">every</a>
+          </div>
+          <div class="control">
+            <input class="input {% if field.errors %} is-danger {% endif %}" style="width: 80px"
+                   value="{{ form.unlock_parameter.value|default_if_none:'' }}"
+                   name="{{ form.unlock_parameter.html_name }}" type="number" placeholder="" >
+          </div>
+          <div class="control">
+            <a class="button is-static" x-show="option != 'SOL'"> minutes  </a>
+            <a class="button is-static" x-show="option == 'SOL'"> solves </a>
+          </div>
+        </div>
+        <div class="field">
+          <div class="control">
+            <a class="button is-danger"> Delete </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</form>

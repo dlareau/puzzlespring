@@ -1,0 +1,12 @@
+{% load crispy_forms_bulma_field %}
+
+<div class="control is-expanded">
+    {% if field.errors %}
+        {% crispy_field field "class" "is-danger" %}
+        {% for error in field.errors %}
+          <p class="help is-danger">{{ error|safe }}</p>
+        {% endfor %}
+    {% else %}
+        {% crispy_field field %}
+    {% endif %}
+</div>

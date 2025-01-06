@@ -1,0 +1,115 @@
+{% extends 'staff_hunt_base.html' %}
+
+{% block staff_content %}
+  {# Top level element #}
+  <div x-data="{modal: false}" hx-ext="sse" sse-connect="{% url 'puzzlehunt:staff_events' %}" >
+    <div id="staff-hint-modal" class="modal pt-6" :class="modal && 'is-active'" style="justify-content: start;"
+         x-cloak x-show="modal" x-transition.opacity.duration.300ms x-transition.delay.200ms>
+      <div class="modal-background" @click="modal = false"></div> {# Hide the modal when you click out of it #}
+      <div id="staff-hint-modal-contents"></div>
+      <button class="modal-close is-large" aria-label="close" @click="modal = false"></button>
+    </div>
+
+    {# The filter bar, the htmx attributes here reload the page with form elements as query parameters on change #}
+    <form class="mb-3"
+          hx-get="{% url 'puzzlehunt:staff:hints_view' hunt.id %}"
+          hx-push-url="true"
+          hx-trigger="change"
+          hx-target="#hint-rows-outer"
+          hx-swap="outerHTML transition:true"
+          hx-select="#hint-rows-outer">
+    
+      {# Puzzle and team selectors #}
+      <div class="field is-horizontal">
+        <div class="field-body">
+        
+          {# Puzzle selector #}
+          <div class="field">
+            <label class="label">Puzzle</label>
+            <div class="control">
+              <div class="select is-fullwidth">
+                <select class="filterInput" name="puzzle_id">
+                  <option value="">------</option>
+                  {% for puzzle in hunt.puzzle_set.all %}
+                    <option value="{{ puzzle.id }}"
+                            {% if puzzle.id == request.GET.puzzle_id %}
+                              selected
+                            {% endif %}>
+                      {{ puzzle.name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        
+          {# Team selector #}
+          <div class="field">
+            <label class="label">Team</label>
+            <div class="control">
+              <div class="select is-fullwidth">
+                <select class="filterInput" name="team_id">
+                  <option value="">------</option>
+                  {% for team in hunt.teams %}
+                    <option value="{{ team.id }}"
+                            {% if team.id|stringformat:"i" == request.GET.team_id %}
+                              selected
+                            {% endif %}>
+                      {{ team.name|truncatechars:30 }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    
+      {# Hint status selector and clear filters button #}
+      <div class="field is-grouped is-grouped-right">
+        <div class="mt-2 mr-2"><b>Hint Status:</b></div>
+        <div class="select mr-2">
+          <select class="filterInput" name="hint_status">
+            {# TODO: this is pretty manual, maybe make an enum #}
+            <option value="" {% if request.GET.hint_status == "" %} selected {% endif %}>------</option>
+            <option value="unclaimed" {% if request.GET.hint_status == "unclaimed" %} selected {% endif %}>Unclaimed</option>
+            <option value="claimed" {% if request.GET.hint_status == "claimed" %} selected {% endif %}>Claimed</option>
+            <option value="unanswered" {% if request.GET.hint_status == "unanswered" %} selected {% endif %}>Unanswered</option>
+            <option value="answered" {% if request.GET.hint_status == "answered" %} selected {% endif %}>Answered</option>
+          </select>
+        </div>
+        <p class="control">
+          <a class="button is-primary is-light"
+             {# TODO: This technically re-renders the whole filter section requiring extra puzzle and team queries. We could do better. #}
+             hx-get="{% url 'puzzlehunt:staff:hints_view' hunt.id %}"
+             hx-push-url="true"
+             hx-trigger="click"
+             hx-target="#staff-content-container"
+             hx-swap="outerHTML transition:true"
+             hx-select="#staff-content-container"
+             hx-params="none">
+            Clear Filters
+          </a>
+        </p>
+      </div>
+    </form>
+  
+    {# The rows of hints, taken care of by the _hint_row partial template #}
+    {# This div will refresh its contents whenever there are new hints available via SSE #}
+    <div id="hint-rows-outer"
+         hx-trigger="sse:hints"
+         hx-get="{{ request.get_full_path }}"
+         hx-select="#hint-rows-outer"
+         hx-swap="outerHTML swap:200ms"
+         hx-disinherit="*">
+      {% for hint in hints %}
+        {% include "partials/_hint_row.html" with staff=True%}
+      {% endfor %}
+    </div>
+  </div>
+ 
+  {# Add in the page selector at the bottom #}
+  <div id="hint-paginator" {% if request.htmx and not request.htmx.boosted %} hx-swap-oob="true" {% endif %}>
+    {% include "components/_paginator.html" with page_info=hints %}
+  </div>
+{% endblock %}

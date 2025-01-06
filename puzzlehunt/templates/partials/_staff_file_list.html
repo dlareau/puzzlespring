@@ -1,0 +1,66 @@
+<nav id="file-nav-{{ parent_type }}-{{ parent.pk }}" class="panel is-primary" hx-target="#file-nav-{{ parent_type }}-{{ parent.pk }}" hx-swap="outerHTML">
+  <div class="panel-block" style="justify-content: space-between">
+    <div> {{ parent_type|capfirst }} File name</div>
+    <div>
+      <span style="margin-right: 85px">{% if parent_type == "hunt" %} CSS {% else %} Main {% endif %}</span>
+      <span style="margin-right: 40px">Actions</span>
+    </div>
+  </div>
+  {% for file in parent|get_files:parent_type|dictsort:"file.path" %}
+    <div id="file-row-{{ parent_type }}-{{ file.pk }}" class="panel-block" style="justify-content: space-between; {% cycle '' 'background-color: #eeeeee;' %}">
+      <div>
+        <span class="panel-icon">
+          <i class="fa fa-book" aria-hidden="true"></i>
+        </span>
+        {{ file.relative_name }}
+      </div>
+      <div>
+        <input id="main-toggle-{{ parent_type }}-{{parent.id}}-{{ forloop.counter }}" class="switch"
+               type="checkbox" name="mainFileSelected"
+               {% if parent.main_file == file or parent.main_solution_file == file or parent.css_file == file %}checked{% endif %}
+               hx-post="{% url 'puzzlehunt:staff:file_set_main' parent_type file.id %}"
+        >
+        <label for="main-toggle-{{ parent_type }}-{{parent.id}}-{{ forloop.counter }}" class="mr-5" style="height: inherit"></label>
+
+        <input type="file" name="replaceFile" id="replaceFile-{{ parent_type }}-{{ file.id }}" hidden
+               hx-post="{% url 'puzzlehunt:staff:file_replace' parent_type file.id %}"
+               hx-encoding="multipart/form-data"
+        >
+        <label class="button is-small ml-1" for="replaceFile-{{ parent_type }}-{{ file.id }}"
+             {% if swapped_pk == file.pk %}
+               x-data="{ success: true }" x-init="setTimeout(() => success = false, 3000)"
+               :class="success && 'is-success'"
+              {% else %}
+                x-data="{ success: false }"
+             {% endif %}
+        >
+          <i class="fa fa-lg" :class="success ? 'fa-check-circle-o' : 'fa-refresh'" aria-hidden="true"></i>
+        </label>
+
+        <a class="button is-small ml-1" href="{% url 'puzzlehunt:staff:file_download' parent_type file.id %}" download>
+          <i class="fa fa-lg fa-download" aria-hidden="true"></i>
+        </a>
+
+        <button class="button is-small ml-1 is-danger is-outlined"
+                hx-post="{% url 'puzzlehunt:staff:file_delete' parent_type file.id %}"
+                hx-confirm="Are you sure?"
+        >
+          <i class="fa fa-lg fa-trash" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+  {% endfor %}
+  <div class="panel-block" style="justify-content: space-between">
+    <button class="button is-link is-danger is-outlined"
+            hx-post="{% url 'puzzlehunt:staff:file_delete_all' parent_type parent.id %}"
+            hx-confirm="Are you sure?"
+    >
+      Delete All Files
+    </button>
+    <input type="file" name="uploadFile" id="uploadFile-{{ parent_type }}-{{ parent.id }}" hidden
+           hx-post="{% url 'puzzlehunt:staff:file_upload' parent_type parent.id %}"
+           hx-encoding="multipart/form-data"
+    >
+    <label class="button is-link is-outlined" for="uploadFile-{{ parent_type }}-{{ parent.id }}"> Upload File </label>
+  </div>
+</nav>

@@ -1,0 +1,19 @@
+<td class="mainCell"
+    id="cell-{{ team.pk }}-{{ status.puzzle.pk }}"
+    style="{{ status|progress_table_color }} {{ status|progress_table_border }}"
+    {{ hx_swap }}
+>
+  {% if status.unlock_time %}
+    {% if status.solve_time %}
+      <span><b>T:</b> {{ status.solve_time|time:"H:i" }}</span>
+      <br>
+      <span>&nbsp;&nbsp;&nbsp;{{ status.solve_time|date:"m/d" }}</span>
+    {% elif status.last_submission %}
+      <span><b>T:</b> {{ status.last_submission|time:"H:i" }}</span>
+      <br>
+      <span>&nbsp;&nbsp;&nbsp;{{ status.last_submission|date:"m/d" }}</span>
+    {% endif %}
+    <br>
+    <span><b>S:</b> {{ status.num_submissions|default:"0"|rjust:"2"}}</span>
+  {% endif %}
+</td>

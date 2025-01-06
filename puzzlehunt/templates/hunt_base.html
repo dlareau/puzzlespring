@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% comment %} This only needs to be this complex because other templates inherit this template {% endcomment %}
+{% block title_meta_elements %}
+  {% set_hunt_from_context %}
+  {% if not title%}
+    {% with title=tmpl_hunt.name %} {{ block.super }} {% endwith %}
+  {% else %}
+    {{ block.super }}
+  {% endif %}
+{% endblock title_meta_elements %}
+
+{% block base_includes %}
+  <link rel="stylesheet" type="text/css" href="{% static "puzzlehunt/hunt_base.css" %}">
+  <link rel="stylesheet" type="text/css" href="{% static "bulma-tooltip.min.css" %}">
+  {% set_hunt_from_context %}
+  {% if tmpl_hunt.css_file %}
+    <link rel="stylesheet" type="text/css" href="{{ tmpl_hunt.css_file.file.url }}">
+  {% endif %}
+{% endblock base_includes %}
+
+{% block bulma_includes %}{% endblock bulma_includes %}
+
+{% block content_wrapper %}
+  <div id="huntContent" 
+    {% if team.pk and request.resolver_match.url_name == 'hunt_view' %}
+       hx-ext="sse" 
+       sse-connect="{% url 'puzzlehunt:team_events' team.pk %}"
+       hx-trigger="sse:huntUpdate"
+       hx-get="{{ request.path }}"
+       hx-select="#huntContent"
+       hx-swap="outerHTML"
+    {% endif %}
+  >
+    {% block content %} {% endblock content %}
+  </div>
+{% endblock content_wrapper %}
+
+{% block footer %}{% endblock footer %}

@@ -1,0 +1,33 @@
+{% extends "info_base.html" %}
+
+{% block title %}Updates{% endblock title %}
+
+{% block content %}
+  <div class="content px-5">
+    <h1 style="text-align: center;">Updates</h1>
+    <br>
+    {% for update in updates %}
+      <div class="box mb-4">
+        <article class="media">
+          <div class="media-content">
+            <div class="content">
+              <p>
+                <strong>{{ update.time|date:"F jS" }} at {{ update.time|time:"h:i a e" }}</strong>
+                <br>
+                {% if update.puzzle %}
+                  <span class="tag is-medium is-info is-light mb-2 mt-1">
+                    Puzzle: <span class="has-text-weight-bold">&nbsp;{{ update.puzzle.name }}</span>
+                  </span>
+                  <br>
+                {% endif %}
+                {{ update.text|capfirst }}
+              </p>
+            </div>
+          </div>
+        </article>
+      </div>
+    {% empty %}
+      <p class="has-text-grey-light">No updates at this time.</p>
+    {% endfor %}
+  </div>
+{% endblock %}

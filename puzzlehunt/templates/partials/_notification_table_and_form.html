@@ -1,0 +1,10 @@
+{% include "partial_header.html" %}
+
+{% if subscriptions %}
+{% include "notification_table.html" %}
+{% endif %}
+
+{% if form %}
+    {% load crispy_forms_tags %}
+    {% crispy form %} 
+{% endif %}

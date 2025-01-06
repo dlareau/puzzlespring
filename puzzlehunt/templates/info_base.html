@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block base_includes %}
+<link rel="stylesheet" type="text/css" href="{% static "puzzlehunt/info_base.css" %}">
+{% endblock base_includes %}
+
+{% block content_wrapper %}
+<div class="bulma">
+  <section class="section">
+    <div class="container mt-5">
+      <div class="columns is-centered is-multiline">
+        {% if info_size == 'full-width' %}
+          <div id="content-box" class="column has-background-light is-12">
+        {% elif info_size == 'wide' %}
+          <div id="content-box" class="column has-background-light is-12-tablet is-11-desktop is-10-widescreen">
+        {% elif info_size == 'narrow' %}
+          <div id="content-box" class="column has-background-light is-8-tablet is-7-desktop is-6-widescreen">
+        {% elif info_size == 'narrow_padded' %}
+          <div id="content-box" class="column has-background-light is-8-tablet is-7-desktop is-6-widescreen p-5">
+        {% else %}
+          <div id="content-box" class="column has-background-light is-10-tablet is-9-desktop is-8-widescreen">
+        {% endif %}
+          {% block content %}{% endblock content %}
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

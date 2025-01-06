@@ -1,0 +1,44 @@
+<div id="puzzle-submission-table" 
+     style="max-height: 190px; overflow: auto;"
+     hx-trigger="sse:submission-{{ puzzle.pk }}"
+     {# TODO: currently we rerender the whole page for the submission table SSE, we could do better. #}
+     hx-get="{{ request.get_full_path }}"
+     hx-select="#puzzle-submission-table"
+     hx-swap="outerHTML swap:200ms"
+     hx-disinherit="*"
+>
+  <h2 class="is-size-5">Previous Answers</h2>
+  <div>
+    <table class="table is-striped is-fullwidth is-narrow mt-1">
+      <thead>
+        <tr>
+          <th style="width: 160px;">Time</th>
+          <th>Answer</th>
+          <th>Response</th>
+          <th>User</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in submissions %}
+        <tr>
+          <td>{{ s.submission_time|date:"m/j - h:i a" }}</td>
+          <td>{{ s.submission_text }}</td>
+          <td>{{ s.convert_markdown_response|safe }}</td>
+          {% if s.user %}
+            <td>{{ s.user.display_name }}</td>
+          {% else %}
+            <td>N/A</td>
+          {% endif %}
+        </tr>
+        {% empty %}
+          <tr>
+          <td>&nbsp</td>
+          <td></td>
+          <td></td>
+          <td></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,107 @@
+{% extends 'staff_hunt_base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block includes %}
+  {{ block.super }}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@100..800&display=swap" rel="stylesheet">
+  <script>
+    htmx.config.useTemplateFragments = true;
+  </script>
+{% endblock includes %}
+
+{% block staff_content %}
+  <div class="progress-container"
+       :class="sidebarOpen && 'sidebarOpen'"
+       hx-ext="sse" sse-connect="{% url 'puzzlehunt:staff_events' %}"
+  >
+    <div sse-swap="progress"></div>
+    <div id="tableKey" class="table-key">
+      <ul>
+        <li><span class="color-swatch" style="background: linear-gradient(to right, #ffffaa, #ffddaa, #ffbbaa, #ff9999);"></span>Unsolved</li>
+        <li><span class="color-swatch" style="background-color: #aaffaa;"></span> Solved</li>
+        <li><span class="border-swatch" style="border: 4px solid #ffdb26;"></span> 1 hint used</li>
+        <li><span class="border-swatch" style="border: 4px solid #db5100;"></span> 2 hints used</li>
+        <li><span class="border-swatch" style="border: 4px solid #000000;"></span> 3+ hints used</li>
+        <li><strong>T: </strong>&nbsp; Last submission time</li>
+        <li><strong>S: </strong>&nbsp; # of submissions</li>
+      </ul>
+    </div>
+    <table id="progressTable" class="table is-narrow sortable is-bordered">
+      <thead>
+        <tr> {# Header row #}
+          <th class="sorttable_alpha"> Team Name </th>
+          <th>Rank</th>
+          {% for column in info_columns %}
+            {% if column.is_time %} <th style="min-width: 80px;"> {% else %} <th style="width: 0;"> {% endif %}
+              {{ column.display_name }}
+            </th>
+          {% endfor %}
+          {% for puzzle in puzzles %}
+            <th class="sorttable_nosort">
+              <div class="has-tooltip-arrow has-tooltip-bottom" data-tooltip="{{ puzzle.name }}">
+                {{ puzzle.abbreviation }}<br>{{ puzzle.order_number }}
+              </div>
+            </th>
+          {% endfor %}
+        </tr>
+        {% for stat in puzzle_stats %}
+          <tr {% cycle 'style="background-color: lightgray"' '' %}>
+            <td> {{ stat.1 }} </td>
+            <td class="has-background-grey-dark"></td>
+            {% for column in info_columns %} <td class="has-background-grey-dark"></td> {% endfor %}
+            {% for puzzle in puzzles %}
+              <td id="cell-p{{ puzzle.pk }}-{{ stat.0 }}">{% get_attribute puzzle stat.0 %}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </thead>
+      <tbody>
+        {% for team in teams %}
+          <tr id="row-{{ team.pk }}">
+            <td> <div>{{ team.name }}</div> </td>
+            <td class="has-text-centered">{{ forloop.counter }}</td>
+            {% for column in info_columns %}
+              {% include 'components/_progress_info_column_cell.html' %}
+            {% endfor %}
+            {% for status in team.statuses %}
+              {% include 'components/_progress_table_cell.html' %}
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+
+    function adjustTableHeaderPosition() {
+      const tableKey = document.getElementById('tableKey');
+      const tableHeaders = document.querySelectorAll('#progressTable thead th');
+      
+      function updatePosition() {
+        const keyHeight = tableKey.offsetHeight;
+        tableHeaders.forEach(header => {
+          header.style.top = `${keyHeight}px`;
+        });
+      }
+
+      // Initial position update
+      updatePosition();
+
+      // Update position on window resize
+      window.addEventListener('resize', updatePosition);
+
+      // Update position when the table key's height changes
+      const observer = new ResizeObserver(updatePosition);
+      observer.observe(tableKey);
+    }
+
+    // Call the function when the page loads
+    window.addEventListener('load', adjustTableHeaderPosition);
+    window.addEventListener('htmx:after-settle', adjustTableHeaderPosition);
+    window.addEventListener('htmx:after-settle', sorttable.makeSortable(document.getElementById('progressTable')));
+  </script>
+{% endblock %}

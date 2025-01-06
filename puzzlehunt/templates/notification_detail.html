@@ -1,0 +1,19 @@
+{% extends 'allauth/layouts/manage.html' %}
+{% load hunt_tags %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+  <h1 class="title is-3 mb-3">Notification Settings</h1>
+  
+  <div class="block">
+    <h2 class="subtitle is-4">Current Subscriptions</h2>
+    {% include "notification_table.html" %}
+  </div>
+
+  <div class="block">
+    <h2 class="subtitle is-4">Add New Subscription</h2>
+    <div id="subscription-form">
+      {% crispy form %}
+    </div>
+  </div>
+{% endblock %} 

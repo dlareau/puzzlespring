@@ -1,0 +1,84 @@
+{% extends 'staff_hunt_base.html' %}
+
+{% block staff_content %}
+  <div class="columns"><div class="column is-12 is-12-desktop is-10-widescreen is-offset-1-widescreen is-8-fullhd is-offset-2-fullhd">
+  {% for hunt in hunts %}
+    <div class="box p-4">
+      <div class="columns is-multiline" x-data="{openFiles: false}">
+        <div class="column">
+          <div>
+            <h3 style="margin-top: -8px" class="is-size-3">{{ hunt.name }}</h3>
+          </div>
+          <div class="is-flex is-justify-content-space-between">
+            <span> {{ hunt.team_set.count }} Teams </span>
+          </div>
+          <div class="is-flex is-justify-content-space-between">
+            <span> {{ hunt.total_users }} People ({{ hunt.new_users }} New) </span>
+          </div>
+        </div>
+        <div class="column is-narrow">
+          <div>
+            <button class="button mr-1 has-tooltip-arrow has-tooltip-top"
+                    data-tooltip="Manage Files"
+                    @click="openFiles = !openFiles"
+                    :class="openFiles && 'is-primary'"
+            >
+              <span class="icon is-small">
+                <i class="fa fa-lg fa-folder-open"></i>
+              </span>
+            </button>
+            <a href="{% url 'puzzlehunt:staff:hunt_template' hunt.pk %}"
+               class="button mr-1 has-tooltip-arrow has-tooltip-top"
+               data-tooltip="Edit Template"
+            >
+              <span class="icon is-small">
+                <i class="fa fa-lg fa-code"></i>
+              </span>
+            </a>
+            <a href="{% url 'admin:puzzlehunt_hunt_change' hunt.pk %}"
+               class="button mr-1  has-tooltip-arrow has-tooltip-top"
+               data-tooltip="Edit Hunt"
+            >
+              <span class="icon is-small">
+                <i class="fa fa-lg fa-pencil"></i>
+              </span>
+            </a>
+            <a href="{% url 'puzzlehunt:hunt_view' hunt.pk %}"
+               class="button has-tooltip-arrow has-tooltip-top"
+               data-tooltip="Preview Hunt"
+            >
+              <span class="icon is-small">
+                <i class="fa fa-lg fa-eye"></i>
+              </span>
+            </a>
+          </div>
+          <div>
+            {% if hunt.is_current_hunt %}
+              <button class="button mt-2 is-primary is-fullwidth">
+                Current Hunt
+              </button>
+            {% else %}
+              <button class="button mt-2 is-fullwidth"
+                      hx-post="{% url 'puzzlehunt:staff:hunt_set_current' hunt.pk %}"
+                      hx-target="#staff-content-container"
+                      hx-select="#staff-content-container"
+                      hx-swap="outerHTML"
+              >
+                Set as Current
+              </button>
+            {% endif %}
+          </div>
+        </div>
+        <div class="column is-12 mb-0" x-show="openFiles" x-transition x-cloak="">
+          {% with parent=hunt parent_type='hunt'%}
+            {% include 'partials/_staff_file_list.html' %}
+          {% endwith %}
+        </div>
+      </div>
+    </div>
+    {% if forloop.counter == 1 %}
+      <hr class="has-background-grey" style="height:1px">
+    {% endif %}
+  {% endfor %}
+  </div></div>
+{% endblock %}

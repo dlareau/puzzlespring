@@ -1,0 +1,46 @@
+<div id="notification-table" class="table-container" {% if request.htmx and not request.htmx.boosted %}hx-swap-oob="true"{% endif %}>
+    <table class="table is-fullwidth">
+        <thead>
+        <tr>
+            <th>Platform</th>
+            <th style="width: 150px;">Hunt</th>
+            <th>Event Types</th>
+            <th class="is-narrow">Active</th>
+            <th class="is-narrow"></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for subscription in subscriptions %}
+            <tr>
+            <td>{{ subscription.platform.name }}</td>
+            <td>
+                <div class="has-tooltip-arrow has-tooltip-multiline" 
+                     data-tooltip="{{ subscription.hunt.name|default:'All Hunts' }}">
+                    {{ subscription.hunt.name|default:"All Hunts" }}
+                </div>
+            </td>
+            <td>
+                {% for event_type in subscription.event_types_list %}
+                    <span class="tag is-info mb-1 has-text-black">
+                        {% for choice in event_type_choices %}
+                            {% if choice.0 == event_type %}
+                                {{ choice.1 }}
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                {% endfor %}
+            </td>
+            <td>{% include "partials/_notification_active_toggle.html" %}</td>
+            <td>
+                <button class="button is-small is-danger"
+                        hx-delete="{% url 'puzzlehunt:notification_delete' subscription.pk %}"
+                        hx-confirm="Are you sure you want to delete this notification subscription?"
+                        hx-target="#notification-table">
+                    Delete
+                </button>
+            </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

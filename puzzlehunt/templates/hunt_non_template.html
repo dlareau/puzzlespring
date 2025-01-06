@@ -1,0 +1,45 @@
+{% extends "hunt_base.html" %}
+
+{% block content_wrapper %}
+  <div id="huntContent" class="bulma">
+    <section class="section">
+      <div class="container">
+        <h1 class="title">{{ hunt.name }}</h1>
+        <h2 class="subtitle">Team: {{ team.name }}</h2>
+        
+        <table class="table is-fullwidth is-striped">
+          <thead>
+            <tr>
+              <th>Puzzle Name</th>
+              <th>Status</th>
+              <th>Answer</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for puzzle in puzzles %}
+              <tr>
+                <td>
+                  <a href="{% url 'puzzlehunt:puzzle_view' puzzle.pk %}">{{ puzzle.name }}</a>
+                </td>
+                <td>
+                  {% if puzzle in solved %}
+                    <span class="tag is-success">Solved</span>
+                  {% else %}
+                    <span class="tag is-danger">Unsolved</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if puzzle in solved %}
+                    {{ puzzle.answer }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+{% endblock content_wrapper %}

@@ -1,0 +1,43 @@
+{% extends 'info_base.html' %}
+{% load hunt_tags %}
+{% block title %}Not Available{% endblock title %}
+
+{% block content %}
+  <h1 class="title">Not Available</h1>
+  <div class="content px-5">
+    {% if reason == "hunt" %}
+    <p>
+      The resource or page you are attempting to access is associated with a
+      puzzlehunt that is not yet started. Please refresh this page after the
+      hunt has started.
+    </p>
+    {% endif %}
+
+    {% if reason == "team" %}
+    <p>
+      You must be participating in the current hunt to view this resource or 
+      page, and it does not appear you are on a team for this hunt. Please
+      ensure you are signed in correctly and that you have properly added
+      yourself to a team on the <a href="{% url 'huntserver:registration' %}"> 
+      registration page</a>. 
+    </p>
+    {% endif %}
+
+    {% if reason == "puzzle" %}
+    <p>
+      This resource or page is part of an ongoing puzzlehunt and is not yet
+      unlocked for your team. Please either continue playing to unlock it or
+      wait until the hunt is public.
+    </p>
+    {% endif %}
+  
+    {% if reason == "hint" %}
+    <p>
+      You do not have access to this page. It may be because you do not have any
+      hints available or because you do not have access to the corresponding puzzle.
+    </p>
+    {% endif %}
+    <br>
+    <p>For assistance, email <a href="mailto:{% contact_email %}">puzzlehunt staff</a>.</p>
+  </div>
+{% endblock %}

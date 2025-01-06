@@ -1,0 +1,84 @@
+{% if query %}
+  {% if users %}
+    <h2 class="subtitle">Users</h2>
+    <div class="table-container">
+      <table class="table is-fullwidth">
+        <thead>
+          <tr>
+            <th>Display Name</th>
+            <th>Full Name</th>
+            <th>Email</th>
+            <th>Current Team</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+            <tr>
+              <td>
+                <a href="{% url 'admin:puzzlehunt_user_change' user.id %}">
+                  {{ user.display_string }}
+                </a>
+                {% if not user.is_superuser %}
+                  <a href="{% url 'impersonate-start' user.id %}" class="button is-small is-light ml-2" title="Impersonate this user">
+                    <span class="icon is-small">
+                      <i class="fa fa-user-secret"></i>
+                    </span>
+                  </a>
+                {% endif %}
+              </td>
+              <td>{{ user.full_name }}</td>
+              <td>{{ user.email }}</td>
+              <td>
+                {% with current_team=user.current_team_list.0 %}
+                  {% if current_team %}
+                    <a href="{% url 'admin:puzzlehunt_team_change' current_team.id %}">
+                      {{ current_team.name }}
+                    </a>
+                  {% else %}
+                    <em>No current team</em>
+                  {% endif %}
+                {% endwith %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  {% if teams %}
+    <h2 class="subtitle">Teams</h2>
+    <div class="table-container">
+      <table class="table is-fullwidth">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Hunt</th>
+            <th>Members</th>
+            <th>Puzzles Solved</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for team in teams %}
+            <tr>
+              <td>
+                <a href="{% url 'admin:puzzlehunt_team_change' team.id %}">
+                  {{ team.name }}
+                </a>
+              </td>
+              <td>{{ team.hunt.name }}</td>
+              <td>{{ team.members.count }}</td>
+              <td>{{ team.solved_puzzles_list|length }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  {% if not users and not teams %}
+    <p class="has-text-centered has-text-grey">
+      No results found for "{{ query }}"
+    </p>
+  {% endif %}
+{% endif %} 

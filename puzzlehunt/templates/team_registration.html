@@ -1,0 +1,53 @@
+{% extends "info_base.html" %}
+{% load hunt_tags %}
+{% load crispy_forms_tags %}
+
+{% block title %}Team Registration{% endblock title %}
+
+{% block content_wrapper %}
+  {% with info_size='wide' %}
+    {{ block.super }}
+  {% endwith %}
+{% endblock %}
+
+{% block content %}
+<div class="content p-4">
+  <div class="columns is-multiline">
+    <div class="column is-8-tablet is-5-desktop is-offset-2-tablet is-offset-0-desktop">
+      <h3>Create a New Team</h3>
+      <hr class="has-background-grey-lighter mt-0">
+      {% crispy form %}
+      <p class="is-size-7">
+        A team is a "CMU Team" if at least half of the team will be composed of CMU students.
+        Don't worry about getting this precisely correct, this is just for the leaderboard.
+      </p>
+
+    </div>
+    <div class="divider is-vertical is-hidden-touch">OR</div>
+    <div class="column divider is-hidden-desktop is-12-tablet my-0">OR</div>
+    <div class="column is-8-tablet is-6-desktop is-offset-2-tablet is-offset-0-desktop">
+      <h3> Join an Existing Team </h3>
+      <hr class="has-background-grey-lighter mt-0">
+      <p>
+        The recommended way to join a team is to have someone on your team send you the <b>join link</b>
+        from your team's info page.
+      </p>
+      <p>
+        If you want, you can alternatively enter the <b>join code</b> for your team below,
+        which can also be found on your team's info page.
+      </p>
+      {# TODO: This could be a crispy form in the future. #}
+      <form method="get" action="{% url 'puzzlehunt:team_join_current' %}">
+        <label for="join_code" class="label">Enter Join Code:</label>
+        <div class="field has-addons">
+          <div class="control">
+            <input id="join_code" name="code" class="input" placeholder="Join Code" value="">
+          </div>
+          <button class="button is-primary" type="submit"> Join </button>
+        </div>
+        <p class="help is-danger">{{ errors }}</p>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

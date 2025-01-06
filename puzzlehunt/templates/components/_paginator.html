@@ -1,0 +1,30 @@
+{% load hunt_tags %}
+{% if page_info.has_other_pages %}
+  <nav class="pagination is-centered mt-5" role="navigation" aria-label="pagination">
+    <ul class="pagination-list">
+      <a class="pagination-link has-background-white-bis"
+         {% if page_info.has_previous %} href="?{% query_transform page=page_info.previous_page_number %}" {% endif %}
+      > &laquo; </a>
+
+      {% for i in page_info.paginator.page_range %}
+        {% if page_info.number > 3 and forloop.first %}
+          <li><a class="pagination-link has-background-white-bis" href="?{% query_transform page=1 %}">1</a></li>
+          <li><span class="pagination-ellipsis">&hellip;</span></li>
+        {% endif %}
+        {% if page_info.number == i %}
+          <li><a class="pagination-link is-current" href="?{% query_transform page=i %}">{{ i }}</a></li>
+        {% elif i > page_info.number|add:'-3' and i < page_info.number|add:'3' %}
+          <li><a class="pagination-link has-background-white-bis" href="?{% query_transform page=i %}">{{ i }}</a></li>
+        {% endif %}
+        {% if page_info.paginator.num_pages > page_info.number|add:'3' and forloop.last %}
+          <li><span class="pagination-ellipsis">&hellip;</span></li>
+          <li><a class="pagination-link has-background-white-bis" href="?{% query_transform page=page_info.paginator.num_pages %}">{{ page_info.paginator.num_pages }}</a></li>
+        {% endif %}
+      {% endfor %}
+
+      <a class="pagination-link has-background-white-bis"
+         {% if page_info.has_next %} href="?{% query_transform page=page_info.next_page_number %}" {% endif %}
+      > &raquo; </a>
+    </ul>
+  </nav>
+{% endif %}

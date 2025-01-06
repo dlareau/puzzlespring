@@ -1,0 +1,15 @@
+{% include "partial_header.html" %}
+{% load crispy_forms_tags %}
+
+<h2 class="title is-5 mb-2" id="team_name_header" hx-swap-oob="true">
+  {{team.name}} [ {{team.hunt.name}} ]
+</h2>
+
+<a class="is-active" id="team-menu-link-{{ team.pk }}" hx-swap-oob="true"
+   href="{% url 'puzzlehunt:team_view' team.pk %}"
+>
+  <span style="display: inline-block">{{ team.short_name }}</span>
+  <span style="display: inline-block">[ {{ team.hunt.name }} ]</span>
+</a>
+
+{% crispy form %}

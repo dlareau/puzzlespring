@@ -1,0 +1,96 @@
+{% load allauth %}
+{% if attrs.type == "checkbox" %}
+  <div class="field">
+    <div class="control">
+      <input class="switch is-rounded"
+             type="checkbox"
+             {% if attrs.required %}required{% endif %}
+             name="{{ attrs.name }}"
+             id="{{ attrs.id }}"
+             {% if attrs.value is not None %}value="{{ attrs.value }}"{% endif %}
+             {% if attrs.disabled %}disabled{% endif %}
+      >
+      <label for="{{ attrs.id }}">
+        {% slot label %}{% endslot %}
+      </label>
+    </div>
+    {% if slots.help_text %}
+      <p class="help">{% slot help_text %}{% endslot %}</p>
+    {% endif %}
+  </div>
+{% elif attrs.type == "radio" %}
+  <div class="field">
+    <div class="control">
+      <input type="radio"
+             {% if attrs.required %}required{% endif %}
+             name="{{ attrs.name }}"
+             id="{{ attrs.id }}"
+             {% if attrs.value is not None %}value="{{ attrs.value }}"{% endif %}
+             {% if attrs.disabled %}disabled{% endif %}
+      >
+      <label for="{{ attrs.id }}" class="radio">
+        {% slot label %}{% endslot %}
+      </label>
+    </div>
+  </div>
+  {% if slots.help_text %}
+    <p class="help">{% slot help_text %}{% endslot %}</p>
+  {% endif %}
+{% elif attrs.type == "textarea" %}
+  <div class="field">
+    <div class="control">
+      <label class="label">{% slot label %}{% endslot %}</label>
+      <textarea {% if attrs.required %}required{% endif %}
+                {% if attrs.rows %}rows="{{ attrs.rows }}"{% endif %}
+                class="textarea"
+                name="{{ attrs.name }}"
+                {% if attrs.readonly %}readonly{% endif %}
+                id="{{ attrs.id }}"
+                {% if attrs.disabled %}disabled{% endif %}>
+        {% slot value %}{% endslot %}
+      </textarea>
+    </div>
+    {% if slots.help_text %}
+      <p class="help">{% slot help_text %}{% endslot %}</p>
+    {% endif %}
+  </div>
+{% elif attrs.type == "hidden" %}
+  <input {% if attrs.required %}required{% endif %}
+         name="{{ attrs.name }}"
+         id="{{ attrs.id }}"
+         {% if attrs.value is not None %}value="{{ attrs.value }}"{% endif %}
+         type="hidden">
+{% else %}
+  <div class="field">
+    {% if not attrs.unlabeled %}
+      <label class="label">{% slot label %}{% endslot %}</label>
+    {% endif %}
+    <div class="control {% if attrs.type == 'password' %} has-icons-left {% endif %}">
+      <input {% if attrs.required %}required{% endif %}
+               name="{{ attrs.name }}"
+               {% if attrs.placeholder %}placeholder="{{ attrs.placeholder }}" {% elif attrs.unlabeled %}placeholder="{% slot label %}{% endslot %}"{% endif %}
+               class="input {% if attrs.errors %}is-danger{% endif %}"
+               id="{{ attrs.id }}"
+               {% if attrs.readonly %}readonly{% endif %}
+               {% if attrs.disabled %}disabled{% endif %}
+               {% if attrs.tabindex %}tabindex="{{ attrs.tabindex }}"{% endif %}
+               {% if attrs.style %}style="{{ attrs.style }}"{% endif %}
+               {% if attrs.autocomplete %}autocomplete="{{ attrs.autocomplete }}"{% endif %}
+               {% if attrs.value is not None %}value="{{ attrs.value }}"{% endif %}
+               type="{{ attrs.type }}">
+      {% if attrs.type == 'password' %}
+        <span class="icon is-small is-left">
+          <i class="fa fa-lock"></i>
+        </span>
+      {% endif %}
+    </div>
+    {% if slots.help_text %}
+      <p class="help">{% slot help_text %}{% endslot %}</p>
+    {% endif %}
+    {% if attrs.errors %}
+      {% for error in attrs.errors %}
+        <p class="help is-danger">{{ error }}</p>
+      {% endfor %}
+    {% endif %}
+  </div>
+{% endif %}

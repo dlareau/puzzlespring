@@ -1,0 +1,27 @@
+{% extends 'hunt_base.html' %}
+
+{% block title_meta_elements %}
+  {% with title=puzzle.name|add:" - Solution" %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
+
+{% block content %}
+  <script src="https://unpkg.com/htmx-ext-head-support@2.0.1/head-support.js"></script>
+  {% if puzzle.main_solution_file.extension == "html" %}
+    <div hx-get="{{ puzzle.main_solution_file.file.url }}"
+         hx-trigger="load"
+         hx-ext="head-support"
+         id="solution-content"
+         class="puzzle-body" {# This class is added for historical compatibility #}
+    ></div>
+  {% elif puzzle.main_solution_file.extension == "pdf" %}
+    <div class="is-flex is-flex-direction-column" style="height: calc(100vh - 4rem);">
+      <embed src="{{ puzzle.main_solution_file.file.url }}"
+        width="100%" 
+        height="100%"
+        type="application/pdf"
+        style="flex: 1;"
+      ></embed>
+    </div>
+  {% endif %}
+{% endblock %}
+

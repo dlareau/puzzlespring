@@ -1,0 +1,73 @@
+{% extends 'staff_hunt_base.html' %}
+
+{% block staff_content %}
+  <div class="columns">
+    <div class="column is-8">
+      <div class="columns">
+        <div class="column subtitle pb-0">Hunt Config Editor:</div>
+        <div class="column is-narrow pb-0">
+          <div id="validateResponse"></div>
+        </div>
+        <div class="column is-narrow pb-0">
+          <button class="button is-primary" style="width: 200px;"
+                  hx-post="{% url 'puzzlehunt:staff:hunt_config' hunt.pk %}"
+                  hx-target="#staff-content-container"
+                  hx-select="#staff-content-container"
+                  hx-swap="outerHTML"
+                  hx-vals="js:{config: editor.getValue()}"
+                  hx-trigger="click, keyup[(ctrlKey||metaKey)&&key=='s'] from:body"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+      <div class="block" id="template-editor"></div>
+      <textarea id="config-text" style="display: none;">{{ config_text|safe }}</textarea>
+    </div>
+    <div class="column is-4 content">
+      <h4>Puzzles:</h4>
+      <ul>
+        {% for puzzle in hunt.puzzle_set.all %}
+          <li><span class="mono">({{ puzzle.order_number|rjust:"2" }}) <b>P{{ puzzle.id }}</b></span>: {{ puzzle.name }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+{% endblock %}
+
+
+{% block extra_body %}
+  
+  <script>
+    let editor;
+    var Range = ace.require("ace/range").Range
+
+    function initializeEditor() {
+      editor = ace.edit("template-editor");
+      window.editor = editor; // Store reference globally
+      editor.session.setTabSize(2);
+      editor.session.setUseSoftTabs(true);
+      editor.setTheme("ace/theme/chrome");
+      editor.session.setMode("ace/mode/phcmu_config");
+      editor.setValue(document.getElementById('config-text').value);
+      editor.selection.clearSelection();
+      editor.setFontSize(15);
+    }
+
+    initializeEditor();
+
+    document.body.addEventListener('htmx:afterSettle', function(evt) {
+      if (evt.detail.target.id === 'staff-content-container') {
+        editor.destroy();
+        initializeEditor();
+      }
+    });
+  
+
+    document.addEventListener("keydown", function(e) {
+      if (e.key === 's' && (navigator.userAgent.includes('Mac') ? e.metaKey : e.ctrlKey)) {
+        e.preventDefault();
+      }
+    }, false);
+  </script>
+{% endblock %}

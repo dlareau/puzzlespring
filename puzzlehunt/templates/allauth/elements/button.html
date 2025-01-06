@@ -1,0 +1,28 @@
+{% load allauth %}
+<{% if attrs.href %}a href="{{ attrs.href }}"{% else %}button{% endif %}
+{% if attrs.form %}form="{{ attrs.form }}"{% endif %}
+{% if attrs.id %}id="{{ attrs.id }}"{% endif %}
+{% if attrs.name %}name="{{ attrs.name }}"{% endif %}
+{% if attrs.type %}type="{{ attrs.type }}"{% endif %}
+{% if attrs.value %}value="{{ attrs.value }}"{% endif %}
+class="{% block class %}
+    button
+    {% if "link" in attrs.tags %}is-link
+    {% else %}
+      {% if "prominent" in attrs.tags %}is-normal{% elif "minor" in attrs.tags %}is-small{% endif %}
+      {% if 'outline' in attrs.tags %}is-outlined{% endif %}
+      is-{% if "danger" in attrs.tags %}danger{% elif "secondary" in attrs.tags %}info{% elif "warning" in attrs.tags %}warning{% else %}primary{% endif %}
+    {% endif %}{% endblock %}">
+    {% if "tool" in attrs.tags %}
+    {% if "delete" in attrs.tags %}
+      <span class="icon"><i class="fa fa-trash-o"></i></span>
+    {% elif "edit" in attrs.tags %}
+      <span class="icon"><i class="fa fa-edit"></i></span>
+    {% endif %}
+    {% endif %}
+
+{% if not "tool" in attrs.tags %}
+{% slot %}
+{% endslot %}
+{% endif %}
+</{% if attrs.href %}a{% else %}button{% endif %}>

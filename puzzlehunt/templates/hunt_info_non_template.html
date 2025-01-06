@@ -1,0 +1,84 @@
+{% extends "hunt_info_base.html" %}
+{% load humanize %}
+
+{% block content %}
+<style>
+  h4 {
+      border-top: 2px dashed #ccc;
+      padding-top: 10px;
+  }
+</style>
+<div class="mb-4">
+  <h1 class="has-text-centered is-size-1 is-family-sans-serif">{{ hunt.name }}</h1>
+  <h3 class="has-text-centered">
+    {{ hunt.display_start_date|date:" F jS " }} {{ hunt.display_start_date|time:"h:iA" }} &ndash;
+    {{ hunt.display_end_date|date:" F jS "}}  {{ hunt.display_end_date|time:"h:iA e" }}
+    {% if hunt.location != "" %}
+      <br>
+      Kickoff location is {{ hunt.location }}
+    {% endif %}
+  </h3>
+</div>
+<div>
+  <h4>What are the puzzles like?</h4>
+  <p>
+    There are a huge variety of puzzle types, like wordplay, logic, or multimedia.
+    For examples of the kinds of puzzles we'll give you, check out our 
+    <a href="{% url 'puzzlehunt:archive' %}">Past Hunts</a>.
+  </p>
+
+  <h4>How do I solve a puzzle?</h4>
+  <p>
+    Every answer to a puzzle is an English word or phrase.
+    When you think you have the correct answer, type it into the answer box on the puzzle page.
+  </p>
+
+  <p>
+    But be careful about guessing too much if you're not sure of the answer.
+    If you submit too many incorrect guesses for the same puzzle within a short amount of time,
+    our server will rate-limit your guesses. When this happens, please wait before submitting again.
+  </p>
+  
+  <h4>How do I register?</h4>
+  <p>
+    Register your team of {{hunt.team_size_limit|apnumber}} (or fewer if you want)
+    <a href="{% url 'puzzlehunt:team_create' %}">here!</a>
+  </p>
+
+  <h4>What do I need?</h4>
+  <p>
+    <ul>
+        <li>A team of no more than {{hunt.team_size_limit|apnumber}} people.</li>
+        <li>
+          A phone or other device with internet access. You'll need this to register your team,
+          view puzzles, and submit your answers.
+        </li>
+        <li>Paper and pencil may be useful for scratch work.</li>
+    </ul>
+  </p>
+  
+  <h4>How long will it last?</h4>
+  <p>
+    The hunt will run from
+    {{ hunt.display_start_date|date:" F jS " }} {{ hunt.display_start_date|time:"h:iA" }} to 
+    {{ hunt.display_end_date|date:" F jS "}} {{ hunt.display_end_date|time:"h:iA e" }}.
+  </p>
+
+  <h4>I think there is an error in this puzzle.</h4>
+  <p>
+    You can contact the staff at
+    <a href="mailto:{% contact_email %}?subject=Puzzle%20Hunt%20Question">{% contact_email %}</a>.
+    If there is in fact an error, we will make an announcement to everyone.
+  </p>
+
+  <h4>Is there anything else I should know?</h4>
+  <p>
+    Nothing on this and the registration page is a puzzle crucial for completing the hunt.
+    No, really, this is not a puzzle.
+  </p>
+
+  <h4>Wait, I have more questions!</h4>
+  <p>Email <a href="mailto:{% contact_email %}?subject=Puzzle%20Hunt%20Question">
+    {% contact_email %}</a> with "Puzzle Hunt" somewhere in the subject line.</p>
+</div>
+{% endblock content %}

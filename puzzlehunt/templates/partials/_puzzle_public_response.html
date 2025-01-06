@@ -1,0 +1,16 @@
+<div id="public-answer-status"
+     class="block p-3 has-text-centered
+     {% if submission %}
+       {% if submission.is_correct %}
+         has-background-correct
+       {% elif submission.response_text == "Wrong Answer." %}
+         has-background-danger
+       {% else %}
+         has-background-warning
+       {% endif %}
+     {% else %}
+       is-hidden
+     {% endif %}
+">
+  {{ submission.response_text }}
+</div>

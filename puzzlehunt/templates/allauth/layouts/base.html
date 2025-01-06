@@ -1,0 +1,11 @@
+{% extends 'info_base.html' %}
+
+{% block title %}
+  {% block head_title %} {% endblock %}
+{% endblock %}
+
+{% block content_wrapper %}
+  {% with info_size='narrow_padded' %}
+    {{ block.super }}
+  {% endwith %}
+{% endblock %}

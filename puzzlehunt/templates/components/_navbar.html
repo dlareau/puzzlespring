@@ -1,0 +1,121 @@
+{% load flatpages %}
+{% load static %}
+{% load account %}
+
+<nav class="bulma navbar {% if debug %} is-warning {% else %} is-light {% endif %} is-fixed-top"
+     role="navigation" aria-label="main navigation" style="outline: 1px solid grey;"
+     x-data="{showNavbar: false}">
+  <div class="navbar-brand">
+    <a class="navbar-item" href="/">
+      <img src="/static/puzzlehunt/header_logo.png" width="140">
+    </a>
+
+    <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" 
+       data-target="navbarBasicExample" @click="showNavbar = !showNavbar;" :class="showNavbar ? 'is-active' : ''">
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+      <span aria-hidden="true"></span>
+    </a>
+  </div>
+
+  <div id="navbarBasicExample" class="navbar-menu" :class="showNavbar ? 'is-active' : ''">
+    <div class="navbar-start">
+      {% block left-header %}
+        {% get_flatpages as flatpages %}
+        <a href="{% url 'puzzlehunt:hunt_info' 'current' %}" class="navbar-item">
+          Hunt Info
+        </a>
+
+        <a href="{% url 'puzzlehunt:hunt_view' 'current' %}" class="navbar-item">
+          Puzzles
+        </a>
+
+        <a href="{% url 'puzzlehunt:hunt_leaderboard' 'current' %}" class="navbar-item is-hidden-touch">
+          Teams
+        </a>
+
+        <a href="{% url 'puzzlehunt:hunt_updates' 'current'%}" class="navbar-item is-hidden-touch">
+          Updates
+        </a>
+
+        {% for page in flatpages|dictsort:"url" %}
+          <a href="/info{{ page.url }}" class="navbar-item is-hidden-touch"> {{ page.title }} </a>
+        {% endfor %}
+
+        <div class="navbar-item has-dropdown is-hoverable is-hidden-desktop">
+          <a class="navbar-link">
+            Other Info
+          </a>
+          <div class="navbar-dropdown">
+            <a href="{% url 'puzzlehunt:hunt_leaderboard' 'current'%}" class="navbar-item">
+              Teams
+            </a>
+            <a href="{% url 'puzzlehunt:hunt_updates' 'current'%}" class="navbar-item">
+              Updates
+            </a>
+            {% for page in flatpages|dictsort:"url" %}
+              <a href="/info{{ page.url }}" class="navbar-item"> {{ page.title }} </a>
+            {% endfor %}
+          </div>
+        </div>
+
+        <a href="{% url 'puzzlehunt:archive' %}" class="navbar-item">
+          Archive
+        </a>
+      {% endblock %}
+    </div>
+
+    <div class="navbar-end">
+      {% block right-header %}
+        {% if request.user.is_authenticated %}
+          {% if request.user.is_staff %}
+            <a class="navbar-item is-hoverable" href="{% url "puzzlehunt:staff:hunts" 'current' %}">
+              <span class="icon is-medium">
+                <i class="fa fl-lg fa-wrench"></i>
+              </span>
+            </a>
+          {% endif %}
+          <div class="navbar-item has-dropdown is-hoverable">
+            <div class="navbar-link {% if request.user.is_impersonate %} has-text-danger {% endif %}">
+              <span class="icon is-medium">
+                <i class="fa fa-lg {% if request.user.is_impersonate %} fa-user-secret {% else %} fa-user {% endif %}"></i>
+              </span>
+              <span id="navbar-user-display">{% user_display user %}{% if request.user.is_impersonate %} ({{ request.impersonator.display_string }}) {% endif %}</span>
+            </div>
+
+            <div class="navbar-dropdown is-right">
+              <a class="navbar-item" href="{% url 'puzzlehunt:team_view' 'current' %}">
+                Current Team
+              </a>
+              <a class="navbar-item" href="{% url 'puzzlehunt:user_detail_view' %}">
+                User Settings
+              </a>
+              <hr class="navbar-divider">
+              {% if request.user.is_impersonate %}
+                <a href="{% url 'impersonate-stop' %}" class="navbar-item">
+                  Stop Impersonating
+                </a>
+              {% else %}
+                <a href="{% url 'account_logout' %}" class="navbar-item">
+                  Log Out
+                </a>
+              {% endif %}
+            </div>
+          </div>
+        {% else %}
+          <div class="navbar-item">
+            <div class="buttons">
+              <a href="{% url 'account_signup' %}" class="button is-link">
+                Sign up
+              </a>
+              <a href="{% url 'account_login' %}" class="button is-outlined">
+                Log in
+              </a>
+            </div>
+          </div>
+        {% endif %}
+      {% endblock %}
+    </div>
+  </div>
+</nav>

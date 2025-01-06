@@ -1,0 +1,46 @@
+{% extends "info_base.html" %}
+{% load hunt_tags %}
+{% block title_meta_elements %}
+  {% with title="Team Leaderboard - "|add:hunt.name %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
+
+{% block content_wrapper %}
+  {% with info_size='wide' %}
+    {{ block.super }}
+  {% endwith %}
+{% endblock %}
+
+{% block content %}
+<div class="content px-5">
+  <h1 style="text-align: center;"> Team Leaderboard - {{hunt.name}}</h1>
+  <br>
+  <br>
+  <table class="table is-striped is-size-7-mobile">
+    <tr>
+      <th>Rank</th>
+      <th>Team</th>
+      {% for rule in ruleset %}
+        {% if rule.visible %}
+          <th>{{ rule.display_name }}</th>
+        {% endif %}
+      {% endfor %}
+    </tr>
+    {% for team in team_data %}
+    <tr>
+      <td>{{forloop.counter}}</td>
+      <td class="team_name" style="word-break: break-word;">{{team.name}}</td>
+      {% for rule in ruleset %}
+        {% if rule.visible %}
+          {% get_attribute team rule.rule_type as val %}
+          {% if rule.is_time %}
+            <td>{{ val|date:"M dS, h:i a" }}</td>
+          {% else %}
+            <td>{{ val }}</td>
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock content %}

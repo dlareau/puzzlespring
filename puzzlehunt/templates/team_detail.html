@@ -1,0 +1,127 @@
+{% extends 'allauth/layouts/manage.html' %}
+{% load hunt_tags %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+  <div class="block mb-3">
+   <h1 class="title is-3 mb-3"> Teams </h1>
+    <div class="columns is-multiline">
+      <div class="column is-narrow">
+        <aside class="menu" style="width: 180px;">
+          <p class="menu-label">Current Team</p>
+          <ul class="menu-list">
+            <li>
+              {% if current_team %}
+                <a {% if current_team == team %} class="is-active" {% endif %}
+                    href="{% url 'puzzlehunt:team_view' current_team.pk %}"
+                    id="team-menu-link-{{ current_team.pk }}"
+                >
+                  {{ current_team.name }}
+                </a>
+              {% else %}
+                <a {% if current_team == team %} class="is-active" {% endif %}
+                    href="{% url 'puzzlehunt:team_view' 'current' %}"
+                >
+                  Join a Team!
+                </a>
+              {% endif %}
+            </li>
+          </ul>
+          <p class="menu-label">Previous Teams</p>
+          <ul class="menu-list">
+            {% for t in teams %}
+              {% if t != current_team %}
+                <li>
+                  <a {% if t.pk == team.pk %} class="is-active" {% endif %}
+                      href="{% url 'puzzlehunt:team_view' t.pk %}"
+                      id="team-menu-link-{{ t.pk }}"
+                  >
+                    <span style="display: inline-block">{{ t.short_name }}</span>
+                    <span class="is-size-7" style="display: inline-block">[ {{ t.hunt.name }} ]</span>
+                  </a>
+                </li>
+              {% endif %}
+            {% empty %}
+              <li>No previous teams</li>
+            {% endfor %}
+          </ul>
+        </aside>
+      </div>
+      {% if team %}
+        <div class="column">
+          <h2 class="title is-5 mb-2" id="team_name_header">
+            {{team.name}} [ {{team.hunt.name}} ]
+          </h2>
+          {% crispy form %}
+          <div class="block">
+            <b class="mt-2">Team members:</b>
+            <table class="table is-fullwidth">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for member in team.members.all %}
+                  <tr>
+                    <td>
+                      {{member.full_name}}
+                    </td>
+                    <td>
+                      {{ member.email }}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="block" x-data="{ copied: false }">
+            <div class="field is-grouped is-grouped-multiline">
+              <div class="control">
+                <div class="tags has-addons">
+                  <span class="tag is-primary">Join Code</span>
+                  <span class="tag is-white">{{ team.join_code }}</span>
+                </div>
+              </div>
+              <div class="control">
+                <div class="tags has-addons">
+                  <span class="tag is-primary">Join Link</span>
+                  <span class="tag is-white">
+                    <input type="text" id="joinLink" class="input is-small" readonly
+                           value="{{ request.scheme }}://{{ request.get_host }}{% url 'puzzlehunt:team_join' team.pk %}?code={{ team.join_code }}"
+                           style="width: 300px; border: none; background: transparent;">
+                  </span>
+                  <button class="tag is-link" @click="copyJoinLink(); copied = true" style="border: none;">
+                    Copy
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p class="help has-text-success" x-show="copied" x-cloak>Link copied to clipboard!</p>
+          </div>
+          <script>
+            function copyJoinLink() {
+              const joinLink = document.getElementById("joinLink");
+              joinLink.select();
+              navigator.clipboard.writeText(joinLink.value);
+            }
+          </script>
+          <div class="block">
+            <form method="POST" action="{% url 'puzzlehunt:team_leave' team.pk %}" style="display: inline;">
+              {% csrf_token %}
+              <button type="submit" class="button is-danger" onclick="return confirm('Are you sure you want to leave the team?');">
+                Leave Team
+              </button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <div class="column content has-text-centered">
+          <p class="is-size-4">You are not currently registered to a team for the current puzzle hunt.</p>
+          <p class="is-size-4">You can join a team <a href="{% url 'puzzlehunt:team_create' %}">here!</a></p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

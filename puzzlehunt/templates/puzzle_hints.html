@@ -1,0 +1,72 @@
+{% extends 'hunt_base.html' %}
+
+{% block title_meta_elements %}
+  {% with title=puzzle.name|add:" - Hints" %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
+
+{% block content_wrapper %}
+<div id="huntContent" class="bulma" hx-ext="sse" sse-connect="{% url 'puzzlehunt:team_events' team.pk %}">
+  <section class="section">
+    <div class="container">
+      <div class="columns is-centered is-multiline">
+        <div id="content-box" class="column has-background-light is-12-tablet is-11-desktop is-10-widescreen">
+          <div class="has-text-centered mb-2">
+            <h1 class="is-size-3">Hints for: {{puzzle.name}}</h1>
+          </div>
+          <h2 class="mb-2 is-size-4"><b>Submit a new hint request</b></h2>
+          <div class="box">
+            {# TODO: Disable this form if the team has no hints #}
+            <form id="hint-submit-form"
+                  method="post"
+                  action="{% url 'puzzlehunt:puzzle_hints_submit' puzzle.pk %}"
+                  x-data="{ hintText: '' }"
+                  {# TODO: This could be better as a htmx submit with hx-confirm and alpine to clear the box #}
+            >
+              {% csrf_token %}
+              <div class="field">
+                <div class="control">
+                  <textarea id="hint-request-text"
+                            name="hintText"
+                            class="textarea"
+                            placeholder="Hint Request"
+                            maxlength="800"
+                            x-model="hintText"
+                  ></textarea>
+                  <small>Max length 800 characters.</small>
+                </div>
+              </div>
+              <div class="field is-grouped is-grouped-centered">
+                <div class="control">
+                  <button id="hint-submit-button"
+                          x-bind:disabled="hintText==''"
+                          class="button is-primary"
+                          onclick="return confirm('Are you sure you would like to submit this hint request?')"
+                  >
+                    Submit
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+          <h2 class="mb-2 is-size-4"><b>Previous Hint requests</b></h2>
+          {# The rows of hints, taken care of by the _hint_row partial template #}
+          {# This div will refresh its contents whenever there are new hints available via SSE #}
+          <div id="hint-rows-outer"
+               hx-trigger="sse:hints"
+               hx-get="{{ request.get_full_path }}"
+               hx-select="#hint-rows-outer"
+               hx-swap="outerHTML swap:200ms"
+               hx-disinherit="*">
+            {% for hint in hints %}
+              {% include "partials/_hint_row.html" with staff=False %}
+            {% empty %}
+              You have not submitted any hint requests for this puzzle yet.
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+

@@ -1,0 +1,40 @@
+<div id=event-{{ item.pk }} class="box" :class="compact ? 'p-1 mb-1' : 'p-2 mb-2'" style="border-left: 10px solid {{ item.color }};">
+  <div class="media" :class="!compact && 'mb-1'">
+    <div class="media-left">
+      <span class="icon" style="color: {{ item.color }};">
+        <i class="fa fa-lg {{ item.icon }}"></i>
+      </span>
+    </div>
+    <div class="media-content">
+      <div class="content">
+        <div class="level">
+          <div class="level-left" style="max-width: calc(100% - 130px);">
+            <p class="mono is-size-6 mb-0">{{ item.web_text|safe }}</p>
+          </div>
+          <div class="level-right">
+            <p class="is-size-7 has-text-grey mb-1 mr-1">{{ item.timestamp }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tags are-small" x-show="!compact">
+    <span class="tag is-light">{{ item.get_type_display }}</span>
+    <span class="tag is-light"
+          @click="document.getElementById('team-puzzle-select').BulmaTagsInput().add(
+            {'text': '{{ item.team.name }}', 'value': 't:{{ item.team.pk }}'}
+          )"
+    >
+      Team: {{ item.team.name }}
+    </span>
+    {% if item.puzzle %}
+      <span class="tag is-light"
+            @click="document.getElementById('team-puzzle-select').BulmaTagsInput().add(
+              {'text': '{{ item.puzzle.name }}', 'value': 'p:{{ item.puzzle.pk }}'}
+            )"
+      >
+        Puzzle: {{ item.puzzle.name }}
+      </span>
+    {% endif %}
+  </div>
+</div>

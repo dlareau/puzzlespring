@@ -1,0 +1,9 @@
+{% include "partial_header.html" %}
+{% load crispy_forms_tags %}
+{% load account %}
+
+<span id="navbar-user-display" hx-swap-oob="true">
+  {% user_display user %}{% if request.user.is_impersonate %} ({{ request.impersonator }}) {% endif %}
+</span>
+
+{% crispy user_form %}

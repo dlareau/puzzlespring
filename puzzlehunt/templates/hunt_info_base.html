@@ -1,0 +1,19 @@
+{% extends "info_base.html" %}
+{% load hunt_tags %}
+{% block title %} Hunt Details {% endblock title %}
+
+{% block content_wrapper %}
+<div class="bulma">
+  <section class="section">
+    <div class="container mt-5">
+      <div class="columns is-centered is-multiline">
+        <div id="content-box" class="column has-background-light is-10-tablet is-9-desktop is-8-widescreen">
+          <div class="content px-4 pb-4">
+            {% block content %}{% endblock content %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,105 @@
+services:
+   # PostgreSQL database
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=puzzlehunt
+      - POSTGRES_USER=puzzlehunt
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+
+  # Redis cache
+  redis:
+    image: redis:latest
+    volumes:
+      - redis_data:/data
+
+  # Main Django application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    pull_policy: never
+    image: django-puzzlehunt
+    volumes:
+      - .:/code  # Enables live modification of django files
+      - media:/media
+      - static:/static
+    environment:
+      - DJANGO_SECRET_KEY
+      - DJANGO_SETTINGS_MODULE=server.settings.env_settings
+      - DATABASE_URL=postgres://puzzlehunt:${DB_PASSWORD}@db/puzzlehunt
+      - DJANGO_ENABLE_DEBUG
+      - DOMAIN
+      - ENABLE_DEBUG_TOOLBAR
+      - SENTRY_DSN
+    depends_on:
+      - db
+      - migrations
+
+  # Container to run migrations
+  migrations:
+    image: django-puzzlehunt
+    pull_policy: never
+    command: >
+      bash -c "python manage.py migrate --no-input"
+    environment:
+      - DJANGO_SECRET_KEY
+      - DJANGO_SETTINGS_MODULE=server.settings.env_settings
+      - DATABASE_URL=postgres://puzzlehunt:${DB_PASSWORD}@db/puzzlehunt
+    depends_on:
+      - db
+
+  # Huey async task queue
+  huey:
+    image: django-puzzlehunt
+    command: python manage.py run_huey --quiet
+    pull_policy: never
+    volumes:
+      - .:/code
+      - static:/static
+      - media:/media
+    environment:
+      - DJANGO_SECRET_KEY
+      - DJANGO_SETTINGS_MODULE=server.settings.env_settings
+      - DATABASE_URL=postgres://puzzlehunt:${DB_PASSWORD}@db/puzzlehunt
+      - DJANGO_ENABLE_DEBUG
+      - SENTRY_DSN
+    depends_on:
+      - db
+      - migrations
+
+  # Pushpin async communication service
+  pushpin:
+    image: fanout/pushpin
+    volumes:
+      - ./pushpin:/etc/pushpin
+    depends_on:
+      - app
+
+  # Caddy reverse proxy
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - static:/static
+      - media:/media
+    environment:
+      - DOMAIN
+    depends_on:
+      - app
+      - pushpin
+
+volumes:
+  postgres_data:
+  static:
+  media:
+  redis_data:
+  caddy_data:
+  caddy_config:
