@@ -1,0 +1,25 @@
+title: PuzzleSpring Website
+description: Documentation and guides for the PuzzleSpring project
+theme: just-the-docs
+url: https://dlareau.github.io/puzzlespring
+
+aux_links:
+  "View on GitHub":
+    - "https://github.com/dlareau/puzzlespring"
+
+# Enable search
+search_enabled: true
+
+# Organize collections
+collections:
+  docs:
+    permalink: "/:collection/:path/"
+    output: true
+
+# Default layout for documentation pages
+defaults:
+  - scope:
+      path: ""
+      type: docs
+    values:
+      layout: default 
