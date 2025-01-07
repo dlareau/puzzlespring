@@ -74,7 +74,7 @@ services:
   pushpin:
     image: fanout/pushpin
     volumes:
-      - ./pushpin:/etc/pushpin
+      - ./config/pushpin:/etc/pushpin
     depends_on:
       - app
 

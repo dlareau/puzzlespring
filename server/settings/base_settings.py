@@ -24,7 +24,7 @@ ROOT_URLCONF = 'server.urls'
 WSGI_APPLICATION = 'server.wsgi.application'
 SITE_ID = 1  # For flatpages
 SITE_TITLE = "Puzzle Hunt CMU"
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 
 # ====================
