@@ -6,55 +6,37 @@ This repository contains both the landing page and documentation for the PuzzleS
 
 ```
 website/
-├── docs/ # Jekyll documentation site
-│ ├── config.yml
-│ ├── index.md
-│ └── ...
-└── public/ # Landing page and static assets
-├── index.html
-├── css/
-└── images/
+├── docs/           # Jekyll documentation site
+│   ├── _config.yml
+│   ├── index.md
+│   └── ...
+└── public/         # Landing page and static assets
+    ├── index.html
+    ├── css/
+    └── images/
 ```
 
 ## Local Development
 
-### Documentation Site
-
-To preview the full site locally (including both landing page and documentation):
+To preview the full site locally:
 
 1. Install Ruby and Bundler
-2. Navigate to the docs directory:
+2. Navigate to the website directory:
    ```bash
-   cd website/docs
+   cd website
    ```
 3. Install dependencies:
    ```bash
-   bundle install
+   cd docs && bundle install && cd ..
    ```
-4. Create site directory and copy landing page:
+4. Run the development server:
    ```bash
-   mkdir -p _site && cp -r ../public/* _site/
+   chmod +x serve.sh  # First time only
+   ./serve.sh
    ```
-5. Start the Jekyll server:
-   ```bash
-   bundle exec jekyll serve --baseurl /docs --destination _site/docs
-   ```
-6. Visit `http://localhost:4000` for the landing page
-7. Visit `http://localhost:4000/docs` for the documentation
+5. Visit `http://localhost:4000`
 
-### Landing Page Only
-
-To preview just the landing page:
-
-1. Navigate to the public directory:
-   ```bash
-   cd website/public
-   ```
-2. Start a local server (e.g., using Python):
-   ```bash
-   python -m http.server 4000
-   ```
-3. Visit `http://localhost:4000`
+The site will automatically rebuild when you make changes to the documentation. Note that you'll need to restart the script if you make changes to the landing page files.
 
 ## Deployment
 
