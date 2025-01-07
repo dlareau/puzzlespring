@@ -1,11 +1,11 @@
-name: Deploy Jekyll Documentation
+name: Deploy Website and Documentation
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'docs/**'
+      - 'website/**'
   workflow_dispatch:
 
 permissions:
@@ -29,21 +29,27 @@ jobs:
         with:
           ruby-version: '3.2'
           bundler-cache: true
-          working-directory: docs
+          working-directory: website/docs
       
       - name: Setup Pages
         uses: actions/configure-pages@v5
       
-      - name: Build site
+      - name: Create site directory
+        run: mkdir -p website/docs/_site
+
+      - name: Copy landing page
+        run: cp -r website/public/* website/docs/_site/
+      
+      - name: Build documentation
         run: |
-          cd docs
+          cd website/docs
           bundle install
-          bundle exec jekyll build
+          JEKYLL_ENV=production bundle exec jekyll build --baseurl /docs --destination _site/docs
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/_site
+          path: website/docs/_site
 
   deploy:
     needs: build

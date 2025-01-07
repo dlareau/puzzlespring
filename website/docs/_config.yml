@@ -1,7 +1,10 @@
-title: PuzzleSpring Website
+title: PuzzleSpring
 description: Documentation and guides for the PuzzleSpring project
 theme: just-the-docs
-url: https://dlareau.github.io/puzzlespring
+
+# For local development and production
+url: ""
+baseurl: "/docs"  # Both local and production use /docs
 
 aux_links:
   "View on GitHub":
@@ -10,16 +13,9 @@ aux_links:
 # Enable search
 search_enabled: true
 
-# Organize collections
-collections:
-  docs:
-    permalink: "/:collection/:path/"
-    output: true
-
 # Default layout for documentation pages
 defaults:
   - scope:
       path: ""
-      type: docs
     values:
       layout: default 
