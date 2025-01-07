@@ -3,7 +3,8 @@
 # Initial setup
 rm -rf docs/_site
 mkdir -p docs/_site
-cp -r public/* docs/_site/
+ln -s ../../public/images docs/_site/images
+ln -s ../../public/index.html docs/_site/index.html
 
 # Change to docs directory for Jekyll commands
 cd docs

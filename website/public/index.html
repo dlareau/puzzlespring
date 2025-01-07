@@ -1,25 +1,176 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>PuzzleSpring - Modern Puzzle Hunt Platform</title>
+    <title>PuzzleSpring</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css">
+
+    <style>
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        .hero-logo {
+            max-width: 600px;
+            width: 100%;
+            height: auto;
+            margin: 2rem auto;
+        }
+        body {
+            background-color: #fafafa;
+        }
+        .dark-section {
+            color: whitesmoke;
+        }
+        .dark-section .title,
+        .dark-section .subtitle,
+        .dark-section strong {
+            color: white;
+        }
+        .dark-section .box {
+            background-color: #2b2b2b;
+            color: whitesmoke;
+        }
+        .dark-section .box .title {
+            color: white;
+        }
+        .dark-section .box .icon.feature-icon {
+            color: #3273dc;
+        }
+        .dark-section .content a {
+            color: #3273dc;
+        }
+        .dark-section .content a:hover {
+            color: #4a9eff;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <nav class="navbar is-light">
-        <div class="navbar-brand">
-            <a class="navbar-item" href="/">
-                <strong>PuzzleSpring</strong>
-            </a>
-        </div>
-        <div class="navbar-menu">
-            <div class="navbar-end">
-                <a href="/docs" class="navbar-item">Documentation</a>
-                <a href="https://github.com/dlareau/puzzlespring" class="navbar-item">GitHub</a>
+    <section class="hero is-small has-background-white-ter">
+        <div class="hero-body">
+            <div class="container has-text-centered">
+                <img src="/images/puzzlespring-transparent.png" alt="PuzzleSpring Logo" class="hero-logo">
+                <h2 class="subtitle is-3">
+                    Build and Host Custom Puzzlehunts with Ease
+                </h2>
             </div>
         </div>
-    </nav>
+    </section>
 
-    <!-- Rest of your landing page content -->
+    <section class="section has-background-grey-darker dark-section">
+        <div class="container">
+            <div class="columns is-centered">
+                <div class="column is-8">
+                    <div class="content has-text-centered">
+                        <p class="is-size-4">
+                            PuzzleSpring is a Django-based puzzlehunt hosting platform designed to be easy to set up
+                            and customize while maintaining powerful features for both hunters and hunt operators.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section has-background-black-ter dark-section">
+        <div class="container">
+            <div class="columns is-multiline">
+                <div class="column is-4">
+                    <div class="box has-text-centered height-100">
+                        <span class="icon feature-icon has-text-primary">
+                            <i class="fas fa-puzzle-piece"></i>
+                        </span>
+                        <h3 class="title is-4">Flexible Puzzle Structure</h3>
+                        <p>Support for linear, nonlinear, and metapuzzle structures with customizable unlocking conditions.</p>
+                    </div>
+                </div>
+                <div class="column is-4">
+                    <div class="box has-text-centered height-100">
+                        <span class="icon feature-icon has-text-primary">
+                            <i class="fas fa-users"></i>
+                        </span>
+                        <h3 class="title is-4">Team Management</h3>
+                        <p>Comprehensive team registration and management system with size limits and waiting lists.</p>
+                    </div>
+                </div>
+                <div class="column is-4">
+                    <div class="box has-text-centered height-100">
+                        <span class="icon feature-icon has-text-primary">
+                            <i class="fas fa-clock"></i>
+                        </span>
+                        <h3 class="title is-4">Hunt Scheduling</h3>
+                        <p>Schedule hunts in advance with automatic starting and stopping functionality.</p>
+                    </div>
+                </div>
+                <div class="column is-4">
+                    <div class="box has-text-centered height-100">
+                        <span class="icon feature-icon has-text-primary">
+                            <i class="fas fa-comments"></i>
+                        </span>
+                        <h3 class="title is-4">Hint System</h3>
+                        <p>Built-in hint request and response system with customizable limitations.</p>
+                    </div>
+                </div>
+                <div class="column is-4">
+                    <div class="box has-text-centered height-100">
+                        <span class="icon feature-icon has-text-primary">
+                            <i class="fas fa-chart-line"></i>
+                        </span>
+                        <h3 class="title is-4">Statistics & Analytics</h3>
+                        <p>Comprehensive statistics tracking and visualization for teams and puzzles.</p>
+                    </div>
+                </div>
+                <div class="column is-4">
+                    <div class="box has-text-centered height-100">
+                        <span class="icon feature-icon has-text-primary">
+                            <i class="fas fa-cogs"></i>
+                        </span>
+                        <h3 class="title is-4">Easy Customization</h3>
+                        <p>Highly customizable with straightforward Django templates and styling options.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section has-background-grey-darker dark-section">
+        <div class="container">
+            <div class="columns is-centered">
+                <div class="column is-8 has-text-centered">
+                    <h2 class="title is-2">Get Started</h2>
+                    <div class="buttons is-centered">
+                        <a href="/docs" class="button is-primary is-large">
+                            <span class="icon">
+                                <i class="fas fa-book"></i>
+                            </span>
+                            <span>Documentation</span>
+                        </a>
+                        <a href="/docs/getting-started/installation" class="button is-info is-large">
+                            <span class="icon">
+                                <i class="fas fa-download"></i>
+                            </span>
+                            <span>Installation Guide</span>
+                        </a>
+                        <a href="https://github.com/dlareau/puzzlespring" class="button is-link is-large">
+                            <span class="icon">
+                                <i class="fab fa-github"></i>
+                            </span>
+                            <span>View on GitHub</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer has-background-black-ter dark-section">
+        <div class="content has-text-centered">
+            <p>
+                <strong>PuzzleSpring</strong> by Dillon Lareau. The source code is licensed under the 
+                <a href="https://opensource.org/licenses/MIT">MIT License</a>.
+            </p>
+        </div>
+    </footer>
 </body>
 </html> 

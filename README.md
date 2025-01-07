@@ -1,6 +1,6 @@
 # PuzzleSpring
 
-PuzzleSpring is a flexible, modern platform for hosting and running puzzle hunts. Originally developed for CMU's Puzzle Hunt organization, it has evolved into a standalone platform that can support various styles of puzzle-based competitions.
+PuzzleSpring is a Django-based puzzlehunt hosting platform designed to be easy to set up and customize while maintaining powerful features for both hunters and hunt operators.
 
 ## Features
 
