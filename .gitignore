@@ -22,7 +22,7 @@ debug.log
 /docker/volumes/shib-certs/
 /docker/volumes/redis_data/
 /docker/volumes/logs/
-*.env
+.env
 /website/docs/_site/
 
 #temp
