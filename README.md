@@ -1,5 +1,10 @@
 # PuzzleSpring
 
+<p align="center">
+  <img src="website/public/images/puzzlespring-line.jpg" alt="PuzzleSpring" width="600">
+</p>
+
+
 PuzzleSpring is a Django-based puzzlehunt hosting platform designed to be easy to set up and customize while maintaining powerful features for both hunters and hunt operators.
 
 ## Features
