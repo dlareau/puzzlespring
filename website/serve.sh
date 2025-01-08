@@ -5,6 +5,7 @@ rm -rf docs/_site
 mkdir -p docs/_site
 ln -s ../../public/images docs/_site/images
 ln -s ../../public/index.html docs/_site/index.html
+ln -s ../../public/favicon.ico docs/_site/favicon.ico
 
 # Change to docs directory for Jekyll commands
 cd docs
