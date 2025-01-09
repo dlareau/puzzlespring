@@ -133,8 +133,9 @@ def puzzle_submit(request, pk):
         return HttpResponse(render_crispy_form(form))
 
     user_answer = form.cleaned_data['answer']
+    user = request.user if request.user.is_authenticated else None
     s = Submission(submission_text=user_answer, team=team, puzzle=puzzle,
-                   submission_time=timezone.now(), user=request.user)
+                   submission_time=timezone.now(), user=user)
     s.respond()
     if puzzle.hunt.is_public:
         response = render(request, "partials/_puzzle_public_response.html", context={'submission': s})
