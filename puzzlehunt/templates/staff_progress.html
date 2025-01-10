@@ -98,6 +98,43 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      const HEADER_METRICS = [
+        { row: 1, label: '# Hints Used', accessor: d => d.num_hints || 0 },
+        { row: 2, label: '# Solves', accessor: d => d.solve_time ? 1 : 0 },
+        { row: 3, label: '# Unlocks', accessor: d => d.unlock_time ? 1 : 0 },
+        { row: 4, label: '# Submissions', accessor: d => d.num_submissions || 0 }
+      ];
+
+      const formatDate = (date, type = 'time') => {
+        if (!date) return '';
+        const d = new Date(date);
+        return type === 'time' 
+          ? d.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false})
+          : d.toLocaleDateString('en-US', {month: 'numeric', day: 'numeric'});
+      };
+
+      const getBackgroundColor = (data) => {
+        if (data.solve_time) return '#aaffaa';
+        
+        const referenceTime = data.last_submission || data.unlock_time;
+        if (!referenceTime) return '';
+
+        const timeSince = (new Date() - new Date(referenceTime)) / (1000 * 60 * 60);
+        if (timeSince > 5) return '#ff9999';
+        if (timeSince > 3) return '#ffbbaa';
+        if (timeSince > 1) return '#ffddaa';
+        return '#ffffaa';
+      };
+
+      const getBorderStyle = (numHints) => {
+        const borders = {
+          1: '#ffdb26',
+          2: '#db5100',
+          3: '#000000'
+        };
+        return numHints >= 1 ? `border: 4px solid ${borders[Math.min(numHints, 3)]};` : 'padding: 4px;';
+      };
+
       const tableKey = document.getElementById('tableKey');
       const keyHeight = tableKey.offsetHeight;
 
@@ -174,50 +211,20 @@
                 
                 // For sorting, use solve_time or last_submission
                 if (type === 'sort') {
-                  if (data.solve_time) return data.solve_time;
-                  if (data.last_submission) return data.last_submission;
-                  return '9999-12-31T23:59:59';
+                  return data.solve_time || data.last_submission || '9999-12-31T23:59:59';
                 }
                 
                 // Calculate background color and border style
-                let bgColor = '';
-                let borderStyle = 'padding: 4px;'; // Default padding to match border width
-                
-                if (data.solve_time) {
-                  bgColor = 'background-color: #aaffaa;';
-                } else {
-                  const referenceTime = data.last_submission || data.unlock_time;
-                  if (referenceTime) {
-                    const timeSince = (new Date() - new Date(referenceTime)) / (1000 * 60 * 60); // hours
-                    if (timeSince > 5) {
-                      bgColor = 'background-color: #ff9999;';
-                    } else if (timeSince > 3) {
-                      bgColor = 'background-color: #ffbbaa;';
-                    } else if (timeSince > 1) {
-                      bgColor = 'background-color: #ffddaa;';
-                    } else {
-                      bgColor = 'background-color: #ffffaa;';
-                    }
-                  }
-                }
-                
-                // Add border based on number of hints
-                if (data.num_hints === 1) {
-                  borderStyle = 'border: 4px solid #ffdb26;';
-                } else if (data.num_hints === 2) {
-                  borderStyle = 'border: 4px solid #db5100;';
-                } else if (data.num_hints >= 3) {
-                  borderStyle = 'border: 4px solid #000000;';
-                }
+                const bgColor = `background-color: ${getBackgroundColor(data)};`;
+                const borderStyle = getBorderStyle(data.num_hints);
                 
                 // For display, use the existing format with background color and border
                 let content = `<div class="puzzle-cell-container" style="${bgColor} ${borderStyle}">`;
-                if (data.solve_time) {
-                  content += `<span class="puzzle-cell"><b>T:</b> <span class="mono">${new Date(data.solve_time).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false})}</span></span><br>`;
-                  content += `<span class="puzzle-cell puzzle-cell-indent"><span class="mono">${new Date(data.solve_time).toLocaleDateString('en-US', {month: 'numeric', day: 'numeric'})}</span></span>`;
-                } else if (data.last_submission) {
-                  content += `<span class="puzzle-cell"><b>T:</b> <span class="mono">${new Date(data.last_submission).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false})}</span></span><br>`;
-                  content += `<span class="puzzle-cell puzzle-cell-indent"><span class="mono">${new Date(data.last_submission).toLocaleDateString('en-US', {month: 'numeric', day: 'numeric'})}</span></span>`;
+
+                const displayTime = data.solve_time || data.last_submission;
+                if (displayTime) {
+                  content += `<span class="puzzle-cell"><b>T:</b> <span class="mono">${formatDate(displayTime, 'time')}</span></span><br>`;
+                  content += `<span class="puzzle-cell puzzle-cell-indent"><span class="mono">${formatDate(displayTime, 'date')}</span></span>`;
                 }
                 if (data.unlock_time) {
                   content += `<br><span class="puzzle-cell"><b>S:</b> <span class="mono">${String(data.num_submissions).padStart(2, ' ')}</span></span>`;
@@ -239,62 +246,32 @@
         },
         headerCallback: function(thead, data, start, end, display) {
           const api = new $.fn.dataTable.Api(this);
-          updateHeaders(api);
+          const startCol = 2 + {{ info_columns|length }};
+          const puzzleColumns = api.columns().indexes().toArray().slice(startCol);
+          const headerRows = $(api.table().header()).find('tr');
+          
+          HEADER_METRICS.forEach(({row, label}, index) => {
+            $(headerRows[row]).find('th:first').html(label);
+            $(headerRows[row]).find('th').each((i, el) => {
+              if (i > 0 && i < startCol) $(el).html('');
+            });
+          });
+          
+          // Process each puzzle column
+          puzzleColumns.forEach((colIdx, i) => {
+            const columnData = api.column(colIdx).data().toArray();
+            const actualColIdx = i + startCol;
+
+            const metrics = HEADER_METRICS.map(({accessor}) => 
+              columnData.reduce((sum, d) => sum + (d ? accessor(d) : 0), 0)
+            );
+
+            metrics.forEach((value, rowIndex) => {
+              $(headerRows[rowIndex + 1]).find(`th:eq(${actualColIdx})`).html(value);
+            });
+          });
         },
       });
-
-      // Helper function to update all headers
-      function updateHeaders(api) {
-        const startCol = 2 + {{ info_columns|length }};
-        const puzzleColumns = api.columns().indexes().toArray().slice(startCol);
-
-        // Get all header rows
-        const headerRows = $(api.table().header()).find('tr');
-        
-        // Set the metric names in the first column
-        $(headerRows[1]).find('th:first').html('# Hints Used');
-        $(headerRows[2]).find('th:first').html('# Solves');
-        $(headerRows[3]).find('th:first').html('# Unlocks');
-        $(headerRows[4]).find('th:first').html('# Submissions');
-        
-        // Clear the repeated headers in rows 2-5
-        headerRows.slice(1, 5).each(function() {
-          $(this).find('th').each(function(i) {
-            if (i > 0 && i < startCol) {  // Skip the first column (i > 0)
-              $(this).html('');
-            }
-          });
-        });
-        
-        // Process each puzzle column
-        puzzleColumns.forEach((colIdx, i) => {
-          const columnData = api.column(colIdx).data().toArray();
-          const actualColIdx = i + startCol;
-          
-          try {
-            // Calculate summaries for this puzzle column
-            let hints = 0, solves = 0, unlocks = 0, submissions = 0;
-            
-            columnData.forEach(d => {
-              if (d) {
-                hints += (d.num_hints || 0);
-                solves += (d.solve_time ? 1 : 0);
-                unlocks += (d.unlock_time ? 1 : 0);
-                submissions += (d.num_submissions || 0);
-              }
-            });
-            
-            // Update each summary row with its respective value
-            $(headerRows[1]).find(`th:eq(${actualColIdx})`).html(hints);
-            $(headerRows[2]).find(`th:eq(${actualColIdx})`).html(solves);
-            $(headerRows[3]).find(`th:eq(${actualColIdx})`).html(unlocks);
-            $(headerRows[4]).find(`th:eq(${actualColIdx})`).html(submissions);
-            
-          } catch (error) {
-            console.error('Error processing column:', colIdx, error);
-          }
-        });
-      }
     });
   </script>
 {% endblock %}
