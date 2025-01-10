@@ -128,14 +128,14 @@ html {
 }
 
 .puzzle-cell-container {
-  height: calc(100% - 8px);
+  height: 100%;
 }
 
-.dataTables_wrapper .dataTable tr {
+#progressTable tbody tr {
   height: 1px;
 }
 
-.dataTables_wrapper .dataTable td:has(.puzzle-cell-container) {
+#progressTable td:has(.puzzle-cell-container) {
   padding: 0;
   height: inherit;
 }

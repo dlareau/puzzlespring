@@ -52,6 +52,46 @@
             </th>
           {% endfor %}
         </tr>
+        <tr>
+          <th># Hints Used</th>
+          <th>Rank</th>
+          {% for column in info_columns %}
+            <th>{{ column.display_name }}</th>
+          {% endfor %}
+          {% for puzzle in puzzles %}
+            <th class="summary-cell"></th>
+          {% endfor %}
+        </tr>
+        <tr>
+          <th># Solves</th>
+          <th>Rank</th>
+          {% for column in info_columns %}
+            <th>{{ column.display_name }}</th>
+          {% endfor %}
+          {% for puzzle in puzzles %}
+            <th class="summary-cell"></th>
+          {% endfor %}
+        </tr>
+        <tr>
+          <th># Unlocks</th>
+          <th>Rank</th>
+          {% for column in info_columns %}
+            <th>{{ column.display_name }}</th>
+          {% endfor %}
+          {% for puzzle in puzzles %}
+            <th class="summary-cell"></th>
+          {% endfor %}
+        </tr>
+        <tr>
+          <th># Submissions</th>
+          <th>Rank</th>
+          {% for column in info_columns %}
+            <th>{{ column.display_name }}</th>
+          {% endfor %}
+          {% for puzzle in puzzles %}
+            <th class="summary-cell"></th>
+          {% endfor %}
+        </tr>
       </thead>
     </table>
   </div>
@@ -64,18 +104,18 @@
       const table = new DataTable('#progressTable', {
         ajax: {
           url: '{% url "puzzlehunt:staff:progress_data" hunt.pk %}',
-          dataSrc: 'data'
+          dataSrc: 'data',
         },
         fixedHeader: {
           header: true,
-          headerOffset: keyHeight + 1,
+          headerOffset: keyHeight,
           fixedPosition: false
         },
         fixedColumns: {
           left: 1
         },
         scrollX: true,
-        scrollY: `calc(100vh - ${keyHeight + 140}px)`,
+        scrollY: `calc(100vh - ${keyHeight + 270}px)`,
         scrollCollapse: true,
         order: [[1, 'asc']],
         columns: [
@@ -197,10 +237,64 @@
           bottomStart: null,
           bottomEnd: null,
         },
-        initComplete: function(settings, json) {
-          this.columns.adjust();
-        }
+        headerCallback: function(thead, data, start, end, display) {
+          const api = new $.fn.dataTable.Api(this);
+          updateHeaders(api);
+        },
       });
+
+      // Helper function to update all headers
+      function updateHeaders(api) {
+        const startCol = 2 + {{ info_columns|length }};
+        const puzzleColumns = api.columns().indexes().toArray().slice(startCol);
+
+        // Get all header rows
+        const headerRows = $(api.table().header()).find('tr');
+        
+        // Set the metric names in the first column
+        $(headerRows[1]).find('th:first').html('# Hints Used');
+        $(headerRows[2]).find('th:first').html('# Solves');
+        $(headerRows[3]).find('th:first').html('# Unlocks');
+        $(headerRows[4]).find('th:first').html('# Submissions');
+        
+        // Clear the repeated headers in rows 2-5
+        headerRows.slice(1, 5).each(function() {
+          $(this).find('th').each(function(i) {
+            if (i > 0 && i < startCol) {  // Skip the first column (i > 0)
+              $(this).html('');
+            }
+          });
+        });
+        
+        // Process each puzzle column
+        puzzleColumns.forEach((colIdx, i) => {
+          const columnData = api.column(colIdx).data().toArray();
+          const actualColIdx = i + startCol;
+          
+          try {
+            // Calculate summaries for this puzzle column
+            let hints = 0, solves = 0, unlocks = 0, submissions = 0;
+            
+            columnData.forEach(d => {
+              if (d) {
+                hints += (d.num_hints || 0);
+                solves += (d.solve_time ? 1 : 0);
+                unlocks += (d.unlock_time ? 1 : 0);
+                submissions += (d.num_submissions || 0);
+              }
+            });
+            
+            // Update each summary row with its respective value
+            $(headerRows[1]).find(`th:eq(${actualColIdx})`).html(hints);
+            $(headerRows[2]).find(`th:eq(${actualColIdx})`).html(solves);
+            $(headerRows[3]).find(`th:eq(${actualColIdx})`).html(unlocks);
+            $(headerRows[4]).find(`th:eq(${actualColIdx})`).html(submissions);
+            
+          } catch (error) {
+            console.error('Error processing column:', colIdx, error);
+          }
+        });
+      }
     });
   </script>
 {% endblock %}
