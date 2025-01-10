@@ -146,15 +146,18 @@
         fixedHeader: {
           header: true,
           headerOffset: keyHeight,
-          fixedPosition: false
         },
         fixedColumns: {
           left: 1
         },
         scrollX: true,
-        scrollY: `calc(100vh - ${keyHeight + 270}px)`,
+        scrollY: `calc(100vh - ${keyHeight + {% if page_size %}300{% else %}270{% endif %}}px)`,
         scrollCollapse: true,
         order: [[1, 'asc']],
+        paging: {% if page_size %}true{% else %}false{% endif %},
+        pageLength: {{ page_size|default:25 }},
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        dom: {% if page_size %}'rt<"bottom"ip><"clear">'{% else %}'rt'{% endif %},
         columns: [
           { 
             data: 'team.name',
@@ -235,7 +238,6 @@
             },
           {% endfor %}
         ],
-        paging: false,
         searching: false,
         info: false,
         layout: {

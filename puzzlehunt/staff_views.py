@@ -72,9 +72,21 @@ def progress(request, hunt):
     info_columns = hunt.teamrankingrule_set.order_by("rule_order").all()
     puzzles = hunt.puzzle_set.all()
     teams = hunt.team_set.all()
+    
+    page_size = request.GET.get("page_size")
+    try:
+        page_size = int(page_size) if page_size else None
+    except ValueError:
+        page_size = None
 
-    context = {'hunt': hunt, 'teams': teams, 'puzzles': puzzles, 'info_columns': info_columns}
-    return render(request, "staff_progress.html", context )
+    context = {
+        'hunt': hunt,
+        'teams': teams,
+        'puzzles': puzzles,
+        'info_columns': info_columns,
+        'page_size': page_size
+    }
+    return render(request, "staff_progress.html", context)
 
 
 
