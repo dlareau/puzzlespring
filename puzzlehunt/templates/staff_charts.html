@@ -1,4 +1,188 @@
 {% extends 'staff_hunt_base.html' %}
 
+{% block extra_head %}
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
+{% endblock %}
+
 {% block staff_content %}
+  <p>These charts will not automatically refresh</p>
+  <div id="chart_solves"></div>
+  <div id="chart_submissions"></div>
+  <div id="chart_hints"></div>
+  <div id="chart_submissions_by_time"></div>
+  <div id="chart_solves_by_time"></div>
+
+
+<h4 class="title is-4">Earliest solves</h4>
+<table class="table is-narrow is-hoverable">
+    <thead>
+        <tr>
+            <th>Puzzle</th>
+            <th>First Team</th>
+            <th>First Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in chart_rows %}
+        <tr>
+            <td>{{ row.puzzle.name }}</td>
+            <td>{{ row.team.name }}</td>
+            <td>{{ row.solve_time|time:"h:i a" }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+  <script>
+    google.charts.load('current', {packages: ['corechart', 'bar']});
+    google.charts.setOnLoadCallback(drawStacked);
+
+    function drawStacked() {
+        var solves_data = new google.visualization.DataTable();
+        solves_data.addColumn('string', 'Puzzle Name');
+        solves_data.addColumn('number', 'Solved');
+        solves_data.addColumn('number', 'Unlocked');
+        solves_data.addColumn('number', 'Locked');
+    
+        solves_data.addRows([
+        {% for point in chart_solves_data %}
+            ["{{point.name}}", {{point.solved}}, {{point.unlocked}}, {{point.locked}}],
+        {% endfor %}
+        ]);
+    
+        var options_solves = {
+        title: 'Puzzle solves',
+        isStacked: true,
+        height: 400,
+        width: 800,
+        chartArea: {
+            top: 20,
+            left: 100,
+            height: '50%',
+            width: 500
+        },
+        hAxis: {slantedText:true, slantedTextAngle:60 },
+        };
+    
+        var solves_chart = new google.visualization.ColumnChart(document.getElementById('chart_solves'));
+        solves_chart.draw(solves_data, options_solves);
+    
+    
+        // Chart 2
+        var submissions_data = new google.visualization.DataTable();
+        submissions_data.addColumn('string', 'Puzzle Name');
+        submissions_data.addColumn('number', 'Correct submissions');
+        submissions_data.addColumn('number', 'Incorrect submissions');
+    
+        submissions_data.addRows([
+        {% for point in chart_submissions_data %}
+            ["{{point.name}}", {{point.correct}}, -{{point.incorrect}}],
+        {% endfor %}
+        ]);
+    
+        var options_submissions = {
+        title: 'Puzzle submissions',
+        isStacked: true,
+        height: 500,
+        width: 800,
+        chartArea: {
+            top: 20,
+            left: 100,
+            height: 300,
+            width: 500
+        },
+        hAxis: {slantedText:true, slantedTextAngle:60 },
+        };
+    
+        var submissions_chart = new google.visualization.ColumnChart(document.getElementById('chart_submissions'));
+        submissions_chart.draw(submissions_data, options_submissions);
+    
+    
+        var hints_data = new google.visualization.DataTable();
+        hints_data.addColumn('string', 'Puzzle Name');
+        hints_data.addColumn('number', 'Number of Hints');
+    
+        hints_data.addRows([
+        {% for point in chart_hints_data %}
+            ["{{point.name}}", {{point.hints}}],
+        {% endfor %}
+        ]);
+    
+        var options_hints = {
+        title: 'Hints per Puzzle',
+        isStacked: true,
+        height: 400,
+        width: 800,
+        chartArea: {
+            top: 20,
+            left: 100,
+            height: '50%',
+            width: 500
+        },
+        hAxis: {slantedText:true, slantedTextAngle:60 },
+        };
+    
+        var hints_chart = new google.visualization.ColumnChart(document.getElementById('chart_hints'));
+        hints_chart.draw(hints_data, options_hints);
+    
+    
+        // Chart 3
+        var submissions_by_time_data = new google.visualization.DataTable();
+        submissions_by_time_data.addColumn('string', 'Hour');
+        submissions_by_time_data.addColumn('number', '# Submissions');
+    
+        submissions_by_time_data.addRows([
+        {% for point in chart_submissions_by_time_data %}
+            ["{{point.hour}}", {{point.amount}}],
+        {% endfor %}
+        ]);
+    
+        var options_submissions_by_time = {
+        title: 'Submissions over time',
+        isStacked: true,
+        height: 400,
+        width: 800,
+        chartArea: {
+            top: 20,
+            left: 50,
+            height: '50%'
+        },
+        pointSize: 3,
+        hAxis: {slantedText:true, slantedTextAngle:60 },
+        };
+    
+        var submissions_by_time_chart = new google.visualization.LineChart(document.getElementById('chart_submissions_by_time'));
+        submissions_by_time_chart.draw(submissions_by_time_data, options_submissions_by_time);
+    
+    
+        // Chart 4
+        var solves_by_time_data = new google.visualization.DataTable();
+        solves_by_time_data.addColumn('string', 'Hour');
+        solves_by_time_data.addColumn('number', '# Solves');
+    
+        solves_by_time_data.addRows([
+        {% for point in chart_solves_by_time_data %}
+            ["{{point.hour}}", {{point.amount}}],
+        {% endfor %}
+        ]);
+    
+        var options_solves_by_time = {
+        title: 'Solves over time',
+        isStacked: true,
+        height: 400,
+        width: 800,
+        chartArea: {
+            top: 20,
+            left: 50,
+            height: '50%'
+        },
+        pointSize: 3,
+        hAxis: {slantedText:true, slantedTextAngle:60 },
+        };
+    
+        var solves_by_time_chart = new google.visualization.LineChart(document.getElementById('chart_solves_by_time'));
+        solves_by_time_chart.draw(solves_by_time_data, options_solves_by_time);
+    }
+  </script>
+
 {% endblock %}

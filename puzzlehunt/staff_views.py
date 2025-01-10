@@ -14,8 +14,7 @@ from .hunt_views import protected_static
 from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, \
     PuzzleFile, SolutionFile, HuntFile
 from django.shortcuts import render, get_object_or_404
-from django.forms import inlineformset_factory
-from django.db.models import F, Max, Count, Subquery, OuterRef, PositiveIntegerField
+from django.db.models import F, Max, Count, Subquery, OuterRef, PositiveIntegerField, Min
 from django.http import HttpResponse
 from django.utils import timezone
 from django.contrib import messages
@@ -114,7 +113,7 @@ def progress_data(request, hunt):
     puzzles = puzzles.all()
 
     # Fetch teams with their ranking data
-    teams = hunt.team_set
+    teams = hunt.active_teams
     for rule in info_columns:
         teams = rule.annotate_query(teams)
     teams = teams.order_by(*[rule.ordering_parameter for rule in info_columns]).all()
@@ -320,7 +319,103 @@ def get_modal(request, pk):
 
 @staff_member_required
 def charts(request, hunt):
-    return render(request, "staff_charts.html", {'hunt': hunt})
+    puzzles = hunt.puzzle_set.order_by('order_number')
+    teams = hunt.active_teams
+    num_teams = teams.count()
+    num_puzzles = puzzles.count()
+
+    names = puzzles.values_list('name', flat=True)
+
+    # Charts 1, 2 and 7
+    puzzle_info_dict1 = []
+    puzzle_info_dict2 = []
+    puzzle_info_dict7 = []
+
+    solves = puzzles.annotate(solved=Count('puzzlestatus', filter=Q(puzzlestatus__solve_time__isnull=False))).values_list('solved', flat=True)
+    unlocks = puzzles.annotate(unlocked=Count('puzzlestatus', filter=Q(puzzlestatus__unlock_time__isnull=False))).values_list('unlocked', flat=True)
+    subs = puzzles.annotate(subs=Count('submission')).values_list('subs', flat=True)
+    hints = puzzles.annotate(hints=Count('hint')).values_list('hints', flat=True)
+    puzzle_data = zip(names, solves, subs, unlocks, hints)
+    for puzzle in puzzle_data:
+        puzzle_info_dict1.append({
+            "name": puzzle[0],
+            "locked": num_teams - puzzle[3],
+            "unlocked": puzzle[3] - puzzle[1],
+            "solved": puzzle[1]
+        })
+
+        puzzle_info_dict2.append({
+            "name": puzzle[0],
+            "incorrect": puzzle[2] - puzzle[1],
+            "correct": puzzle[1]
+        })
+
+        puzzle_info_dict7.append({
+            "name": puzzle[0],
+            "hints": puzzle[4]
+        })
+
+    # Chart 3
+    submission_hours = []
+    subs = Submission.objects.filter(puzzle__hunt=hunt,
+                                     submission_time__gte=hunt.start_date,
+                                     submission_time__lte=hunt.end_date)
+    subs = subs.values_list('submission_time__year',
+                            'submission_time__month',
+                            'submission_time__day',
+                            'submission_time__hour')
+    subs = subs.annotate(Count("id")).order_by('submission_time__year',
+                                               'submission_time__month',
+                                               'submission_time__day',
+                                               'submission_time__hour')
+    for sub in subs:
+        time_string = "%02d/%02d/%04d - %02d:00" % (sub[1], sub[2], sub[0], sub[3])
+        submission_hours.append({"hour": time_string, "amount": sub[4]})
+
+    # Chart 4
+    solve_hours = []
+    solves = PuzzleStatus.objects.filter(puzzle__hunt=hunt,
+                                       solve_time__isnull=False,
+                                       solve_time__gte=hunt.start_date,
+                                       solve_time__lte=hunt.end_date)
+    solves = solves.values_list('solve_time__year',
+                               'solve_time__month',
+                               'solve_time__day',
+                               'solve_time__hour')
+    solves = solves.annotate(Count("id")).order_by('solve_time__year',
+                                                  'solve_time__month',
+                                                  'solve_time__day',
+                                                  'solve_time__hour')
+    for solve in solves:
+        time_string = "%02d/%02d/%04d - %02d:00" % (solve[1], solve[2], solve[0], solve[3])
+        solve_hours.append({"hour": time_string, "amount": solve[4]})
+
+    # Info Table - Get earliest solve for each puzzle
+    # First, get a subquery of the minimum solve time for each puzzle
+    earliest_solves = PuzzleStatus.objects.filter(
+        puzzle__hunt=hunt,
+        solve_time__isnull=False,
+        team__playtester=False
+    ).values('puzzle').annotate(
+        min_solve_time=Min('solve_time')
+    )
+
+    # Then use that to get the actual PuzzleStatus objects
+    results = PuzzleStatus.objects.filter(
+        puzzle__hunt=hunt,
+        solve_time__isnull=False,
+        team__playtester=False
+    ).filter(
+        solve_time__in=Subquery(
+            earliest_solves.values('min_solve_time')
+        )
+    ).select_related('puzzle', 'team').order_by('puzzle__order_number')
+
+    context = {'chart_solves_data': puzzle_info_dict1, 'chart_submissions_data': puzzle_info_dict2,
+               'chart_submissions_by_time_data': submission_hours, 'chart_solves_by_time_data': solve_hours,
+               'teams': teams, 'num_puzzles': num_puzzles, 'chart_rows': results, 'puzzles': puzzles,
+               'chart_hints_data': puzzle_info_dict7, 'hunt': hunt}
+    return render(request, "staff_charts.html", context)
 
 
 @staff_member_required

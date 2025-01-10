@@ -265,6 +265,14 @@ class Hunt(models.Model):
     def teams(self):
         """ Gets the teams for the hunt sorted alphabetically. """
         return self.team_set.order_by(Lower("name")).all()
+    
+    @property
+    def active_teams(self):
+        """ Gets the teams that are currently playing or have played the hunt """
+        if self.is_public or self.is_open:
+            return self.team_set.exclude(playtester=True)
+        else:
+            return self.team_set.filter(playtester=True)
 
     def __str__(self):
         if self.is_current_hunt:
