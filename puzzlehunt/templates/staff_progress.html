@@ -272,6 +272,11 @@
           });
         },
       });
+
+      // Add auto-refresh every minute
+      setInterval(function() {
+        table.ajax.reload(null, false); // null callback, false = retain page position
+      }, 60000); // 60000 ms = 1 minute
     });
   </script>
 {% endblock %}
