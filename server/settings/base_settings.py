@@ -41,7 +41,12 @@ X_FRAME_OPTIONS = "SAMEORIGIN"
 
 codecs.register(lambda name: codecs.lookup('utf8') if name == 'utf8mb4' else None)
 
-# TODO: Add caches definition and set SESSION_ENGINE
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://redis:6379/1',
+    }
+}
 
 # ====================
 # AUTHENTICATION

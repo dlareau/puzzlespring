@@ -66,70 +66,14 @@ def progress(request, hunt):
     """
     View function to display the progress of teams in the current hunt.
 
-    This view fetches and annotates puzzles and teams with various statistics, such as the number of hints used,
-    solves, unlocks, and submissions. It also creates a table cell each team/puzzle combo, and adds submissions
-    and hints to these cells. The progress data is then rendered in the 'staff_progress.html' template.
-
     Args:
         request (HttpRequest): The HTTP request object.
     """
     info_columns = hunt.teamrankingrule_set.order_by("rule_order").all()
+    puzzles = hunt.puzzle_set.all()
+    teams = hunt.team_set.all()
 
-    puzzle_stats = [
-        ('num_hints', '# Hints Used'),
-        ('num_solves', '# Solves'),
-        ('num_unlocks', '# Unlocks'),
-        ('num_submissions', '# Submissions'),
-    ]
-
-    # Fetch puzzles
-    puzzles = hunt.puzzle_set
-    for stat in puzzle_stats:
-        puzzles = Puzzle.annotate_query(puzzles, stat[0])
-    puzzles = puzzles.all()
-
-    # Fetch teams
-    teams = hunt.team_set
-    for rule in info_columns:
-        teams = rule.annotate_query(teams)
-    teams = teams.order_by(*[rule.ordering_parameter for rule in info_columns]).all()
-
-    # Create status arrays
-    puzzle_pks = [puzzle.pk for puzzle in puzzles]
-    team_pks = [team.pk for team in teams]
-    team_idx_cache = {t.pk: team_pks.index(t.pk) for t in teams}
-    puzzle_idx_cache = {p.pk: puzzle_pks.index(p.pk) for p in puzzles}
-    for team in teams:
-        team.statuses = [None for _ in puzzles]
-
-    # Fill in status arrays
-    statuses = PuzzleStatus.objects.filter(puzzle__hunt=hunt).select_related('puzzle').select_related('team')
-    statuses = statuses.annotate(time_since=timezone.now() - F('unlock_time')).all()
-    for status in statuses:
-        puzzle_idx = puzzle_idx_cache[status.puzzle.pk]
-        team_idx = team_idx_cache[status.team.pk]
-        teams[team_idx].statuses[puzzle_idx] = status
-
-    # Add submissions to status arrays
-    submissions = Submission.objects.filter(team__hunt=hunt).values('team', 'puzzle')
-    submissions = submissions.annotate(last_submission=Max('submission_time')).annotate(num_submissions=Count('*'))
-    for sub in submissions:
-        puzzle_idx = puzzle_idx_cache[sub['puzzle']]
-        team_idx = team_idx_cache[sub['team']]
-        if teams[team_idx].statuses[puzzle_idx] is not None:
-            teams[team_idx].statuses[puzzle_idx].num_submissions = sub['num_submissions']
-            teams[team_idx].statuses[puzzle_idx].last_submission = sub['last_submission']
-
-    # Add hints to status arrays
-    hints = Hint.objects.filter(team__hunt=hunt).values('team', 'puzzle').annotate(num_hints=Count('*'))
-
-    for hint in hints:
-        puzzle_idx = puzzle_idx_cache[hint['puzzle']]
-        team_idx = team_idx_cache[hint['team']]
-        if teams[team_idx].statuses[puzzle_idx] is not None:
-            teams[team_idx].statuses[puzzle_idx].num_hints = hint['num_hints']
-
-    context = {'hunt': hunt, 'teams': teams, 'puzzles': puzzles, 'info_columns': info_columns, 'puzzle_stats': puzzle_stats}
+    context = {'hunt': hunt, 'teams': teams, 'puzzles': puzzles, 'info_columns': info_columns}
     return render(request, "staff_progress.html", context )
 
 
@@ -139,6 +83,8 @@ def progress_data(request, hunt):
     """
     API endpoint to return progress data for DataTables consumption.
     """
+    start_time = timezone.now()
+    
     info_columns = hunt.teamrankingrule_set.order_by("rule_order").all()
 
     # Fetch puzzles with their stats
@@ -221,6 +167,9 @@ def progress_data(request, hunt):
 
         team_data["puzzles"] = puzzle_data
         response_data["data"].append(team_data)
+
+    end_time = timezone.now()
+    response_data["metadata"]["calculation_time_ms"] = (end_time - start_time).total_seconds() * 1000
 
     return JsonResponse(response_data)
 
