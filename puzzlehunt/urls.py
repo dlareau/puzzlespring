@@ -91,6 +91,7 @@ urlpatterns = [
         path('hunt/<hunt:hunt>/hunts/', staff_views.view_hunts, name='hunts'),
         path('hunt/<hunt:hunt>/feed/', staff_views.feed, name='feed'),
         path('hunt/<hunt:hunt>/progress/', staff_views.progress, name='progress'),
+        path('hunt/<hunt:hunt>/progress_data/', staff_views.progress_data, name='progress_data'),
         path('hunt/<hunt:hunt>/hints/', staff_views.hints_view, name='hints_view'),
         path('hunt/<hunt:hunt>/charts/', staff_views.charts, name='charts'),
         path('hunt/<hunt:hunt>/template/', staff_views.hunt_template, name='hunt_template'),

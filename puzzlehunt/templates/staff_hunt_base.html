@@ -63,7 +63,7 @@
                   {% set_all_hunts %}
                   {% for hunt in tmpl_all_hunts %}
                     <a class="dropdown-item" 
-                       @click="selectedHunt = '{{ hunt.name }}'; isActive = false"
+                       @click="selectedHunt = `{{ hunt.name }}`; isActive = false"
                        href="{% url 'puzzlehunt:staff:'|add:request.resolver_match.url_name hunt.id %}">
                       {{ hunt.name }}
                     </a>

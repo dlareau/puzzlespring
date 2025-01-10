@@ -22,6 +22,7 @@ from django.contrib import messages
 from django.template.loader import engines
 from puzzlehunt.config_parser import parse_config
 from django.db.models import Q, F, Prefetch
+from django.http import JsonResponse
 
 
 @staff_member_required
@@ -130,6 +131,98 @@ def progress(request, hunt):
 
     context = {'hunt': hunt, 'teams': teams, 'puzzles': puzzles, 'info_columns': info_columns, 'puzzle_stats': puzzle_stats}
     return render(request, "staff_progress.html", context )
+
+
+
+@staff_member_required
+def progress_data(request, hunt):
+    """
+    API endpoint to return progress data for DataTables consumption.
+    """
+    info_columns = hunt.teamrankingrule_set.order_by("rule_order").all()
+
+    # Fetch puzzles with their stats
+    puzzle_stats = [
+        ('num_hints', '# Hints Used'),
+        ('num_solves', '# Solves'),
+        ('num_unlocks', '# Unlocks'),
+        ('num_submissions', '# Submissions'),
+    ]
+
+    # Fetch puzzles
+    puzzles = hunt.puzzle_set
+    for stat in puzzle_stats:
+        puzzles = Puzzle.annotate_query(puzzles, stat[0])
+    puzzles = puzzles.all()
+
+    # Fetch teams with their ranking data
+    teams = hunt.team_set
+    for rule in info_columns:
+        teams = rule.annotate_query(teams)
+    teams = teams.order_by(*[rule.ordering_parameter for rule in info_columns]).all()
+
+    # Fetch all puzzle statuses
+    statuses = (PuzzleStatus.objects.filter(puzzle__hunt=hunt)
+                .select_related('puzzle', 'team')
+                .annotate(time_since=timezone.now() - F('unlock_time')))
+    
+    # Fetch submissions data
+    submissions = (Submission.objects.filter(team__hunt=hunt)
+                  .values('team', 'puzzle')
+                  .annotate(last_submission=Max('submission_time'),
+                           num_submissions=Count('*')))
+    
+    # Fetch hints data
+    hints = (Hint.objects.filter(team__hunt=hunt)
+            .values('team', 'puzzle')
+            .annotate(num_hints=Count('*')))
+
+    # Build response data
+    response_data = {
+        "data": [],
+        "metadata": {
+            "last_updated": timezone.now().isoformat(),
+            "hunt_id": hunt.pk,
+        }
+    }
+
+    # Create lookup dictionaries for faster access
+    submission_data_lookup = {(s['team'], s['puzzle']): s for s in submissions}
+    hint_data_lookup = {(h['team'], h['puzzle']): h for h in hints}
+    status_lookup = {(s.team_id, s.puzzle_id): s for s in statuses}
+
+    # Build team data
+    for team in teams:
+        team_data = {
+            "team": {
+                "id": team.pk,
+                "name": team.name,
+            },
+            "ranking_columns": {
+                column.display_name: getattr(team, column.rule_type) for column in info_columns
+            }
+        }
+
+        # Build puzzle data for this team
+        puzzle_data = {}
+        for puzzle in puzzles:
+            status = status_lookup.get((team.pk, puzzle.pk))
+            submission = submission_data_lookup.get((team.pk, puzzle.pk), {})
+            hint = hint_data_lookup.get((team.pk, puzzle.pk), {})
+
+            if status:
+                puzzle_data[str(puzzle.pk)] = {
+                    "unlock_time": status.unlock_time.isoformat() if status and status.unlock_time else None,
+                    "solve_time": status.solve_time.isoformat() if status and status.solve_time else None,
+                    "last_submission": submission.get('last_submission').isoformat() if submission and submission.get('last_submission') else None,
+                    "num_submissions": submission.get('num_submissions', 0) if submission else 0,
+                    "num_hints": hint.get('num_hints', 0) if hint else 0
+                }
+
+        team_data["puzzles"] = puzzle_data
+        response_data["data"].append(team_data)
+
+    return JsonResponse(response_data)
 
 
 @require_GET

@@ -7,6 +7,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@100..800&display=swap" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.7/css/dataTables.bulma.min.css"/>
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.dataTables.min.css"/>
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedcolumns/4.3.0/css/fixedColumns.dataTables.min.css"/>
+  <script type="text/javascript" src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/1.13.7/js/dataTables.bulma.min.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/fixedheader/3.4.0/js/dataTables.fixedHeader.min.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/fixedcolumns/4.3.0/js/dataTables.fixedColumns.min.js"></script>
   <script>
     htmx.config.useTemplateFragments = true;
   </script>
@@ -17,7 +25,6 @@
        :class="sidebarOpen && 'sidebarOpen'"
        hx-ext="sse" sse-connect="{% url 'puzzlehunt:staff_events' %}"
   >
-    <div sse-swap="progress"></div>
     <div id="tableKey" class="table-key">
       <ul>
         <li><span class="color-swatch" style="background: linear-gradient(to right, #ffffaa, #ffddaa, #ffbbaa, #ff9999);"></span>Unsolved</li>
@@ -29,79 +36,165 @@
         <li><strong>S: </strong>&nbsp; # of submissions</li>
       </ul>
     </div>
-    <table id="progressTable" class="table is-narrow sortable is-bordered">
+    <table id="progressTable" class="table is-narrow is-bordered">
       <thead>
-        <tr> {# Header row #}
-          <th class="sorttable_alpha"> Team Name </th>
+        <tr>
+          <th>Team Name</th>
           <th>Rank</th>
           {% for column in info_columns %}
-            {% if column.is_time %} <th style="min-width: 80px;"> {% else %} <th style="width: 0;"> {% endif %}
-              {{ column.display_name }}
-            </th>
+            <th>{{ column.display_name }}</th>
           {% endfor %}
           {% for puzzle in puzzles %}
-            <th class="sorttable_nosort">
+            <th>
               <div class="has-tooltip-arrow has-tooltip-bottom" data-tooltip="{{ puzzle.name }}">
                 {{ puzzle.abbreviation }}<br>{{ puzzle.order_number }}
               </div>
             </th>
           {% endfor %}
         </tr>
-        {% for stat in puzzle_stats %}
-          <tr {% cycle 'style="background-color: lightgray"' '' %}>
-            <td> {{ stat.1 }} </td>
-            <td class="has-background-grey-dark"></td>
-            {% for column in info_columns %} <td class="has-background-grey-dark"></td> {% endfor %}
-            {% for puzzle in puzzles %}
-              <td id="cell-p{{ puzzle.pk }}-{{ stat.0 }}">{% get_attribute puzzle stat.0 %}</td>
-            {% endfor %}
-          </tr>
-        {% endfor %}
       </thead>
-      <tbody>
-        {% for team in teams %}
-          <tr id="row-{{ team.pk }}">
-            <td> <div>{{ team.name }}</div> </td>
-            <td class="has-text-centered">{{ forloop.counter }}</td>
-            {% for column in info_columns %}
-              {% include 'components/_progress_info_column_cell.html' %}
-            {% endfor %}
-            {% for status in team.statuses %}
-              {% include 'components/_progress_table_cell.html' %}
-            {% endfor %}
-          </tr>
-        {% endfor %}
-      </tbody>
     </table>
   </div>
 
   <script>
-
-    function adjustTableHeaderPosition() {
+    document.addEventListener('DOMContentLoaded', function() {
       const tableKey = document.getElementById('tableKey');
-      const tableHeaders = document.querySelectorAll('#progressTable thead th');
-      
-      function updatePosition() {
-        const keyHeight = tableKey.offsetHeight;
-        tableHeaders.forEach(header => {
-          header.style.top = `${keyHeight}px`;
-        });
-      }
+      const keyHeight = tableKey.offsetHeight;
 
-      // Initial position update
-      updatePosition();
-
-      // Update position on window resize
-      window.addEventListener('resize', updatePosition);
-
-      // Update position when the table key's height changes
-      const observer = new ResizeObserver(updatePosition);
-      observer.observe(tableKey);
-    }
-
-    // Call the function when the page loads
-    window.addEventListener('load', adjustTableHeaderPosition);
-    window.addEventListener('htmx:after-settle', adjustTableHeaderPosition);
-    window.addEventListener('htmx:after-settle', sorttable.makeSortable(document.getElementById('progressTable')));
+      const table = $('#progressTable').DataTable({
+        ajax: {
+          url: '{% url "puzzlehunt:staff:progress_data" hunt.pk %}',
+          dataSrc: 'data'
+        },
+        fixedHeader: {
+          header: true,
+          headerOffset: keyHeight + 1,
+          fixedPosition: false
+        },
+        fixedColumns: {
+          left: 1
+        },
+        scrollX: true,
+        scrollY: `calc(100vh - ${keyHeight + 140}px)`,
+        scrollCollapse: true,
+        order: [[1, 'asc']],
+        columns: [
+          { 
+            data: 'team.name',
+            title: 'Team',
+            className: 'has-text-left',
+            width: '200px',
+            render: function(data, type, row) {
+              return `<div style="max-width: 200px; white-space: normal; word-wrap: break-word;">${data}</div>`;
+            }
+          },
+          {
+            data: null,
+            title: 'Rank',
+            className: 'has-text-centered',
+            render: function(data, type, row, meta) {
+              return meta.row + 1;
+            }
+          },
+          {% for column in info_columns %}
+            {
+              data: 'ranking_columns.{{ column.display_name }}',
+              title: '{{ column.display_name }}',
+              className: 'has-text-centered',
+              {% if column.is_time %}
+              render: function(data, type, row) {
+                if (!data) {
+                  return type === 'sort' ? '9999-12-31T23:59:59' : '';
+                }
+                const date = new Date(data);
+                
+                // Return ISO string for sorting
+                if (type === 'sort') {
+                  return data;
+                }
+                
+                // Return formatted display value
+                return `<div class="has-text-centered">` +
+                       `<span class="puzzle-cell"><span class="mono">${date.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false})}</span></span><br>` +
+                       `<span class="puzzle-cell"><span class="mono">${date.toLocaleDateString('en-US', {month: 'numeric', day: 'numeric'})}</span></span>` +
+                       `</div>`;
+              }
+              {% endif %}
+            },
+          {% endfor %}
+          {% for puzzle in puzzles %}
+            {
+              data: 'puzzles.{{ puzzle.pk }}',
+              title: '{{ puzzle.abbreviation }}',
+              defaultContent: '',
+              render: function(data, type, row) {
+                if (!data) {
+                  return type === 'sort' ? '9999-12-31T23:59:59' : '';
+                }
+                
+                // For sorting, use solve_time or last_submission
+                if (type === 'sort') {
+                  if (data.solve_time) return data.solve_time;
+                  if (data.last_submission) return data.last_submission;
+                  return '9999-12-31T23:59:59';
+                }
+                
+                // Calculate background color and border style
+                let bgColor = '';
+                let borderStyle = 'padding: 4px;'; // Default padding to match border width
+                
+                if (data.solve_time) {
+                  bgColor = 'background-color: #aaffaa;';
+                } else {
+                  const referenceTime = data.last_submission || data.unlock_time;
+                  if (referenceTime) {
+                    const timeSince = (new Date() - new Date(referenceTime)) / (1000 * 60 * 60); // hours
+                    if (timeSince > 5) {
+                      bgColor = 'background-color: #ff9999;';
+                    } else if (timeSince > 3) {
+                      bgColor = 'background-color: #ffbbaa;';
+                    } else if (timeSince > 1) {
+                      bgColor = 'background-color: #ffddaa;';
+                    } else {
+                      bgColor = 'background-color: #ffffaa;';
+                    }
+                  }
+                }
+                
+                // Add border based on number of hints
+                if (data.num_hints === 1) {
+                  borderStyle = 'border: 4px solid #ffdb26;';
+                } else if (data.num_hints === 2) {
+                  borderStyle = 'border: 4px solid #db5100;';
+                } else if (data.num_hints >= 3) {
+                  borderStyle = 'border: 4px solid #000000;';
+                }
+                
+                // For display, use the existing format with background color and border
+                let content = `<div class="puzzle-cell-container" style="${bgColor} ${borderStyle}">`;
+                if (data.solve_time) {
+                  content += `<span class="puzzle-cell"><b>T:</b> <span class="mono">${new Date(data.solve_time).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false})}</span></span><br>`;
+                  content += `<span class="puzzle-cell puzzle-cell-indent"><span class="mono">${new Date(data.solve_time).toLocaleDateString('en-US', {month: 'numeric', day: 'numeric'})}</span></span>`;
+                } else if (data.last_submission) {
+                  content += `<span class="puzzle-cell"><b>T:</b> <span class="mono">${new Date(data.last_submission).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: false})}</span></span><br>`;
+                  content += `<span class="puzzle-cell puzzle-cell-indent"><span class="mono">${new Date(data.last_submission).toLocaleDateString('en-US', {month: 'numeric', day: 'numeric'})}</span></span>`;
+                }
+                if (data.unlock_time) {
+                  content += `<br><span class="puzzle-cell"><b>S:</b> <span class="mono">${String(data.num_submissions).padStart(2, ' ')}</span></span>`;
+                }
+                content += '</div>';
+                return content;
+              }
+            },
+          {% endfor %}
+        ],
+        paging: false,
+        searching: false,
+        info: false,
+        initComplete: function() {
+          this.api().columns.adjust();
+        }
+      });
+    });
   </script>
 {% endblock %}
