@@ -137,7 +137,9 @@ def process_config_rules(rules, solved_puzzles, time):
                 interval = int(rule.rule.interval)
                 if rule.rule.unit.unit.upper().startswith("HOUR"):
                     interval *= 60
-                reward = int(time.seconds/60) * int(value) // interval
+                # Convert total timedelta to minutes
+                total_minutes = int(time.total_seconds() / 60)
+                reward = total_minutes * int(value) // interval
             else:
                 reward = int(value)
             processed_rules.add(rule_id)
