@@ -6,7 +6,6 @@ from django.http import Http404
 from puzzlehunt import models
 from django.core.files import File
 from django_eventstream.channelmanager import DefaultChannelManager
-from django.core.cache import cache
 from .models import PuzzleFile, SolutionFile, HuntFile, PrepuzzleFile, Puzzle, Hunt, Prepuzzle
 
 

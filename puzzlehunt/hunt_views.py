@@ -1,24 +1,20 @@
 from crispy_forms.utils import render_crispy_form
+from pathlib import Path
+
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
-from django.db.models import F, Max, Count
-from django.http import HttpResponse, HttpResponseNotFound, HttpResponseForbidden, JsonResponse
+from django.http import HttpResponse, HttpResponseNotFound, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
 from django.urls import reverse_lazy
-from pathlib import Path
-from django.template.loader import render_to_string
-
-
 from django.views.decorators.http import require_POST
-from django_eventstream import send_event
+
 from django_htmx.http import retarget, reswap
 from django_ratelimit.core import get_usage
 from django_sendfile import sendfile
 
 from .forms import AnswerForm
-from .models import (Puzzle, Hunt, Submission, Prepuzzle, Hint, PuzzleStatus, Update,
-                     PuzzleFile, SolutionFile, HuntFile, PrepuzzleFile, Team)
+from .models import Puzzle, Submission, Prepuzzle, Hint, PuzzleStatus, Update
 from .utils import get_media_file_model
 
 import logging
@@ -99,10 +95,6 @@ def puzzle_solution(request, pk):
         return render(request, "puzzle_solution.html", context)
     else:
         return render(request, puzzle.main_solution_file.file.name.removeprefix("trusted/"), context)
-
-
-def get_ratelimit_key(group, request):
-    return request.ratelimit_key
 
 
 @require_POST

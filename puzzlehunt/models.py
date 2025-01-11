@@ -1,5 +1,4 @@
 import re
-from distutils.command.clean import clean
 
 from django.contrib.auth.base_user import BaseUserManager
 from django.db import models, transaction
@@ -7,7 +6,6 @@ from dateutil import tz
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.contrib.contenttypes.models import ContentType
 import logging
 import os
 import random
@@ -15,9 +13,9 @@ from constance import config
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 
-from django.db.models import F, OuterRef, Count, Subquery, Max, TextField, CharField, Value, Avg
+from django.db.models import F, OuterRef, Count, Subquery, Max, Avg
 from django.db.models.fields import PositiveIntegerField, DateTimeField, DurationField
-from django.db.models.functions import Lower, Cast, Concat
+from django.db.models.functions import Lower
 from django.utils import timezone
 from django_eventstream import send_event
 from datetime import timedelta

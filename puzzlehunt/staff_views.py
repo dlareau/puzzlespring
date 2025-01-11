@@ -5,23 +5,21 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import SuspiciousOperation
 from django.core.files import File
 from django.core.paginator import Paginator
-from django.template import Template, RequestContext, Engine
-from django.template.loader import render_to_string
 from django.views.decorators.http import require_GET, require_POST
-
-from .utils import create_media_files, get_media_file_model, get_media_file_parent_model
-from .hunt_views import protected_static
-from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, \
-    PuzzleFile, SolutionFile, HuntFile
 from django.shortcuts import render, get_object_or_404
 from django.db.models import F, Max, Count, Subquery, OuterRef, PositiveIntegerField, Min
 from django.http import HttpResponse
 from django.utils import timezone
 from django.contrib import messages
 from django.template.loader import engines
-from puzzlehunt.config_parser import parse_config
 from django.db.models import Q, F, Prefetch
 from django.http import JsonResponse
+from puzzlehunt.config_parser import parse_config
+
+from .utils import create_media_files, get_media_file_model, get_media_file_parent_model
+from .hunt_views import protected_static
+from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, \
+    SolutionFile, HuntFile
 
 
 @staff_member_required

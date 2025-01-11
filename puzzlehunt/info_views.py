@@ -1,14 +1,14 @@
 from django_ratelimit.decorators import ratelimit
 
-from .models import Hunt, Team, User, DisplayOnlyHunt, NotificationSubscription, Event
 from django.shortcuts import render, get_object_or_404, redirect
-from .forms import TeamForm, UserEditForm, NotificationSubscriptionForm
-from django.http import Http404, HttpResponse, QueryDict, HttpResponseForbidden
+from django.http import QueryDict
 from django.core.exceptions import PermissionDenied
-
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_GET, require_POST
 from django.contrib import messages
+
+from .models import Hunt, Team, DisplayOnlyHunt, NotificationSubscription, Event
+from .forms import TeamForm, UserEditForm, NotificationSubscriptionForm
 
 
 @require_GET

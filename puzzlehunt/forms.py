@@ -1,14 +1,14 @@
 import re
 
-from crispy_bulma.layout import Submit, FormGroup, IconField
+from crispy_bulma.layout import Submit, FormGroup
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, Div
 from django.conf import settings
 from django.forms import (
-    ModelForm, EmailField, Form, CharField, FileField, 
+    ModelForm, Form, CharField, FileField, 
     TextInput, MultipleChoiceField, CheckboxSelectMultiple
 )
-from django.contrib.auth.forms import UserCreationForm, ValidationError, PasswordChangeForm, SetPasswordForm
+from django.contrib.auth.forms import ValidationError
 from django.urls import reverse
 
 from .models import Team, User, NotificationSubscription, Event

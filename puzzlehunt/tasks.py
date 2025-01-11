@@ -1,5 +1,5 @@
 from huey import crontab
-from huey.contrib.djhuey import periodic_task, task
+from huey.contrib.djhuey import periodic_task
 from django.utils import timezone
 from .models import Team
 
