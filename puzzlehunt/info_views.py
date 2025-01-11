@@ -3,7 +3,8 @@ from django_ratelimit.decorators import ratelimit
 from .models import Hunt, Team, User, DisplayOnlyHunt, NotificationSubscription, Event
 from django.shortcuts import render, get_object_or_404, redirect
 from .forms import TeamForm, UserEditForm, NotificationSubscriptionForm
-from django.http import Http404, HttpResponse, QueryDict
+from django.http import Http404, HttpResponse, QueryDict, HttpResponseForbidden
+from django.core.exceptions import PermissionDenied
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_GET, require_POST
@@ -52,7 +53,6 @@ def user_detail_view(request):
             return redirect("puzzlehunt:user_view")
 
 
-# TODO: Staff view with playtester status, hint info, unlock points and rank was removed and should live elsewhere.
 @require_GET
 @login_required
 def team_view(request, pk):
@@ -61,6 +61,8 @@ def team_view(request, pk):
         team = current_team
     else:
         team = get_object_or_404(Team, pk=pk)
+    if not (request.user.is_staff or request.user in team.members.all()):
+        raise PermissionDenied
 
     teams = request.user.team_set.order_by("-hunt__start_date")
 
@@ -77,6 +79,9 @@ def team_view(request, pk):
 @login_required
 def team_update(request, pk):
     team = get_object_or_404(Team, pk=pk)
+    if not (request.user.is_staff or request.user in team.members.all()):
+        raise PermissionDenied
+
     team_form = TeamForm(request.POST, instance=team)
     if team_form.is_valid():
         team_form.save()
@@ -130,6 +135,10 @@ def team_join(request, pk=None):
 
     if pk is None:
         current_hunt = Hunt.objects.get(is_current_hunt=True)
+        current_team = current_hunt.team_from_user(request.user)
+        if current_team:
+            return redirect('puzzlehunt:team_view', current_team.pk)
+
         try:
             team = current_hunt.team_set.get(join_code=join_code.upper())
         except Team.DoesNotExist:
@@ -137,8 +146,12 @@ def team_join(request, pk=None):
             return render(request, "team_registration.html", {"form": TeamForm(), 'errors': error})
     else:
         team = get_object_or_404(Team, pk=pk)
+        possible_current_team = team.hunt.team_from_user(request.user)
+        if possible_current_team:
+            return redirect('puzzlehunt:team_view', possible_current_team.pk)
+
         if team.join_code != join_code:
-            raise Http404
+            raise PermissionDenied
 
     messages.success(request, f"You have joined {team.name}")
     team.members.add(request.user)
@@ -149,6 +162,9 @@ def team_join(request, pk=None):
 @login_required
 def team_leave(request, pk):
     team = get_object_or_404(Team, pk=pk)
+    if not request.user in team.members.all():
+        raise PermissionDenied
+
     team.members.remove(request.user)
     if team.members.count() == 0:
         team.delete()
@@ -192,6 +208,9 @@ def notification_view(request):
 @require_http_methods(["DELETE"])
 def notification_delete(request, pk):
     subscription = get_object_or_404(NotificationSubscription, pk=pk, user=request.user)
+    if not (request.user.is_staff or request.user == subscription.user):
+        raise PermissionDenied
+
     subscription.delete()
     messages.success(request, "Notification subscription deleted.")
     
@@ -207,6 +226,9 @@ def notification_delete(request, pk):
 @require_POST
 def notification_toggle(request, pk):
     subscription = get_object_or_404(NotificationSubscription, pk=pk, user=request.user)
+    if not (request.user.is_staff or request.user == subscription.user):
+        raise PermissionDenied
+
     subscription.active = not subscription.active
     subscription.save()
     
