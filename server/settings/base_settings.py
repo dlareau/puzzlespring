@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ROOT_URLCONF = 'server.urls'
 WSGI_APPLICATION = 'server.wsgi.application'
 SITE_ID = 1  # For flatpages
-SITE_TITLE = "Puzzle Hunt CMU"
+SITE_TITLE = "Puzzle Hunt CMU" # TODO: Move to constance
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 
@@ -194,18 +194,29 @@ TEMPLATES = [
 
 # Constance (Dynamic Settings)
 CONSTANCE_CONFIG = {
+    # Team Settings
     'NO_TEAMS_MODE': (False, 'If enabled, each user will be their own team'),
+    'TEAM_MEMBERS_CAN_SEE_NAMES': (True, 'If enabled, team members will be able to see users names on the team page'),
+    
+    # Hunt Display Settings
     'SINGLE_HUNT_MODE': (False, 'If enabled, only one hunt will be visible and accessible'),
+    'HUNTS_HAVE_LOCATION': (True, 'If enabled, hunts will display their location on the main page'),
+    'SHOW_ARCHIVE_SEASONS': (True, 'If enabled, the archive page will show season labels on old hunts'),
+    
+    # Puzzle Display Settings
     'PROGRESS_FULL_PUZZLE_NAMES': (False, 'If enabled, the progress page will show full puzzle names'),
-    'SHOW_ARCHIVE_SEASONS': (True, 'If enabled, the progress page will show season labels on old hunts'),
     'SHOW_SOLVE_COUNT_ON_PUZZLE': (True, 'If enabled, the puzzle page the current number of solves'),
     'SHOW_UPDATE_FOR_LOCKED_PUZZLES': (True, 'If enabled, updates will be shown even when the puzzle is locked'),
-    'HUNTS_HAVE_LOCATION': (True, 'If enabled, hunts will display their location on the main page'),
+    
+    # Registration Settings
     'HUNT_REGISTRATION_LOCKOUT': (2, 'The number of days before the hunt when registration locks'),
+    
+    # Communication Settings
     'CONTACT_EMAIL': ('test@test.com', 'The contact email for help links'),
+    
+    # Submission and Hint Settings
     'SHOW_SUBMISSION_USER': (True, 'If enabled, the submissions page will display usernames'),
     'SHOW_HINT_USER_STAFF': (True, 'If enabled, the staff hints page will show the staff responder'),
-    'TEAM_MEMBERS_CAN_SEE_NAMES': (True, 'If enabled, team members will be able to see users names on the team page')
 }
 
 CONSTANCE_ADDITIONAL_FIELDS = {
