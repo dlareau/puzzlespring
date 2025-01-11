@@ -13,14 +13,22 @@ nav_order: 1
 
 Welcome to the PuzzleSpring documentation. This site contains comprehensive guides and information about the project.
 
-## Getting Started
-
-- [Quick Start Guide](getting-started/quickstart.html)
-- [Installation](getting-started/installation.html)
-- [Configuration](getting-started/configuration.html)
-
 ## Documentation Sections
 
-- [User Guide](user-guide)
-- [API Reference](api-reference)
-- [Development](development) 
+### Getting Started
+- [Quick Start](getting-started/quickstart.html)
+- [Installation](getting-started/installation.html)
+
+### User Guide
+- [Configuration](user-guide/configuration)
+- [Usage](user-guide/usage)
+
+### Technical Reference
+- [API Reference](technical-reference/api-reference.html)
+- [Data Model](technical-reference/data-model.html)
+- [Templates](technical-reference/templates.html)
+
+### Additional Resources
+- [Developer Guide](developer-guide.html)
+- [Contributing](contributing.html)
+- [FAQ](faq.html) 

@@ -3,7 +3,6 @@ layout: default
 title: Quick Start Guide
 parent: Getting Started
 nav_order: 1
-has_children: false
 ---
 
 # Quick Start Guide
