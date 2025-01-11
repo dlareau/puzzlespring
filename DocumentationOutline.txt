@@ -1,0 +1,58 @@
+Documentation Outline
+- Getting Started
+    - Quick Start
+    - Installation
+- User Guide
+    - Configuration (done)
+        - In App Settings (done)
+        - Environment Variables (done)
+    - Usage (created)
+        - Public Pages (created)
+            - Index Page (created)
+            - Login Page (created)
+            - User Settings (created)
+                - User Details (created)
+                - Password (created)
+                - Notifications (created)
+                - Emails (created)
+                - External Accounts (created)
+                - Teams (created)
+            - Archive Page (created)
+            - Leaderboard Page (created)
+            - Info Pages (created)
+        - Hunt Pages (created)
+            - Hunt info Page (created)
+            - Prepuzzle Page (created)
+            - Puzzle Pages (created)
+            - Hunt index Page (created)
+            - Solution Pages (created)
+            - Hint Pages (created)
+        - Staff Pages (created)
+            - Django Admin (created)
+            - Hunts Page (created)
+            - Search Page (created)
+            - Progress Page (created)
+            - Feed Page (created)
+            - Hints Page (created)
+            - Charts Page (created)
+            - Hunt Template Page (created)
+            - Puzzles Page (created)
+            - Hunt Config Page (created)
+        - Common Staff Actions (created)
+            - Update Constance Settings (created)
+            - Make an info page (created)
+            - Make a new Hunt (created)
+            - Make a new puzzle (created)
+            - Set up external Accounts (created)
+            - Manually unlock a puzzle (created)
+            - Manually give a team a hint (created)
+            - Add past hunts to the archive (created)
+            - Manually add a user to a team (created)
+            - Manually reset a user's password (created)
+- Technical Reference
+    - API Reference
+    - Data Model
+    - Templates
+- Developer Guide
+- Contributing
+- FAQ

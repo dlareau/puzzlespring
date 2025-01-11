@@ -1,4 +1,16 @@
+{% comment %}
+@template: index.html
+@description: The home page of the puzzlehunt website.
+@extends: info_base.html
+@context: 
+  curr_hunt: The current hunt object
+
+@blocks:
+  content: The content of the page
+{% endcomment %}
+
 {% extends 'info_base.html' %}
+
 
 {% block content %}
   <div class="has-text-centered">
