@@ -1,3 +1,5 @@
+{% extends 'hunt_base.html' %}
+
 {% comment %}
 @template: puzzle_solution.html
 @description: Displays the solution for a puzzle, supporting both HTML and PDF formats.
@@ -8,8 +10,6 @@
 @context:
   puzzle: The puzzle object containing the solution file
 {% endcomment %}
-
-{% extends 'hunt_base.html' %}
 
 {% block title_meta_elements %}
   {% with title=puzzle.name|add:" - Solution" %} {{ block.super }} {% endwith %}

@@ -1,3 +1,5 @@
+{% extends "info_base.html" %}
+
 {% comment %}
 @template: team_registration.html
 @description: Provides interface for creating a new team or joining an existing team.
@@ -11,7 +13,6 @@
   errors: Error messages from join team attempts
 {% endcomment %}
 
-{% extends "info_base.html" %}
 {% load crispy_forms_tags %}
 
 {% block title %}Team Registration{% endblock title %}

@@ -1,3 +1,4 @@
+{% extends 'staff_hunt_base.html' %}
 {% comment %}
 @template: staff_charts.html
 @description: Displays various charts and statistics about puzzle solves, submissions, and hints using Google Charts.
@@ -14,7 +15,6 @@
   chart_solves_by_time_data: Data for solves over time chart
 {% endcomment %}
 
-{% extends 'staff_hunt_base.html' %}
 
 {% block extra_head %}
     <script src="https://www.gstatic.com/charts/loader.js"></script>

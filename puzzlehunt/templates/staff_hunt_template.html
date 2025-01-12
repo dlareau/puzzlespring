@@ -1,3 +1,5 @@
+{% extends 'staff_hunt_base.html' %}
+
 {% comment %}
 @template: staff_hunt_template.html
 @description: Staff interface for editing and previewing hunt templates.
@@ -10,8 +12,6 @@
   template_text: The current template text content
   puzzle_numbers: List of puzzle numbers for preview functionality
 {% endcomment %}
-
-{% extends 'staff_hunt_base.html' %}
 
 {% block staff_content %}
   <div x-data="{ modal:false, templateText:''}">

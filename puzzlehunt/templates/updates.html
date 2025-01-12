@@ -1,3 +1,5 @@
+{% extends "info_base.html" %}
+
 {% comment %}
 @template: updates.html
 @description: Displays a list of hunt updates and announcements in chronological order.
@@ -8,8 +10,6 @@
 @context:
   updates: List of Update objects containing announcements
 {% endcomment %}
-
-{% extends "info_base.html" %}
 
 {% block title %}Updates{% endblock title %}
 

@@ -1,3 +1,5 @@
+{% extends 'allauth/layouts/manage.html' %}
+
 {% comment %}
 @template: user_detail.html
 @description: Displays and manages user profile details.
@@ -8,7 +10,6 @@
   user_form: Form for editing user details
 {% endcomment %}
 
-{% extends 'allauth/layouts/manage.html' %}
 {% load crispy_forms_tags %}
 
 {% block content %}

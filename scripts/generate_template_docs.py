@@ -4,8 +4,8 @@ import os
 
 def parse_template_comment(content):
     """Extract documentation from template comment block."""
-    # Look for {% comment %} block at start of file
-    comment_match = re.match(r'^\s*{%\s*comment\s*%}(.*?){%\s*endcomment\s*%}', 
+    # Look for {% comment %} block anywhere in the file
+    comment_match = re.search(r'{%\s*comment\s*%}(.*?){%\s*endcomment\s*%}', 
                            content, re.DOTALL)
     if not comment_match:
         return None

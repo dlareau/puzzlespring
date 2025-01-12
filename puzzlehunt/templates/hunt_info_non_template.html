@@ -1,3 +1,5 @@
+{% extends "hunt_info_base.html" %}
+
 {% comment %}
 @template: hunt_info_non_template.html
 @description: Displays hunt information page for non-template hunts.
@@ -8,7 +10,6 @@
   hunt: The current Hunt object
 {% endcomment %}
 
-{% extends "hunt_info_base.html" %}
 {% load humanize %}
 
 {% block content %}

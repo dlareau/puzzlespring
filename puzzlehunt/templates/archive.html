@@ -1,3 +1,5 @@
+{% extends 'info_base.html' %}
+
 {% comment %}
 @template: archive.html
 @description: Displays a list of all past puzzle hunts in reverse chronological order with links to their pages.
@@ -7,8 +9,6 @@
 @context:
   hunts: List of all past Hunt objects with their associated data
 {% endcomment %}
-
-{% extends 'info_base.html' %}
 
 {% block content %}
 <div class="container px-4">

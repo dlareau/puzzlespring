@@ -1,3 +1,4 @@
+{% extends 'info_base.html' %}
 {% comment %}
 @template: access_error.html
 @description: Displays an error message when a user tries to access a resource they don't have permission to view.
@@ -9,7 +10,6 @@
   reason: The reason for access denial ('hunt', 'team', 'puzzle', or 'hint')
 {% endcomment %}
 
-{% extends 'info_base.html' %}
 {% block title %}Not Available{% endblock title %}
 
 {% block content %}

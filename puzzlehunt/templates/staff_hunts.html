@@ -1,3 +1,5 @@
+{% extends 'staff_hunt_base.html' %}
+
 {% comment %}
 @template: staff_hunts.html
 @description: Staff interface for managing and viewing all hunts.
@@ -7,8 +9,6 @@
 @context:
   hunts: List of all Hunt objects
 {% endcomment %}
-
-{% extends 'staff_hunt_base.html' %}
 
 {% block staff_content %}
   <div class="columns"><div class="column is-12 is-12-desktop is-10-widescreen is-offset-1-widescreen is-8-fullhd is-offset-2-fullhd">

@@ -1,3 +1,5 @@
+{% extends 'puzzle_base.html' %}
+
 {% comment %}
 @template: puzzle_non_template.html
 @description: Displays a non-template puzzle, supporting HTML and PDF file types.
@@ -7,8 +9,6 @@
 @context:
   puzzle: The current puzzle object
 {% endcomment %}
-
-{% extends 'puzzle_base.html' %}
 
 {% block content %}
   <div id="puzzle-container">

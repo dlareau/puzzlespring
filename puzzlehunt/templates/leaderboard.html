@@ -1,3 +1,5 @@
+{% extends "info_base.html" %}
+
 {% comment %}
 @template: leaderboard.html
 @description: Displays a leaderboard of teams for a specific hunt with customizable ranking rules.
@@ -12,7 +14,6 @@
   team_data: List of Team objects with their ranking data
 {% endcomment %}
 
-{% extends "info_base.html" %}
 {% block title_meta_elements %}
   {% with title="Team Leaderboard - "|add:hunt.name %} {{ block.super }} {% endwith %}
 {% endblock title_meta_elements %}

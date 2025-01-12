@@ -1,3 +1,4 @@
+{% extends 'allauth/layouts/manage.html' %}
 {% comment %}
 @template: team_detail.html
 @description: Displays team details and management interface. Shows team members, join code, and team management options.
@@ -11,7 +12,6 @@
   form: Team management form
 {% endcomment %}
 
-{% extends 'allauth/layouts/manage.html' %}
 {% load crispy_forms_tags %}
 
 {% block content %}

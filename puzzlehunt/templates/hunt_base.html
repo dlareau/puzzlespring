@@ -1,3 +1,5 @@
+{% extends 'base.html' %}
+
 {% comment %}
 @template: hunt_base.html
 @description: Base template for hunt-related pages. Provides hunt-specific styling and real-time updates via SSE.
@@ -15,7 +17,6 @@
   title: Optional page title override
 {% endcomment %}
 
-{% extends 'base.html' %}
 {% load static %}
 
 {% comment %} This only needs to be this complex because other templates inherit this template {% endcomment %}

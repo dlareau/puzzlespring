@@ -1,3 +1,5 @@
+{% extends 'base.html' %}
+
 {% comment %}
 @template: staff_hunt_base.html
 @description: Base template for staff hunt management pages. Provides a collapsible sidebar with navigation and hunt selection.
@@ -12,9 +14,7 @@
   tmpl_all_hunts: List of all Hunt objects for the hunt selector
 {% endcomment %}
 
-{% extends 'base.html' %}
 {% load static %}
-
 
 {% block includes %}
   <link rel="stylesheet" type="text/css" href="{% static "puzzlehunt/staff_base.css" %}">

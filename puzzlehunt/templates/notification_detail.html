@@ -1,3 +1,4 @@
+{% extends 'allauth/layouts/manage.html' %}
 {% comment %}
 @template: notification_detail.html
 @description: Displays and manages user notification preferences and subscriptions.
@@ -8,7 +9,6 @@
   form: Form for adding new notification subscriptions
 {% endcomment %}
 
-{% extends 'allauth/layouts/manage.html' %}
 {% load crispy_forms_tags %}
 
 {% block content %}
