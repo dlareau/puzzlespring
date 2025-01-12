@@ -23,8 +23,16 @@
     <div class="container">
       <div class="columns is-centered is-multiline">
         <div id="content-box" class="column has-background-light is-12-tablet is-11-desktop is-10-widescreen">
-          <div class="has-text-centered mb-2">
-            <h1 class="is-size-3">Hints for: {{puzzle.name}}</h1>
+          <div class="has-text-centered mb-2 is-relative">
+            <a href="{% url 'puzzlehunt:puzzle_view' puzzle.pk %}" 
+               class="button is-light" 
+               style="position: absolute; left: 1rem; top: 0.5rem;">
+              <span class="icon">
+                <i class="fa fa-lg fa-arrow-left"></i>
+              </span>
+              <span>Back</span>
+            </a>
+            <h1 class="is-size-3" style="margin: 0 6rem;">Hints for: {{puzzle.name}}</h1>
           </div>
           <h2 class="mb-2 is-size-4"><b>Submit a new hint request</b></h2>
           <div class="box">
