@@ -10,6 +10,15 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write('Starting initial setup...')
 
+        # Ensure groups and permissions
+        self.stdout.write('Setting up groups and permissions...')
+        try:
+            call_command('ensure_groups')
+            self.stdout.write(self.style.SUCCESS('Successfully set up groups and permissions'))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'Failed to set up groups and permissions: {str(e)}'))
+            return
+
         # Create initial hunt
         self.stdout.write('Creating initial hunt...')
         now = timezone.now()
