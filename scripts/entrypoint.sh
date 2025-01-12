@@ -64,5 +64,9 @@ else
     echo "Migration management is disabled, skipping migrations."
 fi
 
+# Collect static files
+echo "Collecting static files..."
+python manage.py collectstatic --noinput
+
 # Execute the main process
 exec "$@" 

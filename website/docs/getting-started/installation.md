@@ -131,3 +131,40 @@ Available services:
 ## Next Steps
 
 - Review the [Configuration Guide](/docs/user-guide/configuration) for detailed settings
+
+## Customizing Static Files
+
+To override or add custom static files:
+
+1. Create a `custom/static` directory in your project root
+2. Place your custom static files in this directory
+3. Restart the containers to apply changes:
+   ```bash
+   docker compose restart app
+   ```
+
+{: .note }
+> The custom static directory is mounted as a volume, so changes will be reflected without rebuilding the container.
+
+## Customizing Templates
+
+To override or customize templates:
+
+1. Create a `custom/templates` directory in your project root
+2. Mirror the template structure you want to override. For example:
+   ```
+   custom/templates/
+   └── puzzlehunt/
+       └── puzzle_base.html
+   ```
+3. Files in this directory will take precedence over the default templates
+4. Restart the containers to apply changes:
+   ```bash
+   docker compose restart app
+   ```
+
+{: .note }
+> The custom templates directory is mounted as a volume, so changes will be reflected without rebuilding the container.
+
+{: .warning }
+> When overriding templates, ensure you maintain the expected blocks and context variables. Refer to the [Templates](/docs/technical-reference/templates) documentation for details.

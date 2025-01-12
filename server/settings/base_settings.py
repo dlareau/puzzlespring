@@ -90,6 +90,7 @@ ACCOUNT_FORMS = {
 
 STATIC_ROOT = '/app/static/'
 STATIC_URL = '/static/'
+STATICFILES_DIRS = ["/app/custom_static",]
 MEDIA_ROOT = "/app/media/"
 MEDIA_URL = '/media/'
 PROTECTED_URL = '/protected/'
@@ -179,7 +180,10 @@ production_loaders = [
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['/app/media/trusted/'],
+        'DIRS': [
+            '/app/custom_templates/',  # Custom templates take precedence
+            '/app/media/trusted/',
+        ],
         'OPTIONS': {
             'builtins': ['puzzlehunt.templatetags.hunt_tags'],
             'context_processors': [

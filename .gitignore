@@ -4,6 +4,7 @@
 /.idea/
 /static/
 /media/
+/custom/
 /converted_data/
 /huntserver/static/huntserver/*.pdf
 /huntserver/static/huntserver/puzzles/*

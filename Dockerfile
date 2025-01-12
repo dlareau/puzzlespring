@@ -8,7 +8,7 @@ ENV DJANGO_SETTINGS_MODULE server.settings.env_settings
 RUN mkdir /code
 WORKDIR /code
 
-RUN mkdir -p /app/static /app/media
+RUN mkdir -p /app/static /app/media /app/custom_static /app/custom_templates
 
 # Install redis-cli for lock management
 RUN apt-get update && apt-get install -y redis-tools && rm -rf /var/lib/apt/lists/*

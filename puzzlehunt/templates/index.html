@@ -11,9 +11,17 @@
   content: The content of the page
 {% endcomment %}
 
+{% block includes %}
+  <style>
+    html {
+      background-color: #A0A0A0;
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
   <div class="has-text-centered">
-    <img width="65%" src='/static/puzzlehunt/front_page_logo.png'/>
+    <h1 class="title is-1">{% site_title %}</h1>
     <p><strong>
       {% if curr_hunt.is_locked %}
         Our next hunt: <br>
@@ -28,8 +36,9 @@
     <p><strong>
       {{curr_hunt.name}}<br>
       {{ curr_hunt.display_start_date|date:" m/d/y " }}  {{ curr_hunt.display_start_date|time:"h:iA" }} &ndash; {{ curr_hunt.display_end_date|date:" m/d/y "}}  {{ curr_hunt.display_end_date|time:"h:iA e" }}<br>
-      {# TODO: Do something nice if location is empty. #}
-      Kickoff location is {{ curr_hunt.location }}
+      {% if curr_hunt.location %}
+        Kickoff location is {{ curr_hunt.location }}
+      {% endif %}
     </strong></p>
     {% if not curr_hunt.is_public %}
       <p>
@@ -48,26 +57,21 @@
     <hr class="has-background-grey-lighter">
   </div>
   <div class="content px-5">
-    <h4>Who are we?</h4>
+    <h4>What is this?</h4>
     <ul>
-      <li>We are Puzzle Hunt CMU, a group of puzzle enthusiasts from Carnegie Mellon University.</li>
-      <li>We work together to solve Puzzle Hunts such as the <a href="http://www.mit.edu/~puzzle/">MIT mystery hunt</a>, or any of the many tech company puzzle hunts (examples of such companies include Microsoft, APT and Palantir).</li>
-      <li>We also write and host CMU's very own puzzle hunt once a semester, with the goal of providing a fun-filled experience to as many members of the community as possible.</li>
-    </ul>
-    <h4>What is a puzzle hunt?</h4>
-    <ul>
-      <li>Very simply put, it's an event where people get together to solve carefully designed puzzles which somehow link together on a larger scale.</li>
+      <li>This is a website for the {% site_title %} puzzle hunts.</li>
+      <li>A puzzle hunt is an event where people get together to solve carefully designed puzzles which somehow 
+        link together on a larger scale.</li>
       <li>A puzzle hunt is typically characterized by its structure. In addition to several normal puzzles,
-       each round has a meta-puzzle, which requires teams to have solved most of the normal puzzles to even unlock,
-       and often requires solvers to incorporate answers from that round's normal puzzles to make sense of.</li>
-      <li>Our puzzle hunt's structure changes from semester to semester in order to provide new challenges for solvers.</li>
+        each round has a meta-puzzle, which requires teams to have solved most of the normal puzzles to even unlock,
+        and often requires solvers to incorporate answers from that round's normal puzzles to make sense of.</li>
     </ul>
-    <h4>Wait that sounds cool, can I participate?</h4>
-    <p class="pl-4">Yeah, check out our <a href="{% url 'puzzlehunt:hunt_info' 'current' %}">current hunt page</a>!</p>
+    <h4>How do I participate?</h4>
+    <p class="pl-4">Check out our <a href="{% url 'puzzlehunt:hunt_info' 'current' %}">current hunt page</a>!</p>
 
     <h4>Wait, I have more questions!</h4>
     <p class="pl-4">
-      Email the <a href="mailto:{% contact_email %}?subject=Puzzle%20Hunt%20Question">HALP?! LINE</a> ({% contact_email %}) with "Puzzle Hunt" somewhere in the subject line.
+      You can email us at <a href="mailto:{% contact_email %}?subject=Puzzle%20Hunt%20Question">here</a> ({% contact_email %}) with any questions you have.
     </p>
   </div>
 {% endblock %}
