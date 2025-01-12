@@ -36,7 +36,7 @@ This guide will help you get PuzzleSpring up and running quickly to see the app 
 5. Run the initial setup command:
 
     ```bash
-    docker compose exec web python manage.py initial_setup
+    docker compose exec app python manage.py initial_setup
     ```
 
 6. Open your browser and navigate to `http://localhost:8000`.

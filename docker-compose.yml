@@ -23,7 +23,7 @@ services:
     pull_policy: never
     image: django-puzzlehunt
     volumes:
-      - .:/code  # Enables live modification of django files
+      - .:/code
       - media:/media
       - static:/static
     environment:
@@ -34,22 +34,10 @@ services:
       - DOMAIN
       - ENABLE_DEBUG_TOOLBAR
       - SENTRY_DSN
+      - ENABLE_MIGRATION_MANAGEMENT=true
     depends_on:
       - db
-      - migrations
-
-  # Container to run migrations
-  migrations:
-    image: django-puzzlehunt
-    pull_policy: never
-    command: >
-      bash -c "python manage.py migrate --no-input"
-    environment:
-      - DJANGO_SECRET_KEY
-      - DJANGO_SETTINGS_MODULE=server.settings.env_settings
-      - DATABASE_URL=postgres://puzzlehunt:${DB_PASSWORD}@db/puzzlehunt
-    depends_on:
-      - db
+      - redis
 
   # Huey async task queue
   huey:
@@ -66,9 +54,10 @@ services:
       - DATABASE_URL=postgres://puzzlehunt:${DB_PASSWORD}@db/puzzlehunt
       - DJANGO_ENABLE_DEBUG
       - SENTRY_DSN
+      - ENABLE_MIGRATION_MANAGEMENT=true
     depends_on:
       - db
-      - migrations
+      - redis
 
   # Pushpin async communication service
   pushpin:

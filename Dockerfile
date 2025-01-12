@@ -8,10 +8,17 @@ ENV DJANGO_SETTINGS_MODULE server.settings.env_settings
 RUN mkdir /code
 WORKDIR /code
 
+# Install redis-cli for lock management
+RUN apt-get update && apt-get install -y redis-tools && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
 COPY . .
 
+# Make entrypoint executable
+RUN chmod +x /code/scripts/entrypoint.sh
+
 EXPOSE 8000
+ENTRYPOINT ["/code/scripts/entrypoint.sh"]
 CMD ["gunicorn", "--workers=5", "--bind=0.0.0.0:8000", "server.wsgi:application", "--reload"]
