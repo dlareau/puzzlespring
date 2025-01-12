@@ -10,6 +10,12 @@
         file_server
     }
 
+    # Constance files
+    handle_path /media/constance/* {
+        root * /app/media/constance/
+        file_server
+    }
+
     # Forward everything else to Django
     handle {
         reverse_proxy app:8000 {

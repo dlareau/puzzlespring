@@ -122,7 +122,6 @@ INSTALLED_APPS = [
     
     # Third-party apps
     'colorfield',
-    'django_toggle_switch_widget',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -228,14 +227,23 @@ CONSTANCE_CONFIG = {
     # Submission and Hint Settings
     'SHOW_SUBMISSION_USER': (True, 'If enabled, the submissions page will display usernames'),
     'SHOW_HINT_USER_STAFF': (True, 'If enabled, the staff hints page will show the staff responder'),
+
+    # Image settings
+    'NAVBAR_IMAGE': ('', 'Image displayed on the navbar', 'image_field'),
+    'EMBED_IMAGE': ('', 'Image displayed in embeds', 'image_field'),
 }
 
 CONSTANCE_ADDITIONAL_FIELDS = {
     bool: ['django.forms.fields.BooleanField', {
-        'widget': 'django_toggle_switch_widget.widgets.DjangoToggleSwitchWidget',
+        'widget': 'puzzlehunt.widgets.ToggleSwitchWidget',
+        'required': False,
     }],
+    'image_field': ['django.forms.ImageField', {
+        'widget': 'puzzlehunt.widgets.ImageWidget',
+    }]
 }
 CONSTANCE_BACKEND = 'constance.backends.database.DatabaseBackend'
+CONSTANCE_FILE_ROOT = 'constance'
 
 # Crispy Forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = ("bulma",)

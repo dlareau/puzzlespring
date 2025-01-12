@@ -9,7 +9,6 @@ django-picklefield
 django-ratelimit
 django-redis
 django-sendfile2
-django-toggle-switch-widget
 django-eventstream
 django-mathfilters
 django-constance[redis]

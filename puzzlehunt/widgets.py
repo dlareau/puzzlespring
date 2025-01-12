@@ -14,3 +14,17 @@ class AceEditorWidget(forms.Textarea):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.attrs['class'] = 'ace-editor'
+
+class ImageWidget(forms.ClearableFileInput):
+    template_name = 'components/_image_widget.html'
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.attrs['class'] = 'file-input'
+
+class ToggleSwitchWidget(forms.CheckboxInput):
+    template_name = 'components/_toggle_switch_widget.html'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.attrs['class'] = 'toggle-switch'

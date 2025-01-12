@@ -27,6 +27,20 @@ def contact_email():
     return config.CONTACT_EMAIL
 
 
+@register.simple_tag()
+def embed_image():
+    if config.EMBED_IMAGE:
+        return f"{settings.MEDIA_URL}{config.EMBED_IMAGE}"
+    return settings.STATIC_URL + "puzzlehunt/embed_logo.jpg"
+
+
+@register.simple_tag()
+def navbar_image():
+    if config.NAVBAR_IMAGE:
+        return f"{settings.MEDIA_URL}{config.NAVBAR_IMAGE}"
+    return settings.STATIC_URL + "puzzlehunt/navbar_logo.jpg"
+
+
 @register.filter()
 def render_with_context(value):
     return Template(value).render(Context({'curr_hunt': Hunt.objects.get(is_current_hunt=True)}))
