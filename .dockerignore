@@ -1,0 +1,11 @@
+.git
+.gitignore
+*.pyc
+__pycache__
+.env
+*.md
+custom/
+converted_data/
+.github/
+config/
+website/

@@ -1,21 +1,38 @@
-FROM python:3.10
+# Build stage
+FROM python:3.10-slim as builder
 
-ENV PYTHONUNBUFFERED 1
-ENV DJANGO_ENABLE_DEBUG False
-ENV DJANGO_USE_SHIBBOLETH False
-ENV DJANGO_SETTINGS_MODULE server.settings.env_settings
-
-RUN mkdir /code
+ENV PYTHONUNBUFFERED=1
 WORKDIR /code
 
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc python3-dev libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt --prefix=/install
+
+# Final stage
+FROM python:3.10-slim
+
+ENV PYTHONUNBUFFERED=1
+ENV DJANGO_SETTINGS_MODULE=server.settings.env_settings
+
+WORKDIR /code
+
+# Install runtime dependencies only
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends redis-tools libpq5 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy Python packages from builder
+COPY --from=builder /install /usr/local
+
+# Create necessary directories
 RUN mkdir -p /app/static /app/media /app/custom_static /app/custom_templates
 
-# Install redis-cli for lock management
-RUN apt-get update && apt-get install -y redis-tools && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt requirements.txt
-RUN pip install -r requirements.txt
-
+# Copy application code
 COPY . .
 
 # Make entrypoint executable

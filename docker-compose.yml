@@ -21,7 +21,7 @@ services:
       context: .
       dockerfile: Dockerfile
     pull_policy: never
-    image: django-puzzlehunt
+    image: puzzlespring-local
     volumes:
       - .:/code
       - media:/app/media
@@ -43,7 +43,7 @@ services:
 
   # Huey async task queue
   huey:
-    image: django-puzzlehunt
+    image: puzzlespring-local
     command: python manage.py run_huey --quiet
     pull_policy: never
     volumes:
