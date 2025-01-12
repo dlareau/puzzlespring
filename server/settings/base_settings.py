@@ -41,12 +41,19 @@ X_FRAME_OPTIONS = "SAMEORIGIN"
 
 codecs.register(lambda name: codecs.lookup('utf8') if name == 'utf8mb4' else None)
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': 'redis://redis:6379/1',
+if not DEBUG:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': 'redis://redis:6379/1',
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+        }
+    }
 
 # ====================
 # AUTHENTICATION
