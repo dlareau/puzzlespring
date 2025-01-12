@@ -19,7 +19,7 @@ def prepuzzle_static(context):
 
 @register.simple_tag()
 def site_title():
-    return settings.SITE_TITLE
+    return config.SITE_TITLE
 
 
 @register.simple_tag()
@@ -38,7 +38,7 @@ def embed_image():
 def navbar_image():
     if config.NAVBAR_IMAGE:
         return f"{settings.MEDIA_URL}{config.NAVBAR_IMAGE}"
-    return settings.STATIC_URL + "puzzlehunt/navbar_logo.jpg"
+    return settings.STATIC_URL + "puzzlehunt/navbar_logo.png"
 
 
 @register.filter()

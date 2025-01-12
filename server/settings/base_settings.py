@@ -23,7 +23,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ROOT_URLCONF = 'server.urls'
 WSGI_APPLICATION = 'server.wsgi.application'
 SITE_ID = 1  # For flatpages
-SITE_TITLE = "Puzzle Hunt CMU" # TODO: Move to constance
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 
@@ -61,6 +60,7 @@ else:
 
 AUTH_USER_MODEL = 'puzzlehunt.User'
 LOGIN_REDIRECT_URL = '/'
+LOGIN_URL = 'account_login'
 
 AUTHENTICATION_BACKENDS = [
     # Needed to login by username in Django admin, regardless of `allauth`
@@ -204,6 +204,9 @@ TEMPLATES = [
 
 # Constance (Dynamic Settings)
 CONSTANCE_CONFIG = {
+    # Site Settings
+    'SITE_TITLE': ('PuzzleSpring', 'The title of the site'),
+    
     # Team Settings
     'NO_TEAMS_MODE': (False, 'If enabled, each user will be their own team'),
     'TEAM_MEMBERS_CAN_SEE_NAMES': (True, 'If enabled, team members will be able to see users names on the team page'),
