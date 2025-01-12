@@ -1,3 +1,14 @@
+{% comment %}
+@template: updates.html
+@description: Displays a list of hunt updates and announcements in chronological order.
+@extends: info_base.html
+@blocks:
+  title: Sets page title to "Updates"
+  content: Displays updates in a card-based layout
+@context:
+  updates: List of Update objects containing announcements
+{% endcomment %}
+
 {% extends "info_base.html" %}
 
 {% block title %}Updates{% endblock title %}

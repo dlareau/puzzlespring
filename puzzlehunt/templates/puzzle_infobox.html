@@ -1,3 +1,13 @@
+{% comment %}
+@template: puzzle_infobox.html
+@description: Displays puzzle information box with answer submission, stats, hints access, and updates.
+@context:
+  puzzle: The current Puzzle object
+  team: The current Team object
+  form: Form for submitting puzzle answers
+  updates: List of Update objects for this puzzle
+{% endcomment %}
+
 {% load crispy_forms_tags %}
 <div id="puzzle-infobox" 
      class="columns is-centered is-multiline" 

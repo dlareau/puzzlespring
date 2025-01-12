@@ -1,3 +1,20 @@
+{% comment %}
+@template: hunt_base.html
+@description: Base template for hunt-related pages. Provides hunt-specific styling and real-time updates via SSE.
+@extends: base.html
+@blocks:
+  title_meta_elements: Overrides title meta elements to include hunt name
+  base_includes: Adds hunt-specific CSS and custom hunt CSS if available
+  bulma_includes: Removes default Bulma includes
+  content_wrapper: Adds SSE-based live updates for hunt content
+  content: Block for hunt-specific content
+  footer: Removes default footer
+@context:
+  tmpl_hunt: The current hunt object
+  team: The current team object (optional)
+  title: Optional page title override
+{% endcomment %}
+
 {% extends 'base.html' %}
 {% load static %}
 

@@ -1,3 +1,14 @@
+{% comment %}
+@template: staff_search.html
+@description: Provides a search interface for staff to find users and teams.
+@extends: staff_hunt_base.html
+@blocks:
+  staff_content: Displays search input and results area
+@context:
+  hunt: The current Hunt object
+  query: The current search query
+{% endcomment %}
+
 {% extends 'staff_hunt_base.html' %}
 {% load crispy_forms_tags %}
 

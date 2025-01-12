@@ -1,3 +1,12 @@
+{% comment %}
+@template: _hint_row.html
+@description: Displays a single hint row with request details and response status.
+@context:
+  hint: The Hint object to display
+  staff: Boolean indicating if viewing as staff
+  puzzle: The current Puzzle object
+{% endcomment %}
+
 <div id="hint-row-{{ hint.id }}"
      class="hint_row box p-3 mb-4
           {% if staff %}

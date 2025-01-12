@@ -1,3 +1,13 @@
+{% comment %}
+@template: staff_hunts.html
+@description: Staff interface for managing and viewing all hunts.
+@extends: staff_hunt_base.html
+@blocks:
+  staff_content: The main content area displaying hunt management interface
+@context:
+  hunts: List of all Hunt objects
+{% endcomment %}
+
 {% extends 'staff_hunt_base.html' %}
 
 {% block staff_content %}

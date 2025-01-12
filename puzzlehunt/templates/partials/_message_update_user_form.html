@@ -1,3 +1,11 @@
+{% comment %}
+@template: _message_update_user_form.html
+@description: Displays user form updates with messages and user display information.
+@context:
+  user: The current User object
+  user_form: Form for updating user information
+{% endcomment %}
+
 {% include "partial_header.html" %}
 {% load crispy_forms_tags %}
 {% load account %}

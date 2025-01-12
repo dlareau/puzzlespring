@@ -1,3 +1,12 @@
+{% comment %}
+@template: _search_results.html
+@description: Displays search results for users and teams in the staff interface.
+@context:
+  query: The search query string
+  users: List of User objects matching the search
+  teams: List of Team objects matching the search
+{% endcomment %}
+
 {% if query %}
   {% if users %}
     <h2 class="subtitle">Users</h2>

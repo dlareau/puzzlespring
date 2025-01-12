@@ -1,3 +1,13 @@
+{% comment %}
+@template: archive.html
+@description: Displays a list of all past puzzle hunts in reverse chronological order with links to their pages.
+@extends: info_base.html
+@blocks:
+  content: Displays a table of past hunts with links to their various pages
+@context:
+  hunts: List of all past Hunt objects with their associated data
+{% endcomment %}
+
 {% extends 'info_base.html' %}
 
 {% block content %}

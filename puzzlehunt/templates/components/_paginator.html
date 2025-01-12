@@ -1,3 +1,10 @@
+{% comment %}
+@template: _paginator.html
+@description: Displays a pagination navigation bar with page numbers and ellipsis.
+@context:
+  page_info: Django Page object containing pagination information
+{% endcomment %}
+
 {% if page_info.has_other_pages %}
   <nav class="pagination is-centered mt-5" role="navigation" aria-label="pagination">
     <ul class="pagination-list">

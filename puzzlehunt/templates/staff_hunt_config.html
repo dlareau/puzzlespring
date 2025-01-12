@@ -1,3 +1,15 @@
+{% comment %}
+@template: staff_hunt_config.html
+@description: Provides an interface for editing hunt configuration using the Ace editor.
+@extends: staff_hunt_base.html
+@blocks:
+  staff_content: Displays configuration editor and puzzle list
+  extra_body: Adds JavaScript for Ace editor initialization and keyboard shortcuts
+@context:
+  hunt: The current Hunt object
+  config_text: Current hunt configuration text
+{% endcomment %}
+
 {% extends 'staff_hunt_base.html' %}
 
 {% block staff_content %}

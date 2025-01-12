@@ -1,3 +1,16 @@
+{% comment %}
+@template: staff_hunt_template.html
+@description: Staff interface for editing and previewing hunt templates.
+@extends: staff_hunt_base.html
+@blocks:
+  staff_content: The main content area with template editor and preview functionality
+  extra_body: Additional JavaScript for Ace editor initialization
+@context:
+  hunt: The current Hunt object
+  template_text: The current template text content
+  puzzle_numbers: List of puzzle numbers for preview functionality
+{% endcomment %}
+
 {% extends 'staff_hunt_base.html' %}
 
 {% block staff_content %}

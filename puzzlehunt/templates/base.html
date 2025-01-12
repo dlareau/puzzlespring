@@ -1,3 +1,18 @@
+{% comment %}
+@template: base.html
+@description: The base template that all other templates extend from. Provides the basic HTML structure, meta tags, and common includes.
+@blocks:
+  title_meta_elements: Block containing all meta elements for the page title and social sharing
+  base_includes: Block for including base CSS/JS files
+  bulma_includes: Block for including Bulma-specific CSS/JS files
+  includes: Block for template-specific includes
+  extra_head: Block for additional head content
+  content_wrapper: Block containing the main content wrapper structure
+  content: Block for the main content of the page
+  footer: Block containing the footer content
+  extra_body: Block for additional body content
+{% endcomment %}
+
 {% load static %}
 {% load django_htmx %}
 

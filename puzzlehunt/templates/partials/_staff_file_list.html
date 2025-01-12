@@ -1,3 +1,11 @@
+{% comment %}
+@template: _staff_file_list.html
+@description: Displays a list of files associated with a puzzle or hunt with management controls.
+@context:
+  parent: The parent object (Puzzle or Hunt) owning the files
+  parent_type: String indicating the type of parent ('puzzle', 'solution', or 'hunt')
+{% endcomment %}
+
 <nav id="file-nav-{{ parent_type }}-{{ parent.pk }}" class="panel is-primary" hx-target="#file-nav-{{ parent_type }}-{{ parent.pk }}" hx-swap="outerHTML">
   <div class="panel-block" style="justify-content: space-between">
     <div> {{ parent_type|capfirst }} File name</div>

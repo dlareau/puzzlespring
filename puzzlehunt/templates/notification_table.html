@@ -1,3 +1,11 @@
+{% comment %}
+@template: notification_table.html
+@description: Displays a table of notification subscriptions with platform, hunt, event types, and management controls.
+@context:
+  subscriptions: List of NotificationSubscription objects
+  event_type_choices: List of tuples containing event type choices
+{% endcomment %}
+
 <div id="notification-table" class="table-container" {% if request.htmx and not request.htmx.boosted %}hx-swap-oob="true"{% endif %}>
     <table class="table is-fullwidth">
         <thead>

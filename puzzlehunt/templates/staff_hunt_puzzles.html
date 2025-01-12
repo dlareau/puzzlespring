@@ -1,3 +1,14 @@
+{% comment %}
+@template: staff_hunt_puzzles.html
+@description: Staff interface for managing and viewing puzzle statistics and files.
+@extends: staff_hunt_base.html
+@blocks:
+  staff_content: The main content area displaying puzzle management interface
+@context:
+  puzzles: List of all Puzzle objects in the hunt
+  num_teams: Total number of teams in the hunt
+{% endcomment %}
+
 {% extends 'staff_hunt_base.html' %}
 {% load mathfilters %}
 

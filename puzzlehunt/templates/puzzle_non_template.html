@@ -1,3 +1,13 @@
+{% comment %}
+@template: puzzle_non_template.html
+@description: Displays a non-template puzzle, supporting HTML and PDF file types.
+@extends: puzzle_base.html
+@blocks:
+  content: The main content area displaying the puzzle content
+@context:
+  puzzle: The current puzzle object
+{% endcomment %}
+
 {% extends 'puzzle_base.html' %}
 
 {% block content %}

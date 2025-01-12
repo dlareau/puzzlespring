@@ -1,3 +1,16 @@
+{% comment %}
+@template: team_detail.html
+@description: Displays team details and management interface. Shows team members, join code, and team management options.
+@extends: allauth/layouts/manage.html
+@blocks:
+  content: Main content block containing team information and management interface
+@context:
+  current_team: The user's current team
+  teams: List of user's previous teams
+  team: The team being viewed
+  form: Team management form
+{% endcomment %}
+
 {% extends 'allauth/layouts/manage.html' %}
 {% load crispy_forms_tags %}
 

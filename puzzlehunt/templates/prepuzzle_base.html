@@ -1,3 +1,15 @@
+{% comment %}
+@template: prepuzzle_base.html
+@description: Base template for prepuzzle pages. Provides answer checking functionality.
+@extends: base.html
+@blocks:
+  title_meta_elements: Sets page title to puzzle name
+  base_includes: Adds JavaScript for answer checking
+  content: Block for prepuzzle-specific content
+@context:
+  puzzle: The current prepuzzle object
+{% endcomment %}
+
 {% extends 'base.html' %}
 {% load static %}
 

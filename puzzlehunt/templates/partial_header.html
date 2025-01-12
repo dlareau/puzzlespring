@@ -1,3 +1,10 @@
+{% comment %}
+@template: partial_header.html
+@description: Partial template for displaying message container if messages exist.
+@context:
+  messages: List of messages to display
+{% endcomment %}
+
 {% if messages %}
   {% include "components/_message_container.html" %}
 {% endif %}

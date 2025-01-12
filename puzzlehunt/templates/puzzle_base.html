@@ -1,3 +1,16 @@
+{% comment %}
+@template: puzzle_base.html
+@description: Base template for puzzle pages. Provides puzzle-specific layout and info box.
+@extends: hunt_base.html
+@blocks:
+  title_meta_elements: Sets page title to puzzle name
+  content_wrapper: Adds puzzle info box section
+  content: Block for puzzle-specific content
+@context:
+  puzzle: The current puzzle object
+  is_prepuzzle: Template tag result indicating if this is a prepuzzle
+{% endcomment %}
+
 {% extends 'hunt_base.html' %}
 
 {% block title_meta_elements %}

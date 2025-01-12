@@ -1,3 +1,11 @@
+{% comment %}
+@template: prepuzzle_infobox.html
+@description: Displays the information box for a prepuzzle, including title and answer submission form.
+@context:
+  puzzle: The current prepuzzle object
+  form: Form for submitting prepuzzle answers
+{% endcomment %}
+
 {% load crispy_forms_tags %}
 <div id="puzzle-infobox" class="columns is-centered is-multiline">
   <div id="content-box" class="column has-background-light is-12-tablet is-11-desktop is-10-widescreen">

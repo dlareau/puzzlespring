@@ -1,3 +1,11 @@
+{% comment %}
+@template: _feed_item.html
+@description: Displays a single feed item with icon, text, and timestamp in a styled box.
+@context:
+  item: The FeedEvent object to display
+  compact: Boolean indicating if the item should be displayed in compact mode
+{% endcomment %}
+
 <div id=event-{{ item.pk }} class="box" :class="compact ? 'p-1 mb-1' : 'p-2 mb-2'" style="border-left: 10px solid {{ item.color }};">
   <div class="media" :class="!compact && 'mb-1'">
     <div class="media-left">

@@ -1,3 +1,10 @@
+{% comment %}
+@template: _puzzle_public_response.html
+@description: Displays the response status for a puzzle submission with appropriate styling.
+@context:
+  submission: The PuzzleSubmission object containing response information
+{% endcomment %}
+
 <div id="public-answer-status"
      class="block p-3 has-text-centered
      {% if submission %}

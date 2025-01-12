@@ -1,3 +1,14 @@
+{% comment %}
+@template: access_error.html
+@description: Displays an error message when a user tries to access a resource they don't have permission to view.
+@extends: info_base.html
+@blocks:
+  title: Sets page title to "Not Available"
+  content: Displays the appropriate error message based on the reason
+@context:
+  reason: The reason for access denial ('hunt', 'team', 'puzzle', or 'hint')
+{% endcomment %}
+
 {% extends 'info_base.html' %}
 {% block title %}Not Available{% endblock title %}
 

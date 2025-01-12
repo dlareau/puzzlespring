@@ -1,3 +1,13 @@
+{% comment %}
+@template: _staff_hint_modal.html
+@description: Modal dialog for staff to view and respond to hint requests.
+@context:
+  hint: The Hint object being responded to
+  previous_hints: List of previous Hint objects for this team and puzzle
+  previous_submissions: List of previous PuzzleSubmission objects for this team and puzzle
+  form: Form for submitting hint response
+{% endcomment %}
+
 <div id="staff-hint-modal-contents" x-data="{ activeTab: 'answer' }">
   <div class="modal-background" @click="modal = false"></div>
   <div class="modal-content box">

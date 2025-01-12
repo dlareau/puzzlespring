@@ -1,3 +1,17 @@
+{% comment %}
+@template: leaderboard.html
+@description: Displays a leaderboard of teams for a specific hunt with customizable ranking rules.
+@extends: info_base.html
+@blocks:
+  title_meta_elements: Sets page title to include hunt name
+  content_wrapper: Sets wide layout for the leaderboard
+  content: Displays the leaderboard table with team rankings
+@context:
+  hunt: The Hunt object being displayed
+  ruleset: List of LeaderboardRule objects defining the columns and ranking rules
+  team_data: List of Team objects with their ranking data
+{% endcomment %}
+
 {% extends "info_base.html" %}
 {% block title_meta_elements %}
   {% with title="Team Leaderboard - "|add:hunt.name %} {{ block.super }} {% endwith %}

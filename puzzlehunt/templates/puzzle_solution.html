@@ -1,3 +1,14 @@
+{% comment %}
+@template: puzzle_solution.html
+@description: Displays the solution for a puzzle, supporting both HTML and PDF formats.
+@extends: hunt_base.html
+@blocks:
+  title_meta_elements: Sets page title to puzzle name with "Solution" suffix
+  content: Displays the puzzle solution content based on file type
+@context:
+  puzzle: The puzzle object containing the solution file
+{% endcomment %}
+
 {% extends 'hunt_base.html' %}
 
 {% block title_meta_elements %}

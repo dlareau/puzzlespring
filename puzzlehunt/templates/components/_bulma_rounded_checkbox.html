@@ -1,3 +1,10 @@
+{% comment %}
+@template: _bulma_rounded_checkbox.html
+@description: Renders a rounded checkbox switch with Bulma styling.
+@context:
+  field: The form field to render as a checkbox switch
+{% endcomment %}
+
 <div class="field">
   <div class="control">
     <input id="check-{{ field.html_name }}" type="checkbox" name="{{ field.html_name }}"

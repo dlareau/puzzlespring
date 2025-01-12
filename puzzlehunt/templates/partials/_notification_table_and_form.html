@@ -1,3 +1,11 @@
+{% comment %}
+@template: _notification_table_and_form.html
+@description: Displays notification subscriptions table and subscription form.
+@context:
+  subscriptions: List of NotificationSubscription objects
+  form: Form for creating new notification subscriptions
+{% endcomment %}
+
 {% include "partial_header.html" %}
 
 {% if subscriptions %}

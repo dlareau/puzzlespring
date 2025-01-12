@@ -1,3 +1,11 @@
+{% comment %}
+@template: hint_unlock_plan_formset.html
+@description: Form for configuring hint unlock plans in the staff interface.
+@context:
+  hunt: The current Hunt object
+  formset: Django formset for hint unlock plan configuration
+{% endcomment %}
+
 <form hx-post="{% url 'puzzlehunt:staff:hunt_hint_unlocking' hunt.pk %}">
   {% csrf_token %}
   {{ formset.management_form }}

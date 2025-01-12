@@ -1,3 +1,13 @@
+{% comment %}
+@template: user_detail.html
+@description: Displays and manages user profile details.
+@extends: allauth/layouts/manage.html
+@blocks:
+  content: Displays user details form
+@context:
+  user_form: Form for editing user details
+{% endcomment %}
+
 {% extends 'allauth/layouts/manage.html' %}
 {% load crispy_forms_tags %}
 

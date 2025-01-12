@@ -1,3 +1,19 @@
+{% comment %}
+@template: staff_charts.html
+@description: Displays various charts and statistics about puzzle solves, submissions, and hints using Google Charts.
+@extends: staff_hunt_base.html
+@blocks:
+  extra_head: Adds Google Charts loader
+  staff_content: Displays charts and earliest solves table
+@context:
+  chart_rows: List of earliest solve data for each puzzle
+  chart_solves_data: Data for puzzle solve status chart
+  chart_submissions_data: Data for puzzle submissions chart
+  chart_hints_data: Data for hints per puzzle chart
+  chart_submissions_by_time_data: Data for submissions over time chart
+  chart_solves_by_time_data: Data for solves over time chart
+{% endcomment %}
+
 {% extends 'staff_hunt_base.html' %}
 
 {% block extra_head %}

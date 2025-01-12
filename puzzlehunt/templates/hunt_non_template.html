@@ -1,3 +1,16 @@
+{% comment %}
+@template: hunt_non_template.html
+@description: Displays a simple list view of all puzzles in a hunt with their solve status and answers.
+@extends: hunt_base.html
+@blocks:
+  content_wrapper: Displays hunt title, team name, and puzzle list table
+@context:
+  hunt: The current Hunt object
+  team: The current Team object
+  puzzles: List of all Puzzle objects in the hunt
+  solved: List of puzzles that have been solved by the team
+{% endcomment %}
+
 {% extends "hunt_base.html" %}
 
 {% block content_wrapper %}

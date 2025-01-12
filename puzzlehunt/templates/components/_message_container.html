@@ -1,3 +1,11 @@
+{% comment %}
+@template: _message_container.html
+@description: Displays Django messages as Bulma toast notifications.
+@context:
+  messages: List of Django message objects to display
+  DEFAULT_MESSAGE_LEVELS: Django's message level constants
+{% endcomment %}
+
 <div id="outer-message-container" class="bulma" {% if request.htmx and not request.htmx.boosted %}hx-swap-oob="true"{% endif %} style="position: absolute; width: 100%; z-index: 10;">
   {% if messages %}
     <script>

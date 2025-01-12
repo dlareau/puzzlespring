@@ -1,3 +1,16 @@
+{% comment %}
+@template: puzzle_hints.html
+@description: Displays hint request form and previous hints for a puzzle with real-time updates via SSE.
+@extends: hunt_base.html
+@blocks:
+  title_meta_elements: Sets page title to puzzle name with "Hints" suffix
+  content_wrapper: Displays hint request form and previous hints
+@context:
+  puzzle: The puzzle object hints are being requested for
+  team: The current team object
+  hints: List of previous Hint objects for this puzzle
+{% endcomment %}
+
 {% extends 'hunt_base.html' %}
 
 {% block title_meta_elements %}

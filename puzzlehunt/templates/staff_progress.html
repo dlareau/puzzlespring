@@ -1,3 +1,17 @@
+{% comment %}
+@template: staff_progress.html
+@description: Displays a real-time progress board showing teams' puzzle solving status, hints, and submissions using DataTables.
+@extends: staff_hunt_base.html
+@blocks:
+  includes: Adds DataTables and other required CSS/JS files
+  staff_content: Displays the progress board with team and puzzle data
+@context:
+  hunt: The current Hunt object
+  puzzles: List of Puzzle objects in the hunt
+  info_columns: List of additional information columns to display
+  page_size: Optional pagination size for the table
+{% endcomment %}
+
 {% extends 'staff_hunt_base.html' %}
 {% load static %}
 {% load humanize %}

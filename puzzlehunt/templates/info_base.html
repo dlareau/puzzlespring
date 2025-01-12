@@ -1,3 +1,15 @@
+{% comment %}
+@template: info_base.html
+@description: Base template for informational pages. Provides a centered content layout with configurable width.
+@extends: base.html
+@blocks:
+  base_includes: Adds info-specific CSS
+  content_wrapper: Provides a centered content layout with configurable width
+  content: Block for page-specific content
+@context:
+  info_size: Controls the width of the content ('full-width', 'wide', 'narrow', 'narrow_padded', or default)
+{% endcomment %}
+
 {% extends 'base.html' %}
 {% load static %}
 

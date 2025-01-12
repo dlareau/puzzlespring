@@ -1,3 +1,14 @@
+{% comment %}
+@template: staff_hints.html
+@description: Displays staff interface for managing hint requests with filtering and real-time updates.
+@extends: staff_hunt_base.html
+@blocks:
+  staff_content: Displays hint management interface with filters and hint list
+@context:
+  hunt: The current Hunt object
+  hints: Paginated list of Hint objects
+{% endcomment %}
+
 {% extends 'staff_hunt_base.html' %}
 
 {% block staff_content %}

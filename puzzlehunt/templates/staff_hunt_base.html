@@ -1,3 +1,17 @@
+{% comment %}
+@template: staff_hunt_base.html
+@description: Base template for staff hunt management pages. Provides a collapsible sidebar with navigation and hunt selection.
+@extends: base.html
+@blocks:
+  includes: Adds staff-specific CSS and JS files
+  content_wrapper: Provides the main layout with collapsible sidebar
+  staff_content: Block for staff page-specific content
+  footer: Removes default footer
+@context:
+  hunt: The current Hunt object being managed
+  tmpl_all_hunts: List of all Hunt objects for the hunt selector
+{% endcomment %}
+
 {% extends 'base.html' %}
 {% load static %}
 

@@ -1,3 +1,16 @@
+{% comment %}
+@template: team_registration.html
+@description: Provides interface for creating a new team or joining an existing team.
+@extends: info_base.html
+@blocks:
+  title: Sets page title to "Team Registration"
+  content_wrapper: Sets wide layout for the registration form
+  content: Displays team creation form and join team interface
+@context:
+  form: Form for creating a new team
+  errors: Error messages from join team attempts
+{% endcomment %}
+
 {% extends "info_base.html" %}
 {% load crispy_forms_tags %}
 

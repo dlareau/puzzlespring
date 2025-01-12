@@ -1,3 +1,13 @@
+{% comment %}
+@template: hunt_info_non_template.html
+@description: Displays hunt information page for non-template hunts.
+@extends: hunt_info_base.html
+@blocks:
+  content: The main content area displaying hunt details and rules
+@context:
+  hunt: The current Hunt object
+{% endcomment %}
+
 {% extends "hunt_info_base.html" %}
 {% load humanize %}
 

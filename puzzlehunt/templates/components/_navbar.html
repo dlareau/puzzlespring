@@ -1,3 +1,14 @@
+{% comment %}
+@template: _navbar.html
+@description: Main navigation bar with user menu, team selection, and site navigation.
+@context:
+  debug: Boolean indicating if in debug mode
+  user: The current User object
+  current_hunt_team: The current Team object for the user in the current hunt
+  team_list: List of Team objects the user belongs to
+  is_staff: Boolean indicating if the user is staff
+{% endcomment %}
+
 {% load flatpages %}
 {% load static %}
 {% load account %}
