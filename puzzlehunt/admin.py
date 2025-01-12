@@ -336,7 +336,6 @@ class DisplayOnlyHuntAdmin(admin.ModelAdmin):
 
 # admin.site.unregister(Group)
 admin.site.unregister(FlatPage)
-admin.site.unregister(Site)
 admin.site.unregister(Theme)
 
 admin.site.register(User, PuzzlehuntUserAdmin)

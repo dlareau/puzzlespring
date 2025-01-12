@@ -2,21 +2,33 @@ from django.core.management.base import BaseCommand
 from django.core.management import call_command
 from django.utils import timezone
 from puzzlehunt.models import Hunt
+from django.contrib.sites.models import Site
 from datetime import timedelta
+import os
 
 class Command(BaseCommand):
     help = 'Performs initial setup: creates the first hunt, collects static files, and creates a superuser'
 
     def handle(self, *args, **options):
+        self.stdout.write(self.style.WARNING(
+            '\nWARNING: This command will delete all existing data and set up a fresh instance.'
+            '\nThis should only be run on initial setup.'
+            '\nAre you sure you want to continue? (yes/no): '
+        ))
+        
+        if input().lower() != 'yes':
+            self.stdout.write(self.style.ERROR('Setup cancelled.'))
+            return
+
         self.stdout.write('Starting initial setup...')
 
-        # Ensure groups and permissions
-        self.stdout.write('Setting up groups and permissions...')
+        # Flush existing data
+        self.stdout.write('Flushing existing data...')
         try:
-            call_command('ensure_groups')
-            self.stdout.write(self.style.SUCCESS('Successfully set up groups and permissions'))
+            call_command('flush', interactive=False, verbosity=0)
+            self.stdout.write(self.style.SUCCESS('Successfully flushed existing data'))
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f'Failed to set up groups and permissions: {str(e)}'))
+            self.stdout.write(self.style.ERROR(f'Failed to flush data: {str(e)}'))
             return
 
         # Create initial hunt
@@ -38,6 +50,21 @@ class Command(BaseCommand):
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'Failed to create hunt: {str(e)}'))
             return
+
+        # Update site domain
+        self.stdout.write('Updating site domain...')
+        try:
+            domain = os.environ.get('DOMAIN')
+            if domain:
+                # Remove port if present
+                domain = domain.split(':')[0]
+                site = Site.objects.get_current()
+                site.domain = domain
+                site.name = domain
+                site.save()
+                self.stdout.write(self.style.SUCCESS(f'Successfully updated site domain to {domain}'))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'Failed to update site domain: {str(e)}'))
 
         # Collect static files
         self.stdout.write('Collecting static files...')
