@@ -97,7 +97,11 @@ def generate_template_docs():
                 template_groups[dir_name].append((template_path.name, docs))
     
     # Process templates by directory
-    for dir_name, templates in sorted(template_groups.items()):
+    # Sort directories but ensure 'root' comes first
+    sorted_dirs = sorted(template_groups.items(), 
+                        key=lambda x: ('z' if x[0] != 'root' else '', x[0]))
+    
+    for dir_name, templates in sorted_dirs:
         if templates:  # Only show directories with documented templates
             output.extend([
                 f"## {dir_name.replace('_', ' ').title()}",

@@ -9,204 +9,6 @@ nav_order: 3
 
 This document describes the templates used in the PuzzleSpring application.
 
-## Components
-
-### <u>_bulma_expanded_text_input.html</u>
-
-_Description:_ Renders an expanded text input field with Bulma styling and error handling.
-
-
-_Context Variables:_
-
-- `field`: The form field to render
-
-
-
-### <u>_bulma_rounded_checkbox.html</u>
-
-_Description:_ Renders a rounded checkbox switch with Bulma styling.
-
-
-_Context Variables:_
-
-- `field`: The form field to render as a checkbox switch
-
-
-
-### <u>_feed_item.html</u>
-
-_Description:_ Displays a single feed item with icon, text, and timestamp in a styled box.
-
-
-_Context Variables:_
-
-- `item`: The FeedEvent object to display
-- `compact`: Boolean indicating if the item should be displayed in compact mode
-
-
-
-### <u>_message_container.html</u>
-
-_Description:_ Displays Django messages as Bulma toast notifications.
-
-
-_Context Variables:_
-
-- `messages`: List of Django message objects to display
-- `DEFAULT_MESSAGE_LEVELS`: Django's message level constants
-
-
-
-### <u>_navbar.html</u>
-
-_Description:_ Main navigation bar with user menu, team selection, and site navigation.
-
-
-_Context Variables:_
-
-- `debug`: Boolean indicating if in debug mode
-- `user`: The current User object
-- `current_hunt_team`: The current Team object for the user in the current hunt
-- `team_list`: List of Team objects the user belongs to
-- `is_staff`: Boolean indicating if the user is staff
-
-
-
-### <u>_paginator.html</u>
-
-_Description:_ Displays a pagination navigation bar with page numbers and ellipsis.
-
-
-_Context Variables:_
-
-- `page_info`: Django Page object containing pagination information
-
-
-
-## Partials
-
-### <u>_hint_row.html</u>
-
-_Description:_ Displays a single hint row with request details and response status.
-
-
-_Context Variables:_
-
-- `hint`: The Hint object to display
-- `staff`: Boolean indicating if viewing as staff
-- `puzzle`: The current Puzzle object
-
-
-
-### <u>_message_update_user_form.html</u>
-
-_Description:_ Displays user form updates with messages and user display information.
-
-
-_Context Variables:_
-
-- `user`: The current User object
-- `user_form`: Form for updating user information
-
-
-
-### <u>_notification_active_toggle.html</u>
-
-_Description:_ Toggle switch for activating/deactivating notification subscriptions.
-
-
-_Context Variables:_
-
-- `subscription`: The NotificationSubscription object to toggle
-
-
-
-### <u>_notification_table_and_form.html</u>
-
-_Description:_ Displays notification subscriptions table and subscription form.
-
-
-_Context Variables:_
-
-- `subscriptions`: List of NotificationSubscription objects
-- `form`: Form for creating new notification subscriptions
-
-
-
-### <u>_puzzle_public_response.html</u>
-
-_Description:_ Displays the response status for a puzzle submission with appropriate styling.
-
-
-_Context Variables:_
-
-- `submission`: The PuzzleSubmission object containing response information
-
-
-
-### <u>_search_results.html</u>
-
-_Description:_ Displays search results for users and teams in the staff interface.
-
-
-_Context Variables:_
-
-- `query`: The search query string
-- `users`: List of User objects matching the search
-- `teams`: List of Team objects matching the search
-
-
-
-### <u>_staff_file_list.html</u>
-
-_Description:_ Displays a list of files associated with a puzzle or hunt with management controls.
-
-
-_Context Variables:_
-
-- `parent`: The parent object (Puzzle or Hunt) owning the files
-- `parent_type`: String indicating the type of parent ('puzzle', 'solution', or 'hunt')
-
-
-
-### <u>_staff_hint_modal.html</u>
-
-_Description:_ Modal dialog for staff to view and respond to hint requests.
-
-
-_Context Variables:_
-
-- `hint`: The Hint object being responded to
-- `previous_hints`: List of previous Hint objects for this team and puzzle
-- `previous_submissions`: List of previous PuzzleSubmission objects for this team and puzzle
-- `form`: Form for submitting hint response
-
-
-
-### <u>_submission_table.html</u>
-
-_Description:_ Displays a table of previous puzzle submissions with real-time updates.
-
-
-_Context Variables:_
-
-- `puzzle`: The current Puzzle object
-- `submissions`: List of PuzzleSubmission objects for this puzzle
-
-
-
-### <u>_team_name_and_form.html</u>
-
-_Description:_ Displays team name and form for editing team information.
-
-
-_Context Variables:_
-
-- `team`: The current Team object
-- `form`: Form for editing team information
-
-
-
 ## Root
 
 ### <u>access_error.html</u>
@@ -914,5 +716,203 @@ _Context Variables:_
 _Template Blocks:_
 
 - `content`: Displays user details form
+
+
+
+## Components
+
+### <u>_bulma_expanded_text_input.html</u>
+
+_Description:_ Renders an expanded text input field with Bulma styling and error handling.
+
+
+_Context Variables:_
+
+- `field`: The form field to render
+
+
+
+### <u>_bulma_rounded_checkbox.html</u>
+
+_Description:_ Renders a rounded checkbox switch with Bulma styling.
+
+
+_Context Variables:_
+
+- `field`: The form field to render as a checkbox switch
+
+
+
+### <u>_feed_item.html</u>
+
+_Description:_ Displays a single feed item with icon, text, and timestamp in a styled box.
+
+
+_Context Variables:_
+
+- `item`: The FeedEvent object to display
+- `compact`: Boolean indicating if the item should be displayed in compact mode
+
+
+
+### <u>_message_container.html</u>
+
+_Description:_ Displays Django messages as Bulma toast notifications.
+
+
+_Context Variables:_
+
+- `messages`: List of Django message objects to display
+- `DEFAULT_MESSAGE_LEVELS`: Django's message level constants
+
+
+
+### <u>_navbar.html</u>
+
+_Description:_ Main navigation bar with user menu, team selection, and site navigation.
+
+
+_Context Variables:_
+
+- `debug`: Boolean indicating if in debug mode
+- `user`: The current User object
+- `current_hunt_team`: The current Team object for the user in the current hunt
+- `team_list`: List of Team objects the user belongs to
+- `is_staff`: Boolean indicating if the user is staff
+
+
+
+### <u>_paginator.html</u>
+
+_Description:_ Displays a pagination navigation bar with page numbers and ellipsis.
+
+
+_Context Variables:_
+
+- `page_info`: Django Page object containing pagination information
+
+
+
+## Partials
+
+### <u>_hint_row.html</u>
+
+_Description:_ Displays a single hint row with request details and response status.
+
+
+_Context Variables:_
+
+- `hint`: The Hint object to display
+- `staff`: Boolean indicating if viewing as staff
+- `puzzle`: The current Puzzle object
+
+
+
+### <u>_message_update_user_form.html</u>
+
+_Description:_ Displays user form updates with messages and user display information.
+
+
+_Context Variables:_
+
+- `user`: The current User object
+- `user_form`: Form for updating user information
+
+
+
+### <u>_notification_active_toggle.html</u>
+
+_Description:_ Toggle switch for activating/deactivating notification subscriptions.
+
+
+_Context Variables:_
+
+- `subscription`: The NotificationSubscription object to toggle
+
+
+
+### <u>_notification_table_and_form.html</u>
+
+_Description:_ Displays notification subscriptions table and subscription form.
+
+
+_Context Variables:_
+
+- `subscriptions`: List of NotificationSubscription objects
+- `form`: Form for creating new notification subscriptions
+
+
+
+### <u>_puzzle_public_response.html</u>
+
+_Description:_ Displays the response status for a puzzle submission with appropriate styling.
+
+
+_Context Variables:_
+
+- `submission`: The PuzzleSubmission object containing response information
+
+
+
+### <u>_search_results.html</u>
+
+_Description:_ Displays search results for users and teams in the staff interface.
+
+
+_Context Variables:_
+
+- `query`: The search query string
+- `users`: List of User objects matching the search
+- `teams`: List of Team objects matching the search
+
+
+
+### <u>_staff_file_list.html</u>
+
+_Description:_ Displays a list of files associated with a puzzle or hunt with management controls.
+
+
+_Context Variables:_
+
+- `parent`: The parent object (Puzzle or Hunt) owning the files
+- `parent_type`: String indicating the type of parent ('puzzle', 'solution', or 'hunt')
+
+
+
+### <u>_staff_hint_modal.html</u>
+
+_Description:_ Modal dialog for staff to view and respond to hint requests.
+
+
+_Context Variables:_
+
+- `hint`: The Hint object being responded to
+- `previous_hints`: List of previous Hint objects for this team and puzzle
+- `previous_submissions`: List of previous PuzzleSubmission objects for this team and puzzle
+- `form`: Form for submitting hint response
+
+
+
+### <u>_submission_table.html</u>
+
+_Description:_ Displays a table of previous puzzle submissions with real-time updates.
+
+
+_Context Variables:_
+
+- `puzzle`: The current Puzzle object
+- `submissions`: List of PuzzleSubmission objects for this puzzle
+
+
+
+### <u>_team_name_and_form.html</u>
+
+_Description:_ Displays team name and form for editing team information.
+
+
+_Context Variables:_
+
+- `team`: The current Team object
+- `form`: Form for editing team information
 
 
