@@ -12,7 +12,7 @@
   </p>
 </div>
 
-PuzzleSpring is a Django-based puzzlehunt hosting platform designed to be easy to set up and customize while maintaining powerful features for both hunters and hunt operators.
+PuzzleSpring is a Django-based puzzlehunt hosting platform designed to be easy to set up and customize while maintaining powerful features for both hunters and hunt operators. Please see our documentation linked above for how to get started.
 
 ## Features
 
