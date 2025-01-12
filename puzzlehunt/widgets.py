@@ -1,22 +1,16 @@
 from django import forms
 
 
-class HtmlEditor(forms.Textarea):
-    def __init__(self, *args, **kwargs):
-        super(HtmlEditor, self).__init__(*args, **kwargs)
-        self.attrs['class'] = 'html-editor'
+class AceEditorWidget(forms.Textarea):
+    template_name = 'components/_ace_editor_widget.html'
 
     class Media:
-        css = {
-            'all': (
-                'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.9.0/codemirror.css',
-                '/static/codemirror_html.css'
-            )
-        }
         js = (
-            'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.9.0/codemirror.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.9.0/mode/xml/xml.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.9.0/mode/htmlmixed/htmlmixed.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.9.0/mode/css/css.js',
-            '/static/codemirror_html.js'
+            'ace-src-noconflict/ace.js',
+            'ace-src-noconflict/mode-html.js',
+            'ace-src-noconflict/theme-chrome.js',
         )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.attrs['class'] = 'ace-editor'

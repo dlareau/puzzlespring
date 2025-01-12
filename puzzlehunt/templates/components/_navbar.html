@@ -51,7 +51,9 @@
         </a>
 
         {% for page in flatpages|dictsort:"url" %}
-          <a href="/info{{ page.url }}" class="navbar-item is-hidden-touch"> {{ page.title }} </a>
+          {% if not page.registration_required or request.user.is_authenticated %}
+            <a href="/info{{ page.url }}" class="navbar-item is-hidden-touch"> {{ page.title }} </a>
+          {% endif %}
         {% endfor %}
 
         <div class="navbar-item has-dropdown is-hoverable is-hidden-desktop">

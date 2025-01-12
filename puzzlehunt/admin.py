@@ -15,7 +15,7 @@ from django.contrib.flatpages.models import FlatPage
 from django.contrib.sites.admin import Site
 from django.template.defaultfilters import truncatechars
 from django.utils.safestring import mark_safe
-from puzzlehunt.widgets import HtmlEditor
+from puzzlehunt.widgets import AceEditorWidget
 
 
 @admin.display(description="Team name", ordering=Lower("team__name"))
@@ -319,13 +319,14 @@ class FlatPageProxyAdmin(FlatPageAdmin):
     )
 
     def get_form(self, request, obj=None, **kwargs):
-        kwargs['form'] = FlatpageProxyForm
         form = super(FlatPageAdmin, self).get_form(request, obj, **kwargs)
         form.base_fields['sites'].initial = Site.objects.get(pk=1)
-        form.base_fields['content'].widget = HtmlEditor(attrs={'style': 'width:90%; height:400px;'})
+        form.base_fields['content'].widget = AceEditorWidget(attrs={
+            'style': 'width:90%;',
+        })
         form.base_fields['url'].help_text = ("Example: '/contact-us/' translates to " +
-                                             "/info/contact-us/. Make sure to have leading and " +
-                                             "trailing slashes.")
+                                         "/info/contact-us/. Make sure to have leading and " +
+                                         "trailing slashes.")
         return form
 # endregion
 
