@@ -7,7 +7,7 @@ nav_order: 1
 
 # Quick Start Guide
 
-This guide will help you get PuzzleSpring up and running quickly for your first puzzle hunt.
+This guide will help you get PuzzleSpring up and running quickly to see the app in action.
 
 ## Basic Setup
 

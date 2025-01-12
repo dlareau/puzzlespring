@@ -1,7 +1,7 @@
 Documentation Outline
-- Getting Started
-    - Quick Start
-    - Installation
+- Getting Started (done)
+    - Quick Start (done)
+    - Installation (done)
 - User Guide
     - Configuration (done)
         - In App Settings (done)
@@ -49,10 +49,10 @@ Documentation Outline
             - Add past hunts to the archive (created)
             - Manually add a user to a team (created)
             - Manually reset a user's password (created)
-- Technical Reference
-    - API Reference
-    - Data Model
-    - Templates
+- Technical Reference (done)
+    - API Reference (done)
+    - Data Model (done)
+    - Templates (done)
 - Developer Guide
 - Contributing
 - FAQ
