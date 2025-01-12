@@ -6,7 +6,7 @@
 
     # Static files with caching
     handle_path /static/* {
-        root * /static/
+        root * /app/static/
         file_server
     }
 
@@ -15,8 +15,8 @@
         reverse_proxy app:8000 {
             @accel header X-Accel-Redirect *
             handle_response @accel {
-                uri strip_prefix /media
-                root    * /media
+                uri strip_prefix /app/media
+                root    * /app/media
                 rewrite * {rp.header.X-Accel-Redirect}
                 method  * GET
                 file_server

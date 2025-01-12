@@ -24,8 +24,8 @@ services:
     image: django-puzzlehunt
     volumes:
       - .:/code
-      - media:/media
-      - static:/static
+      - media:/app/media
+      - static:/app/static
     environment:
       - DJANGO_SECRET_KEY
       - DJANGO_SETTINGS_MODULE=server.settings.env_settings
@@ -46,8 +46,8 @@ services:
     pull_policy: never
     volumes:
       - .:/code
-      - static:/static
-      - media:/media
+      - static:/app/static
+      - media:/app/media
     environment:
       - DJANGO_SECRET_KEY
       - DJANGO_SETTINGS_MODULE=server.settings.env_settings
@@ -77,8 +77,8 @@ services:
       - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-      - static:/static
-      - media:/media
+      - static:/app/static
+      - media:/app/media
     environment:
       - DOMAIN
     depends_on:
