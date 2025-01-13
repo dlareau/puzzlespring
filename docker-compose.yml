@@ -28,6 +28,7 @@ services:
       - static:/app/static
       - ./custom/static:/app/custom_static
       - ./custom/templates:/app/custom_templates
+      - ./custom/config:/app/custom_config
     environment:
       - DJANGO_SECRET_KEY
       - DJANGO_SETTINGS_MODULE=server.settings.env_settings

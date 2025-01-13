@@ -30,7 +30,7 @@ RUN apt-get update && \
 COPY --from=builder /install /usr/local
 
 # Create necessary directories
-RUN mkdir -p /app/static /app/media /app/custom_static /app/custom_templates
+RUN mkdir -p /app/static /app/media /app/custom_static /app/custom_templates /app/custom_config
 
 # Copy application code
 COPY . .
