@@ -5,6 +5,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import SuspiciousOperation
 from django.core.files import File
 from django.core.paginator import Paginator
+from django.forms import ValidationError
 from django.views.decorators.http import require_GET, require_POST
 from django.shortcuts import render, get_object_or_404
 from django.db.models import F, Max, Count, Subquery, OuterRef, PositiveIntegerField, Min
@@ -14,7 +15,6 @@ from django.contrib import messages
 from django.template.loader import engines
 from django.db.models import Q, F, Prefetch
 from django.http import JsonResponse
-from puzzlehunt.config_parser import parse_config
 
 from .utils import create_media_files, get_media_file_model, get_media_file_parent_model
 from .hunt_views import protected_static
@@ -599,17 +599,13 @@ def hunt_set_current(request, hunt):
 def hunt_config(request, hunt):
     """Render or update the hunt configuration page."""
     if request.method == "POST":
-        # Get the config from the request body
         config_text = request.POST.get('config', '')
         try:
-            
-            # Validate the config by attempting to parse it
-            parse_config(config_text)
-            # If parsing succeeds, save the config
             hunt.config = config_text
+            hunt.full_clean()  # This will validate the config
             hunt.save()
             messages.success(request, "Configuration saved successfully")
-        except Exception as e:
+        except ValidationError as e:
             messages.error(request, str(e))
     else:
         config_text = hunt.config or "# Write your config here"

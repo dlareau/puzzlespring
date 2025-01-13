@@ -23,3 +23,5 @@ redis>=4.0.0
 huey>=2.4.0
 django-anymail
 python3-openid
+pytest
+pytest-django

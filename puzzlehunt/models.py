@@ -279,15 +279,23 @@ class Hunt(models.Model):
             return self.name
 
     def clean(self):
-        """ Overrides the standard clean method to ensure that only one hunt is the current hunt """
+        """ Validates the hunt model, including config parsing """
         if not self.is_current_hunt:
             try:
                 old_obj = Hunt.objects.get(pk=self.pk)
                 if old_obj.is_current_hunt:
                     raise ValidationError({'is_current_hunt':
-                                          ["There must always be one current hunt", ]})
+                                        ["There must always be one current hunt", ]})
             except ObjectDoesNotExist:
                 pass
+
+        # Validate config if present
+        if self.config:
+            try:
+                parse_config(self.config, self.puzzle_set.values_list('id', flat=True))
+            except Exception as e:
+                raise ValidationError({'config': [str(e)]})
+
         super(Hunt, self).clean()
 
     @transaction.atomic
@@ -597,15 +605,15 @@ class Team(models.Model):
 
     def solved_puzzles(self):
         """Get all solved puzzles for the team."""
-        return self.puzzlestatus_set.filter(solve_time__isnull=False)
+        return Puzzle.objects.filter(puzzlestatus__team=self, puzzlestatus__solve_time__isnull=False)
 
     def unlocked_puzzles(self):
         """Get all unlocked puzzles for the team."""
-        return self.puzzlestatus_set.filter(unlock_time__isnull=False)
+        return Puzzle.objects.filter(puzzlestatus__team=self, puzzlestatus__unlock_time__isnull=False)
 
     def solved_metas(self):
         """Get all solved meta puzzles for the team."""
-        return self.puzzlestatus_set.filter(solve_time__isnull=False, puzzle__type=Puzzle.PuzzleType.META_PUZZLE)
+        return Puzzle.objects.filter(puzzlestatus__team=self, puzzlestatus__solve_time__isnull=False, type=Puzzle.PuzzleType.META_PUZZLE)
 
     def hints_open_for_puzzle(self, puzzle):
         """ Takes a puzzle and returns whether the team may use hints on the puzzle """
@@ -639,24 +647,27 @@ class Team(models.Model):
 
         # Get the team's solved puzzles by ID
         solved_puzzles = set(
-            self.solved_puzzles().values_list('puzzle__id', flat=True)
+            self.solved_puzzles().values_list('id', flat=True)
         )
+        
+        # Get all valid puzzle IDs for this hunt
+        puzzle_ids = set(hunt.puzzle_set.values_list('id', flat=True))
+        
         try:
             # Parse the config and process unlocks
-            config_rules = parse_config(self.hunt.config)
+            config_rules = parse_config(self.hunt.config, puzzle_ids)
             unlocked_puzzles, points, hints = process_config_rules(
                 config_rules,
                 solved_puzzles,
                 time_since_start
             )
-        
         except Exception as e:
             # Log the error if config parsing fails
             logger.error(f"Error processing hunt config: {e}")
             return
         
         # Unlock new puzzles
-        current_unlocks = set(self.unlocked_puzzles().values_list('puzzle__id', flat=True))
+        current_unlocks = set(self.unlocked_puzzles().values_list('id', flat=True))
         puzzles_to_add = unlocked_puzzles - current_unlocks
         
         for puzzle_id in puzzles_to_add:

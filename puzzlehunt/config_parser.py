@@ -82,8 +82,84 @@ class ConfigFile(List):
     def __repr__(self):
         return "\n".join(map(str, self))
 
-def parse_config(config_str):
-    return parse(config_str.upper(), ConfigFile, comment=comment_sh)
+def parse_config(config_str, puzzle_ids=None):
+    """
+    Parse a config string and validate puzzle IDs and check for circular dependencies.
+    
+    Args:
+        config_str: The configuration string to parse
+        puzzle_ids: Optional set of valid puzzle IDs to check against
+    
+    Raises:
+        ValueError: If an invalid puzzle ID is referenced or circular dependencies are found
+    """
+    config = parse(config_str.upper(), ConfigFile, comment=comment_sh)
+    
+    # Build dependency graph
+    dependencies = {}
+    
+    def add_dependency(puzzle_id, depends_on):
+        if puzzle_id not in dependencies:
+            dependencies[puzzle_id] = set()
+        dependencies[puzzle_id].add(depends_on)
+    
+    def check_cycles(puzzle_id, visited=None, path=None):
+        if visited is None:
+            visited = set()
+        if path is None:
+            path = []
+            
+        visited.add(puzzle_id)
+        path.append(puzzle_id)
+        
+        if puzzle_id in dependencies:
+            for dep in dependencies[puzzle_id]:
+                if dep in path:
+                    cycle = path[path.index(dep):] + [dep]
+                    raise ValueError(f"Circular dependency detected: {' -> '.join('P' + id for id in cycle)}")
+                if dep not in visited:
+                    check_cycles(dep, visited, path)
+        
+        path.pop()
+    
+    # Collect dependencies and validate puzzle IDs
+    referenced_ids = set()
+    for rule in config:
+        # Get the puzzle being unlocked
+        if isinstance(rule.unlockable, List):
+            unlockables = [item for item in rule.unlockable if isinstance(item, PuzzleID)]
+        elif isinstance(rule.unlockable, PuzzleID):
+            unlockables = [rule.unlockable]
+        else:
+            unlockables = []
+            
+        for unlockable in unlockables:
+            referenced_ids.add(unlockable.id)
+            
+        # Check rule conditions and build dependency graph
+        def collect_dependencies(rule_item, target_puzzles):
+            if isinstance(rule_item, PuzzleID):
+                referenced_ids.add(rule_item.id)
+                for target in target_puzzles:
+                    add_dependency(target.id, rule_item.id)
+            elif isinstance(rule_item, (And, Or, SomeOf)):
+                for item in rule_item:
+                    if not isinstance(item, str):
+                        collect_dependencies(item, target_puzzles)
+        
+        collect_dependencies(rule.rule, unlockables)
+    
+    # Check for invalid puzzle IDs if puzzle_ids was provided
+    if puzzle_ids is not None:
+        invalid_ids = referenced_ids - set(str(pid) for pid in puzzle_ids)
+        if invalid_ids:
+            raise ValueError(f"Config references non-existent puzzle IDs: {', '.join(sorted(invalid_ids))}")
+    
+    # Check for cycles in the dependency graph
+    for puzzle_id in dependencies:
+        check_cycles(puzzle_id)
+    
+    return config
 
 def check_rule(rule, solved_puzzles, time, points):
     # Handle string inputs (like parentheses and commas)
