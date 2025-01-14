@@ -85,7 +85,6 @@ def puzzle_view(request, pk):
         return render(request, puzzle.main_file.file.name.removeprefix("trusted/"), context)
 
 
-# TODO: give solutions the same template / no template treatment as puzzles
 def puzzle_solution(request, pk):
     puzzle = get_object_or_404(Puzzle, pk=pk)
     if not puzzle.check_access(user=request.user, solution=True):
@@ -180,7 +179,6 @@ def hunt_view(request, hunt):
     team = hunt.team_from_user(request.user)
     puzzle_list = []
 
-    # TODO: consider moving the puzzle list logic to the model.
     # Admins get all access, wrong teams/early lookers get an error page
     # real teams get appropriate puzzles, and puzzles from past hunts are public
     if hunt.is_public or request.user.is_staff:
@@ -262,7 +260,6 @@ def hunt_prepuzzle(request, hunt):
         return redirect('puzzlehunt:hunt_info', hunt.pk)
 
 
-# TODO: if we ever allow the main pages to require javascript, this can go away and the submit method can just use htmx
 def render_prepuzzle(request, form, puzzle, submission=None):
     context = {'form': form, 'puzzle': puzzle, 'submission': submission}
     if puzzle.main_file is None or not puzzle.main_file.extension == "tmpl":

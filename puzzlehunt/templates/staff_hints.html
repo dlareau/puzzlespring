@@ -81,7 +81,6 @@
         <div class="mt-2 mr-2"><b>Hint Status:</b></div>
         <div class="select mr-2">
           <select class="filterInput" name="hint_status">
-            {# TODO: this is pretty manual, maybe make an enum #}
             <option value="" {% if request.GET.hint_status == "" %} selected {% endif %}>------</option>
             <option value="unclaimed" {% if request.GET.hint_status == "unclaimed" %} selected {% endif %}>Unclaimed</option>
             <option value="claimed" {% if request.GET.hint_status == "claimed" %} selected {% endif %}>Claimed</option>

@@ -237,7 +237,7 @@ class TeamAdmin(admin.ModelAdmin):
          })
     )
 
-    # TODO: find a way to slim down this inline.
+    # TODO: find a way to slim down this inline in order to bring it back.
     # inlines = [PuzzleStatusInline]
 
 

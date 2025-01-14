@@ -489,17 +489,6 @@ class Prepuzzle(models.Model):
         return self.released
 
 # region Team Model
-# TODO: possibly bring logic out to lookup view
-class TeamManager(models.Manager):
-    def search(self, query=None):
-        qs = self.get_queryset()
-        if query is not None:
-            or_lookup = (models.Q(team_name__icontains=query) |
-                         models.Q(location__icontains=query))
-            qs = qs.filter(or_lookup).distinct()
-        return qs
-
-
 def team_key_gen():
     join_code = "JOIN123"
     bad_code = True
@@ -516,7 +505,6 @@ class Team(models.Model):
         verbose_name="Team Name",
         max_length=100,
         help_text="The team name as it will be shown to hunt participants")
-    # TODO: the name puzzle statuses isn't exactly right here, as it is really unlocked puzzles
     puzzle_statuses = models.ManyToManyField(
         Puzzle,
         blank=True,
@@ -560,8 +548,6 @@ class Team(models.Model):
         default=0,
         help_text="The total number of points this team has earned through config rules"
     )
-
-    objects = TeamManager()
 
     @property
     def is_playtester_team(self):
@@ -760,8 +746,6 @@ class Submission(models.Model):
         null=True,
         help_text="The user who created the submission")
 
-    # TODO: It could be good to store is_correct as a field to avoid recalculating it
-    # If we do this, we'll want to make sure any text manipulations such as lower are consistently applied.
     @property
     def is_correct(self):
         """ A boolean indicating if the submission given is exactly correct """

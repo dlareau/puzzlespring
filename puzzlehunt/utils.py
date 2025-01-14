@@ -58,7 +58,6 @@ def get_media_file_model_from_object(parent_object, is_solution_file):
             raise Http404("Invalid parent object type")
 
 
-#TODO: a helper that automatically attempts to set the main file.
 def create_media_files(parent_object, file, is_solution_file=False):
     if file is None:
         return "No file!"

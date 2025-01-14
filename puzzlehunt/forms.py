@@ -125,7 +125,7 @@ class AnswerForm(Form):
             data = re.sub(r'[^A-Za-z0-9]', '', data)
         if not puzzle.case_sensitive:
             data = data.lower()
-        # TODO: A check here for orginal_answer != answer would allow raising a validation error
+        # Note: A check here for orginal_answer != answer would allow erroring instead of modifying the answer
 
         return data
 

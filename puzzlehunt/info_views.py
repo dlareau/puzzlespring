@@ -116,7 +116,6 @@ def team_create(request):
             team.members.add(request.user)
             Event.objects.create_event(Event.EventType.TEAM_JOIN, team, user=request.user)
 
-            # TODO: it feels kinda weird to be taken to the team view, maybe hunt into?
             messages.success(request, f"You have joined {team.name}")
             return redirect('puzzlehunt:team_view', 'current')
     else:
