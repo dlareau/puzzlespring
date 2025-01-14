@@ -1,18 +1,15 @@
 import os
 
+os.environ["DATABASE_URL"] = 'sqlite:///mydatabase'
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 os.environ['ENFORCE_SSL'] = 'False'
 os.environ['DJANGO_ENABLE_DEBUG'] = 'True'
 
 from .base_settings import *
 
+INSTALLED_APPS = ['daphne'] + INSTALLED_APPS
+
 SECRET_KEY = 'development_secret_key'
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'mydatabase',
-    }
-}
 
 CACHES = {
     'default': {
