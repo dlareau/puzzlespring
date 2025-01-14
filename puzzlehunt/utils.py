@@ -2,6 +2,7 @@ import io
 import zipfile
 
 from django.http import Http404
+from django.shortcuts import get_object_or_404
 
 from puzzlehunt import models
 from django.core.files import File
@@ -82,3 +83,19 @@ def create_media_files(parent_object, file, is_solution_file=False):
                         media_file_model.objects.create(file=django_file, parent=parent_object)
     else:
         media_file_model.objects.create(file=file, parent=parent_object)
+
+
+class HuntConverter:
+    regex = '[0-9]+|current'
+
+    def to_python(self, value):
+        if value == "current":
+            return Hunt.objects.get(is_current_hunt=True)
+        else:
+            return get_object_or_404(Hunt, id=int(value))
+
+    def to_url(self, value):
+        if value == "current":
+            return "current"
+        else:
+            return '%d' % value

@@ -31,7 +31,7 @@ services:
       - ./custom/config:/app/custom_config
     environment:
       - DJANGO_SECRET_KEY
-      - DJANGO_SETTINGS_MODULE=server.settings.env_settings
+      - DJANGO_SETTINGS_MODULE=server.settings.base_settings
       - DATABASE_URL=postgres://puzzlehunt:${DB_PASSWORD}@db/puzzlehunt
       - DJANGO_ENABLE_DEBUG
       - DOMAIN
@@ -53,7 +53,7 @@ services:
       - media:/app/media
     environment:
       - DJANGO_SECRET_KEY
-      - DJANGO_SETTINGS_MODULE=server.settings.env_settings
+      - DJANGO_SETTINGS_MODULE=server.settings.base_settings
       - DATABASE_URL=postgres://puzzlehunt:${DB_PASSWORD}@db/puzzlehunt
       - DJANGO_ENABLE_DEBUG
       - SENTRY_DSN

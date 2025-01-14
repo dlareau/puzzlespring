@@ -1,28 +1,10 @@
-from django.shortcuts import get_object_or_404
 from django.urls import path, register_converter
 from django.conf.urls import include
 from puzzlehunt import info_views, hunt_views, staff_views
-from puzzlehunt.models import Hunt
 from django_eventstream.views import events
+from puzzlehunt.utils import HuntConverter
 
 app_name = 'puzzlehunt'
-
-
-class HuntConverter:
-    regex = '[0-9]+|current'
-
-    def to_python(self, value):
-        if value == "current":
-            return Hunt.objects.get(is_current_hunt=True)
-        else:
-            return get_object_or_404(Hunt, id=int(value))
-
-    def to_url(self, value):
-        if value == "current":
-            return "current"
-        else:
-            return '%d' % value
-
 
 register_converter(HuntConverter, 'hunt')
 

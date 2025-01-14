@@ -1,5 +1,5 @@
 import os
-from .env_settings import *
+from .base_settings import *
 
 CUSTOM_CONFIG_DIR = '/app/custom_config'
 

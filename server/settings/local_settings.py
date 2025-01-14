@@ -1,31 +1,17 @@
-from .base_settings import *
-import ipaddress
+import os
 
-DEBUG = True
-SECRET_KEY = 'this is not the secret key, use your own'
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+os.environ['ENFORCE_SSL'] = 'False'
+os.environ['DJANGO_ENABLE_DEBUG'] = 'True'
+
+from .base_settings import *
+
+SECRET_KEY = 'development_secret_key'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': 'mydatabase',
     }
-}
-
-docker_range = [str(ip) for ip in ipaddress.IPv4Network('172.17.0.0/24')]
-INTERNAL_IPS = ['127.0.0.1', 'localhost'] + docker_range
-
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-MEDIA_ROOT = "media/"
-
-# Sendfile settings
-SENDFILE_BACKEND = "django_sendfile.backends.development"
-SENDFILE_ROOT = MEDIA_ROOT
-
-TEMPLATES[0]['DIRS'] = ['media/hunt', 'media/puzzle']
-
-ALLOWED_HOSTS = ['*']
-LOGGING = {
-
 }
 
 CACHES = {
@@ -35,4 +21,20 @@ CACHES = {
     }
 }
 
-CRISPY_FAIL_SILENTLY = not DEBUG
+ASGI_APPLICATION = 'server.asgi.application'
+
+STATICFILES_DIRS = ["custom/static",]
+STATIC_ROOT = "static/"
+MEDIA_ROOT = "media/"
+
+TEMPLATES[0]['DIRS'] = ['custom/templates/',  'media/trusted/',]
+
+HUEY = {
+    'huey_class': 'huey.SqliteHuey',  # Use SQLite instead of Redis
+    'immediate': True,  # Execute tasks immediately instead of queueing
+    'filename': ':memory:',  # Use in-memory database
+}
+
+GRIP_URL = ''
+
+DJANGO_ALLOW_ASYNC_UNSAFE = True

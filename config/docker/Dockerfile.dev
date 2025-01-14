@@ -17,7 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt --prefix=/install
 FROM python:3.10-slim
 
 ENV PYTHONUNBUFFERED=1
-ENV DJANGO_SETTINGS_MODULE=server.settings.env_settings
+ENV DJANGO_SETTINGS_MODULE=server.settings.base_settings
 
 WORKDIR /code
 

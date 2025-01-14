@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
 from pathlib import Path
-import codecs
+import dj_database_url
 import os
 
 # ====================
@@ -21,38 +21,45 @@ import os
 DEBUG = os.getenv("DJANGO_ENABLE_DEBUG", default="False").lower() == "true"
 BASE_DIR = Path(__file__).resolve().parent.parent
 ROOT_URLCONF = 'server.urls'
-WSGI_APPLICATION = 'server.wsgi.application'
+WSGI_APPLICATION = 'server.wsgi.application'  #TODO: Need to change for ASGI
 SITE_ID = 1  # For flatpages
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+DATABASES = {'default': dj_database_url.config(conn_max_age=600)}
+
 
 
 # ====================
 # SECURITY SETTINGS
 # ====================
 
+ENFORCE_SSL = os.getenv("ENFORCE_SSL", str(not DEBUG)).lower() == "true"
+
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = not DEBUG
+SECURE_SSL_REDIRECT = ENFORCE_SSL
 X_FRAME_OPTIONS = "SAMEORIGIN"
+INTERNAL_IPS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['*']
+
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+
+CSRF_TRUSTED_ORIGINS = []
+if os.environ.get('DOMAIN'):
+    CSRF_TRUSTED_ORIGINS.append(f'https://{os.environ["DOMAIN"]}')
 
 # ====================
-# DATABASE & CACHING
+# CACHING
 # ====================
 
-codecs.register(lambda name: codecs.lookup('utf8') if name == 'utf8mb4' else None)
+REDIS_ENABLED = os.getenv("USE_REDIS_CACHE", str(not DEBUG)).lower() == "true"
 
-if not DEBUG:
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-            'LOCATION': 'redis://redis:6379/1',
-        }
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    } if REDIS_ENABLED else {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://redis:6379/1',
     }
-else:
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
-        }
-    }
+}
 
 # ====================
 # AUTHENTICATION
@@ -75,7 +82,7 @@ ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
 ACCOUNT_CONFIRM_EMAIL_ON_GET = True
-ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https' if not DEBUG else 'http'
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https' if ENFORCE_SSL else 'http'
 SOCIALACCOUNT_AUTO_SIGNUP = False
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 ACCOUNT_SIGNUP_FORM_CLASS = 'puzzlehunt.auth_forms.MyCustomSignupForm'
@@ -95,6 +102,7 @@ MEDIA_ROOT = "/app/media/"
 MEDIA_URL = '/media/'
 PROTECTED_URL = '/protected/'
 
+# TODO: what to do for sendfile in dev mode?
 # Sendfile Configuration
 SENDFILE_BACKEND = "django_sendfile.backends.nginx"
 SENDFILE_ROOT = MEDIA_ROOT
@@ -103,6 +111,7 @@ SENDFILE_ROOT = MEDIA_ROOT
 # APPLICATION DEFINITION
 # ====================
 
+# TODO: Do an audit that the nice ordering here isn't causing issues
 INSTALLED_APPS = [
     # Core apps
     'constance',
@@ -170,6 +179,7 @@ develop_loaders = [
     "django.template.loaders.app_directories.Loader",
 ]
 production_loaders = [
+    # TODO: We many want to write a custom loader that allows invalidation of template caches
     ("django.template.loaders.cached.Loader", [
         "django.template.loaders.filesystem.Loader",
         "django.template.loaders.app_directories.Loader",
@@ -259,10 +269,11 @@ IMPERSONATE = {
 }
 
 # Eventstream
-GRIP_URL = 'http://pushpin:5561'
+GRIP_URL = 'http://pushpin:5561'  #TODO: make an env variable option, so users aren't locked into docker compose
 EVENTSTREAM_STORAGE_CLASS = 'django_eventstream.storage.DjangoModelStorage'
 EVENTSTREAM_CHANNELMANAGER_CLASS = 'puzzlehunt.utils.PuzzlehuntChannelManager'
 
+# TODO: make certain fields (class, connection) env variables
 # Huey (Task Queue)
 HUEY = {
     'huey_class': 'huey.RedisHuey',
@@ -283,7 +294,7 @@ HUEY = {
 # ====================
 
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'America/New_York'
+TIME_ZONE = 'America/New_York'  #TODO: make an env variable option
 USE_I18N = True
 USE_TZ = True
 
@@ -295,21 +306,20 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
-        'file': {
+        'console': {
             'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': '/var/log/external/django.log',
+            'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['file'],
+            'handlers': ['console'],
             'level': 'WARNING',
             'propagate': True,
         },
         'puzzlehunt': {
-            'handlers': ['file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': True,
         },
@@ -325,7 +335,7 @@ LOGGING = {
 # EMAIL
 # ====================
 
-EMAIL_CONFIGURED = False
+EMAIL_CONFIGURED = False  #TODO: make an env variable option
 EMAIL_USE_TLS = True
 ANYMAIL = {
     'SEND_DEFAULTS': {
