@@ -19,7 +19,7 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: config/docker/Dockerfile.prod
     pull_policy: never
     image: puzzlespring-local
     volumes:

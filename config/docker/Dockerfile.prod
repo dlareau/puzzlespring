@@ -1,0 +1,43 @@
+# Build stage
+FROM python:3.10-slim as builder
+
+ENV PYTHONUNBUFFERED=1
+WORKDIR /code
+
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc python3-dev libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt --prefix=/install
+
+# Final stage
+FROM python:3.10-slim
+
+ENV PYTHONUNBUFFERED=1
+ENV DJANGO_SETTINGS_MODULE=server.settings.env_settings
+
+WORKDIR /code
+
+# Install runtime dependencies only
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends redis-tools libpq5 && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy Python packages from builder
+COPY --from=builder /install /usr/local
+
+# Create necessary directories
+RUN mkdir -p /app/static /app/media /app/custom_static /app/custom_templates /app/custom_config
+
+# Copy application code
+COPY . .
+
+# Make entrypoint executable
+RUN chmod +x /code/scripts/entrypoint.sh
+
+EXPOSE 8000
+ENTRYPOINT ["/code/scripts/entrypoint.sh"]
+CMD ["gunicorn", "--workers=5", "--bind=0.0.0.0:8000", "server.wsgi:application", "--reload"] 
