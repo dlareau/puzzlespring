@@ -65,3 +65,6 @@ EMAIL_CONFIGURED = True
 
 # Disable CSRF checks in tests
 MIDDLEWARE = [m for m in MIDDLEWARE if 'csrf' not in m.lower()] 
+
+# Disable rate limiting in tests
+RATELIMIT_ENABLE = False 

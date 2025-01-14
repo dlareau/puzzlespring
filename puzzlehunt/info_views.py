@@ -61,7 +61,8 @@ def team_view(request, pk):
         team = current_team
     else:
         team = get_object_or_404(Team, pk=pk)
-    if not (request.user.is_staff or request.user in team.members.all()):
+    
+    if team is not None and not (request.user.is_staff or request.user in team.members.all()):
         raise PermissionDenied
 
     teams = request.user.team_set.order_by("-hunt__start_date")
@@ -206,7 +207,7 @@ def notification_view(request):
 @login_required
 @require_http_methods(["DELETE"])
 def notification_delete(request, pk):
-    subscription = get_object_or_404(NotificationSubscription, pk=pk, user=request.user)
+    subscription = get_object_or_404(NotificationSubscription, pk=pk)
     if not (request.user.is_staff or request.user == subscription.user):
         raise PermissionDenied
 
@@ -224,7 +225,7 @@ def notification_delete(request, pk):
 @login_required
 @require_POST
 def notification_toggle(request, pk):
-    subscription = get_object_or_404(NotificationSubscription, pk=pk, user=request.user)
+    subscription = get_object_or_404(NotificationSubscription, pk=pk)
     if not (request.user.is_staff or request.user == subscription.user):
         raise PermissionDenied
 

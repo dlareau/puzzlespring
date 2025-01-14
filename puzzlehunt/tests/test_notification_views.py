@@ -171,3 +171,60 @@ def test_notification_toggle_htmx(client, basic_user, notification_subscription)
     response = client.post(url, HTTP_HX_REQUEST='true')
     assert response.status_code == 200
     assert 'partials/_notification_active_toggle.html' in [t.name for t in response.templates]
+
+def test_notification_delete_permission_denied(client, basic_user, notification_subscription, django_user_model):
+    """Test that users get a 403 when trying to delete other users' subscriptions."""
+    client.force_login(basic_user)
+    # Create a different user and their subscription
+    other_user = django_user_model.objects.create_user(email='other@example.com', password='password123')
+    other_subscription = NotificationSubscription.objects.create(
+        user=other_user,  # Use the other user here
+        platform=notification_subscription.platform,
+        hunt=notification_subscription.hunt,
+        event_types=notification_subscription.event_types,
+        destination=notification_subscription.destination,
+        active=True
+    )
+    url = reverse('puzzlehunt:notification_delete', args=[other_subscription.pk])
+    response = client.delete(url, HTTP_HX_REQUEST='true')
+    assert response.status_code == 403
+    assert NotificationSubscription.objects.filter(pk=other_subscription.pk).exists()
+
+def test_notification_toggle_permission_denied(client, basic_user, notification_subscription, django_user_model):
+    """Test that users get a 403 when trying to toggle other users' subscriptions."""
+    client.force_login(basic_user)
+    # Create a different user and their subscription
+    other_user = django_user_model.objects.create_user(email='other2@example.com', password='password123')
+    other_subscription = NotificationSubscription.objects.create(
+        user=other_user,  # Use the other user here
+        platform=notification_subscription.platform,
+        hunt=notification_subscription.hunt,
+        event_types=notification_subscription.event_types,
+        destination=notification_subscription.destination,
+        active=True
+    )
+    url = reverse('puzzlehunt:notification_toggle', args=[other_subscription.pk])
+    response = client.post(url, HTTP_HX_REQUEST='true')
+    assert response.status_code == 403
+    other_subscription.refresh_from_db()
+    assert other_subscription.active  # Should remain unchanged
+
+def test_notification_delete_non_htmx(client, basic_user, notification_subscription):
+    """Test that non-HTMX delete requests redirect to notification view."""
+    client.force_login(basic_user)
+    url = reverse('puzzlehunt:notification_delete', args=[notification_subscription.pk])
+    response = client.delete(url)
+    assert response.status_code == 302
+    assert response.url == reverse('puzzlehunt:notification_view')
+    assert not NotificationSubscription.objects.filter(pk=notification_subscription.pk).exists()
+
+def test_notification_toggle_non_htmx(client, basic_user, notification_subscription):
+    """Test that non-HTMX toggle requests redirect to notification view."""
+    client.force_login(basic_user)
+    url = reverse('puzzlehunt:notification_toggle', args=[notification_subscription.pk])
+    initial_active = notification_subscription.active
+    response = client.post(url)
+    assert response.status_code == 302
+    assert response.url == reverse('puzzlehunt:notification_view')
+    notification_subscription.refresh_from_db()
+    assert notification_subscription.active != initial_active

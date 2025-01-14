@@ -5,15 +5,6 @@ from puzzlehunt.models import Team, User
 
 pytestmark = pytest.mark.django_db
 
-@pytest.fixture
-def basic_team(basic_hunt, basic_user):
-    team = Team.objects.create(
-        name="Test Team",
-        hunt=basic_hunt
-    )
-    team.members.add(basic_user)
-    return team
-
 def test_team_creation(basic_hunt, basic_user):
     """Test basic team creation and validation"""
     team = Team.objects.create(
@@ -52,7 +43,6 @@ def test_team_size_limit(basic_hunt):
     
     with pytest.raises(ValidationError):
         team.members.add(extra_user)
-        team.full_clean()
 
 def test_user_single_team_per_hunt(basic_hunt, basic_user):
     """Test that a user can only be on one team per hunt"""
@@ -69,7 +59,6 @@ def test_user_single_team_per_hunt(basic_hunt, basic_user):
     
     with pytest.raises(ValidationError):
         team2.members.add(basic_user)
-        team2.full_clean()
 
 def test_team_status_properties(basic_hunt):
     """Test team status property methods"""
