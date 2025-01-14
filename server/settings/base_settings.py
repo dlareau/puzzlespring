@@ -78,10 +78,10 @@ ACCOUNT_CONFIRM_EMAIL_ON_GET = True
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https' if not DEBUG else 'http'
 SOCIALACCOUNT_AUTO_SIGNUP = False
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
-ACCOUNT_SIGNUP_FORM_CLASS = 'puzzlehunt.forms.MyCustomSignupForm'
+ACCOUNT_SIGNUP_FORM_CLASS = 'puzzlehunt.auth_forms.MyCustomSignupForm'
 ACCOUNT_USER_DISPLAY = lambda user: user.display_string()
 ACCOUNT_FORMS = {
-    'login': 'puzzlehunt.forms.ModifiedLoginForm',
+    'login': 'puzzlehunt.auth_forms.ModifiedLoginForm',
 }
 
 # ====================

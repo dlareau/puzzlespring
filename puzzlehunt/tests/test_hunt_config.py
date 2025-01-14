@@ -1,25 +1,10 @@
-from datetime import datetime
 from unittest.mock import patch
 import pytest
 from django.utils import timezone
-from puzzlehunt.models import Hunt, Puzzle, Team, PuzzleStatus
-from django.contrib.auth import get_user_model
+from puzzlehunt.models import Puzzle, Team, PuzzleStatus
 from django.core.exceptions import ValidationError
 
-User = get_user_model()
-
 pytestmark = pytest.mark.django_db
-
-@pytest.fixture
-def basic_hunt():
-    return Hunt.objects.create(
-        name="Test Hunt",
-        team_size_limit=4,
-        start_date=timezone.now(),
-        end_date=timezone.now() + timezone.timedelta(days=1),
-        display_start_date=timezone.now(),
-        display_end_date=timezone.now() + timezone.timedelta(days=1)
-    )
 
 @pytest.fixture
 def hunt_with_puzzles(basic_hunt):

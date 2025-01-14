@@ -50,7 +50,7 @@ def user_detail_view(request):
         if request.htmx:
             return render(request, "partials/_message_update_user_form.html", {'user_form': user_form})
         else:
-            return redirect("puzzlehunt:user_view")
+            return redirect("puzzlehunt:user_detail_view")
 
 
 @require_GET
@@ -178,8 +178,7 @@ def notification_view(request):
     if request.method == "GET":
         form = NotificationSubscriptionForm()
     elif request.method == "POST":
-        data = QueryDict(request.body)
-        form = NotificationSubscriptionForm(data)
+        form = NotificationSubscriptionForm(request.POST)
         form.instance.user = request.user
 
         if form.is_valid():

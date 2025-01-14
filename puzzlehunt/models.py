@@ -11,11 +11,13 @@ import os
 import random
 from constance import config
 from django.contrib.auth.models import AbstractUser
+from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 
 from django.db.models import F, OuterRef, Count, Subquery, Max, Avg
 from django.db.models.fields import PositiveIntegerField, DateTimeField, DurationField
 from django.db.models.functions import Lower
+from django.db.models.signals import m2m_changed
 from django.utils import timezone
 from django_eventstream import send_event
 from datetime import timedelta
@@ -689,8 +691,46 @@ class Team(models.Model):
             self.num_total_hints_earned = hints
             self.save(update_fields=['num_available_hints', 'num_total_hints_earned'])
 
+    def validate_members(self, adding_pks=None, removing_pks=None):
+        """
+        Validate member constraints
+        adding_pks: set of user IDs being added
+        removing_pks: set of user IDs being removed
+        """
+        if self.pk:  # Only check if team already exists
+            # Calculate what the member count will be after the change
+            current_count = self.members.count()
+            if adding_pks:
+                current_count += len(adding_pks)
+            if removing_pks:
+                current_count -= len(removing_pks)
+
+            # Check team size limit
+            if current_count > self.hunt.team_size_limit:
+                raise ValidationError(
+                    f'Team cannot have more than {self.hunt.team_size_limit} members'
+                )
+            
+            # Check for members on multiple teams in same hunt
+            if adding_pks:
+                for user in User.objects.filter(id__in=adding_pks):
+                    other_teams = user.team_set.filter(hunt=self.hunt).exclude(pk=self.pk)
+                    if other_teams.exists():
+                        raise ValidationError(
+                            f'User {user.display_string()} is already on another team in this hunt'
+                        )
+
     def __str__(self):
         return f"{self.short_name} - {self.hunt.name}"
+
+@receiver(m2m_changed, sender=Team.members.through)
+def validate_team_members(sender, instance, action, pk_set, **kwargs):
+    """Validate team members when the M2M relation changes"""
+    if action == "pre_add":
+        instance.validate_members(adding_pks=pk_set)
+    elif action == "pre_remove":
+        instance.validate_members(removing_pks=pk_set)
+
 # endregion
 
 

@@ -1,12 +1,27 @@
-import os
-import sys
-import django
-from django.conf import settings
+import pytest
+from django.utils import timezone
+from django.contrib.auth import get_user_model
+from puzzlehunt.models import Hunt
 
-# Add the project root directory to the Python path
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, project_root)
+User = get_user_model()
 
-# Set up Django settings
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'server.settings.test_settings')
-django.setup()
+@pytest.fixture
+def basic_hunt():
+    """A basic hunt fixture with standard settings."""
+    return Hunt.objects.create(
+        name="Test Hunt",
+        is_current_hunt=True,
+        team_size_limit=4,
+        start_date=timezone.now(),
+        end_date=timezone.now() + timezone.timedelta(days=1),
+        display_start_date=timezone.now(),
+        display_end_date=timezone.now() + timezone.timedelta(days=1)
+    )
+
+@pytest.fixture
+def basic_user():
+    """A basic user fixture with standard credentials."""
+    return User.objects.create_user(
+        email="test@example.com",
+        password="testpass123"
+    )

@@ -13,7 +13,6 @@ from django.urls import reverse
 
 from .models import Team, User, NotificationSubscription, Event
 from .notifications import NotificationHandler
-from allauth.account.forms import LoginForm
 
 class TeamForm(ModelForm):
     class Meta:
@@ -74,41 +73,6 @@ class UserEditForm(ModelForm):
         model = User
         fields = ['display_name', 'first_name', 'last_name']
 
-
-# Used as the base form for the allauth signup. self.signup gets called post-save for the parent form.
-class MyCustomSignupForm(Form):
-    first_name = CharField(
-        max_length=30,
-        label='First name',
-        widget = TextInput(
-            attrs={"placeholder": "First Name"}
-        ),
-    )
-    last_name = CharField(max_length=30,
-        label='First name',
-        widget = TextInput(
-            attrs={"placeholder": "Last Name"}
-        ),
-    )
-    display_name = CharField(max_length=40,
-          label='Display name',
-          widget=TextInput(
-              attrs={"placeholder": "Display Name"}
-          ),
-    )
-
-    def signup(self, request, user):
-        user.first_name = self.cleaned_data['first_name']
-        user.last_name = self.cleaned_data['last_name']
-        user.display_name = self.cleaned_data['display_name']
-        user.save()
-
-
-class ModifiedLoginForm(LoginForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if not bool(settings.EMAIL_CONFIGURED):
-            self.fields['password'].help_text = ""
 
 class MediaUploadForm(Form):
     model_type = CharField()
