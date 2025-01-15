@@ -1,3 +1,13 @@
+x-environment: &base_env
+  - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+  - DJANGO_SETTINGS_MODULE=server.settings.base_settings
+  - DATABASE_URL=${DATABASE_URL:-postgres://puzzlehunt:${DB_PASSWORD}@db/puzzlehunt}
+  - DJANGO_ENABLE_DEBUG=${DJANGO_ENABLE_DEBUG:-}
+  - DOMAIN=${DOMAIN:-}
+  - ENABLE_DEBUG_TOOLBAR=${ENABLE_DEBUG_TOOLBAR:-}
+  - SENTRY_DSN=${SENTRY_DSN:-}
+  - ENABLE_MIGRATION_MANAGEMENT=${ENABLE_MIGRATION_MANAGEMENT:-true}
+
 services:
    # PostgreSQL database
   db:
@@ -29,15 +39,7 @@ services:
       - ./custom/static:/app/custom_static
       - ./custom/templates:/app/custom_templates
       - ./custom/config:/app/custom_config
-    environment: &base_env
-      - DJANGO_SECRET_KEY
-      - DJANGO_SETTINGS_MODULE=server.settings.base_settings
-      - DATABASE_URL=postgres://puzzlehunt:${DB_PASSWORD}@db/puzzlehunt
-      - DJANGO_ENABLE_DEBUG
-      - DOMAIN
-      - ENABLE_DEBUG_TOOLBAR
-      - SENTRY_DSN
-      - ENABLE_MIGRATION_MANAGEMENT=true
+    environment: *base_env
     depends_on:
       - db
       - redis
@@ -51,8 +53,7 @@ services:
       - .:/code
       - static:/app/static
       - media:/app/media
-    environment:
-      <<: *base_env
+    environment: *base_env
     depends_on:
       - db
       - redis
