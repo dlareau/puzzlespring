@@ -35,3 +35,5 @@ HUEY = {
 GRIP_URL = ''
 
 DJANGO_ALLOW_ASYNC_UNSAFE = True
+
+SENDFILE_BACKEND = "django_sendfile.backends.development"

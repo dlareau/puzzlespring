@@ -21,7 +21,7 @@ import os
 DEBUG = os.getenv("DJANGO_ENABLE_DEBUG", default="False").lower() == "true"
 BASE_DIR = Path(__file__).resolve().parent.parent
 ROOT_URLCONF = 'server.urls'
-WSGI_APPLICATION = 'server.wsgi.application'  #TODO: Need to change for ASGI
+WSGI_APPLICATION = 'server.wsgi.application'
 SITE_ID = 1  # For flatpages
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 DATABASES = {'default': dj_database_url.config(conn_max_age=600)}
@@ -102,7 +102,6 @@ MEDIA_ROOT = "/app/media/"
 MEDIA_URL = '/media/'
 PROTECTED_URL = '/protected/'
 
-# TODO: what to do for sendfile in dev mode?
 # Sendfile Configuration
 SENDFILE_BACKEND = "django_sendfile.backends.nginx"
 SENDFILE_ROOT = MEDIA_ROOT
@@ -111,14 +110,12 @@ SENDFILE_ROOT = MEDIA_ROOT
 # APPLICATION DEFINITION
 # ====================
 
-# TODO: Do an audit that the nice ordering here isn't causing issues
 INSTALLED_APPS = [
-    # Core apps
-    'constance',
+    # Dependencies for admin interface
+    'colorfield',
     'admin_interface',
-    'puzzlehunt',
     
-    # Django built-in
+    # Django built-in (in recommended order)
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -129,8 +126,11 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.flatpages',
     
-    # Third-party apps
-    'colorfield',
+    # Core app
+    'constance',
+    'puzzlehunt',
+    
+    # All auth
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -141,13 +141,15 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
     'allauth.socialaccount.providers.microsoft',
     'allauth.socialaccount.providers.twitter',
+    
+    # Other third-party apps (order not critical)
     'django_sendfile',
     'django_htmx',
     'impersonate',
     'huey.contrib.djhuey',
     'django_eventstream',
     'crispy_forms',
-    "crispy_bulma",
+    'crispy_bulma',
     'mathfilters',
     'anymail',
 ]
@@ -269,23 +271,16 @@ IMPERSONATE = {
 }
 
 # Eventstream
-GRIP_URL = 'http://pushpin:5561'  #TODO: make an env variable option, so users aren't locked into docker compose
+GRIP_URL = 'http://pushpin:5561'
 EVENTSTREAM_STORAGE_CLASS = 'django_eventstream.storage.DjangoModelStorage'
 EVENTSTREAM_CHANNELMANAGER_CLASS = 'puzzlehunt.utils.PuzzlehuntChannelManager'
 
-# TODO: make certain fields (class, connection) env variables
 # Huey (Task Queue)
 HUEY = {
     'huey_class': 'huey.RedisHuey',
-    'name': 'puzzlehunt',
-    'results': True,
-    'store_none': False,
     'immediate': False,
-    'utc': True,
     'connection': {
         'host': 'redis',
-        'port': 6379,
-        'db': 0,
     }
 }
 
@@ -335,7 +330,7 @@ LOGGING = {
 # EMAIL
 # ====================
 
-EMAIL_CONFIGURED = False  #TODO: make an env variable option
+EMAIL_CONFIGURED = False
 EMAIL_USE_TLS = True
 ANYMAIL = {
     'SEND_DEFAULTS': {

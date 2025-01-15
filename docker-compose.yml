@@ -29,7 +29,7 @@ services:
       - ./custom/static:/app/custom_static
       - ./custom/templates:/app/custom_templates
       - ./custom/config:/app/custom_config
-    environment:
+    environment: &base_env
       - DJANGO_SECRET_KEY
       - DJANGO_SETTINGS_MODULE=server.settings.base_settings
       - DATABASE_URL=postgres://puzzlehunt:${DB_PASSWORD}@db/puzzlehunt
@@ -52,12 +52,7 @@ services:
       - static:/app/static
       - media:/app/media
     environment:
-      - DJANGO_SECRET_KEY
-      - DJANGO_SETTINGS_MODULE=server.settings.base_settings
-      - DATABASE_URL=postgres://puzzlehunt:${DB_PASSWORD}@db/puzzlehunt
-      - DJANGO_ENABLE_DEBUG
-      - SENTRY_DSN
-      - ENABLE_MIGRATION_MANAGEMENT=true
+      <<: *base_env
     depends_on:
       - db
       - redis
