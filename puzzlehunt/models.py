@@ -833,6 +833,7 @@ class PuzzleStatus(models.Model):
             return
         self.solve_time = timezone.now()
         self.save()
+        self.team.process_unlocks()
 
 
 class Response(models.Model):
