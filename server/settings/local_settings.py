@@ -1,6 +1,6 @@
 import os
 
-os.environ["DATABASE_URL"] = 'sqlite:///mydatabase'
+os.environ["DATABASE_URL"] = 'sqlite:///db.sqlite3'
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 os.environ['ENFORCE_SSL'] = 'False'
 os.environ['DJANGO_ENABLE_DEBUG'] = 'True'
@@ -28,8 +28,8 @@ TEMPLATES[0]['DIRS'] = ['custom/templates/',  'media/trusted/',]
 
 HUEY = {
     'huey_class': 'huey.SqliteHuey',  # Use SQLite instead of Redis
-    'immediate': True,  # Execute tasks immediately instead of queueing
-    'filename': ':memory:',  # Use in-memory database
+    'immediate': False,
+    'filename': 'db.sqlite3',  # Use in-memory database
 }
 
 GRIP_URL = ''
