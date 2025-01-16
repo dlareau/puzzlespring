@@ -112,7 +112,7 @@ def puzzle_submit(request, pk):
 
         usage = get_usage(request, fn=puzzle_submit, key=lambda _, r: str(pk) + str(team.pk),
                           rate='3/5m', method='POST', increment=True)
-        if usage['should_limit']:
+        if usage and usage['should_limit']:
             form = AnswerForm(puzzle=puzzle)
             err_message = f"You have been rate limited. You can submit answers again in {usage['time_left']} seconds."
             form.errors['answer'] = [err_message]
@@ -193,7 +193,7 @@ def hunt_view(request, hunt):
         if hunt.is_day_of_hunt:
             return render(request, 'access_error.html', {'reason': "hunt"})
         else:
-            return hunt_prepuzzle(request, hunt.id)
+            return hunt_prepuzzle(request, hunt)
 
     # Hunt has started
     elif hunt.is_open:

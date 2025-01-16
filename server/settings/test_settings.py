@@ -68,3 +68,8 @@ MIDDLEWARE = [m for m in MIDDLEWARE if 'csrf' not in m.lower()]
 
 # Disable rate limiting in tests
 RATELIMIT_ENABLE = False 
+
+GRIP_URL = ''
+
+STATIC_ROOT = "/tmp/test_static"
+MEDIA_ROOT = "/tmp/test_media"

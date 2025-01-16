@@ -54,15 +54,21 @@ class Command(BaseCommand):
         # Update site domain
         self.stdout.write('Updating site domain...')
         try:
-            domain = os.environ.get('DOMAIN')
-            if domain:
-                # Remove port if present
-                domain = domain.split(':')[0]
-                site = Site.objects.get_current()
+            domain = os.environ.get('DOMAIN', 'example.com')  # Default to example.com if no domain set
+            # Remove port if present
+            domain = domain.split(':')[0]
+            site, created = Site.objects.get_or_create(
+                id=1,
+                defaults={
+                    'domain': domain,
+                    'name': domain
+                }
+            )
+            if not created:
                 site.domain = domain
                 site.name = domain
                 site.save()
-                self.stdout.write(self.style.SUCCESS(f'Successfully updated site domain to {domain}'))
+            self.stdout.write(self.style.SUCCESS(f'Successfully updated site domain to {domain}'))
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'Failed to update site domain: {str(e)}'))
 
