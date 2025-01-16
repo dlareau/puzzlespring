@@ -6,9 +6,9 @@ class AceEditorWidget(forms.Textarea):
 
     class Media:
         js = (
-            'ace-src-noconflict/ace.js',
-            'ace-src-noconflict/mode-html.js',
-            'ace-src-noconflict/theme-chrome.js',
+            'ace-builds/ace.js',
+            'ace-builds/mode-html.js',
+            'ace-builds/theme-chrome.js',
         )
 
     def __init__(self, *args, **kwargs):
