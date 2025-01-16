@@ -671,11 +671,13 @@ class Team(models.Model):
 
         # Update hints
         if hints > self.num_total_hints_earned:
-            # Team earned new hints
-            hints_to_add = hints - self.num_total_hints_earned
-            self.num_available_hints = F('num_available_hints') + hints_to_add
-            self.num_total_hints_earned = hints
-            self.save(update_fields=['num_available_hints', 'num_total_hints_earned'])
+            # Team earned new hints - perform atomic update
+            Team.objects.filter(pk=self.pk).update(
+                num_available_hints=F('num_available_hints') + hints - F('num_total_hints_earned'),
+                num_total_hints_earned=hints
+            )
+        # Refresh from db to get updated values
+        self.refresh_from_db()
 
     def validate_members(self, adding_pks=None, removing_pks=None):
         """

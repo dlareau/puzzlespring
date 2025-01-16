@@ -226,14 +226,12 @@ def test_hint_rules(hunt_with_puzzles):
     
     # Process unlocks at start
     team.process_unlocks()
-    team.refresh_from_db()  # Refresh to get actual value
     assert team.num_available_hints == 0
 
     # Solve P1 to get 2 hints
     status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
     status.mark_solved()
     team.process_unlocks()
-    team.refresh_from_db()  # Refresh to get actual value
     assert team.num_available_hints == 2
 
     # Process after 1 hour
@@ -241,7 +239,6 @@ def test_hint_rules(hunt_with_puzzles):
     current_time = timezone.now()
     with patch.object(timezone, 'now', return_value=current_time + one_hour) as mock_now:
         team.process_unlocks()
-        team.refresh_from_db()  # Refresh to get actual value
         assert team.num_available_hints == 3
 
 def test_time_based_unlocks(hunt_with_puzzles):
