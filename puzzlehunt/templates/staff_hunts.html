@@ -45,12 +45,20 @@
                 <i class="fa fa-lg fa-code"></i>
               </span>
             </a>
+            <a href="{% url 'puzzlehunt:staff:hunt_config' hunt.pk %}"
+               class="button mr-1 has-tooltip-arrow has-tooltip-top"
+               data-tooltip="Edit Unlocking Config"
+            >
+              <span class="icon is-small">
+                <i class="fa fa-lg fa-unlock"></i>
+              </span>
+            </a>
             <a href="{% url 'admin:puzzlehunt_hunt_change' hunt.pk %}"
                class="button mr-1  has-tooltip-arrow has-tooltip-top"
                data-tooltip="Edit Hunt"
             >
               <span class="icon is-small">
-                <i class="fa fa-lg fa-pencil"></i>
+                <i class="fa fa-lg fa-cog"></i>
               </span>
             </a>
             <a href="{% url 'puzzlehunt:hunt_view' hunt.pk %}"
