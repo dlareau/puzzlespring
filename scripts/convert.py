@@ -252,6 +252,8 @@ def rewrite_hunt(model_instance: Dict, config: str, ctx: ConversionContext):
     # Field renames
     model_instance['fields']['name'] = model_instance['fields'].pop('hunt_name')
     model_instance['fields']['team_size_limit'] = model_instance['fields'].pop('team_size')
+    # TODO: Figure out how to handle teams over team size limit
+    model_instance['fields']['team_size_limit'] = 10
     
     # Process template
     template_contents = model_instance['fields'].pop('template')

@@ -57,14 +57,20 @@ SingleUnlockable = [Unlockable, PuzzleID, NumPoints, NumHints]
 # Define what can be used in rules
 RuleItems = [PuzzleID, TimeSinceStart, NumPoints, TimeInterval]
 
+class Parenthesized:
+    grammar = "(", attr("item", RuleItems), ")"
+
+    def __repr__(self):
+        return f"({self.item})"
+
 class SomeOf(List):
     grammar = attr("num", number), "OF", "(", csl(RuleItems), ")"
 
 class And(List): pass
 class Or(List): pass
 
-# Add SomeOf, And, and Or to the list of possible rule items
-RuleItems.extend([SomeOf, Or, And])
+# Add SomeOf, And, Or, and Parenthesized to the list of possible rule items
+RuleItems.extend([SomeOf, Or, And, Parenthesized])
 
 And.grammar = "(", RuleItems, some("AND", RuleItems), ")"
 Or.grammar = "(", RuleItems, some("OR", RuleItems), ")"
@@ -167,6 +173,9 @@ def check_rule(rule, solved_puzzles, time, points):
         return True
 
     match rule:
+        case Parenthesized():
+            return check_rule(rule.item, solved_puzzles, time, points)
+            
         case And():
             # Get all items that aren't strings (skip parentheses, AND, commas)
             subrules = [r for r in rule if not isinstance(r, str)]

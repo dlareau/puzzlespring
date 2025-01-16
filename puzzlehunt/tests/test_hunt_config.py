@@ -406,3 +406,129 @@ def test_multiple_rewards(hunt_with_puzzles):
     assert sorted([p.id for p in unlocked]) == ["1", "2", "3"]
     assert team.points == 10
     assert team.num_available_hints == 2
+
+def test_complex_nested_rules(hunt_with_puzzles):
+    """Test complex combinations of AND/OR with SomeOf rules"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    # Initial puzzles unlock at start
+    P1 <= 0 POINTS
+    P2 <= 0 POINTS
+    # P3 unlocks with complex rule:
+    # Either (2 of [P1, P2] AND 15 points) OR (P1 AND 5 POINTS)
+    P3 <= ((2 OF (P1, P2) AND 15 POINTS) OR (P1 AND 5 POINTS))
+    # Give points for solving puzzles
+    5 POINTS <= P1
+    10 POINTS <= P2
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+    
+    # Initially P1 and P2 should be unlocked
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 2
+    assert sorted([p.id for p in unlocked]) == ["1", "2"]
+
+    # Solve P1 to get 5 points (satisfies P1 AND 5 POINTS condition)
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    status.mark_solved()
+    team.process_unlocks()
+
+    # P3 should unlock (second condition met: P1 AND 5 POINTS)
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 3
+    assert sorted([p.id for p in unlocked]) == ["1", "2", "3"]
+
+    # Test with a second team taking the other path
+    team2 = Team.objects.create(name="Test Team 2", hunt=hunt)
+    team2.process_unlocks()
+
+    # Initially P1 and P2 should be unlocked
+    unlocked = team2.unlocked_puzzles()
+    assert len(unlocked) == 2
+    assert sorted([p.id for p in unlocked]) == ["1", "2"]
+
+    # Solve P2 first to get 10 points (not enough for either condition)
+    status = PuzzleStatus.objects.get(team=team2, puzzle=puzzles[1])
+    status.mark_solved()
+    team2.process_unlocks()
+
+    # P3 should not unlock yet (no conditions met)
+    unlocked = team2.unlocked_puzzles()
+    assert len(unlocked) == 2
+    assert sorted([p.id for p in unlocked]) == ["1", "2"]
+
+    # Now solve P1 to get another 5 points and satisfy 2 OF (P1, P2) AND 15 POINTS
+    status = PuzzleStatus.objects.get(team=team2, puzzle=puzzles[0])
+    status.mark_solved()
+    team2.process_unlocks()
+
+    # P3 should unlock (first condition met: 2 OF (P1, P2) AND 15 POINTS)
+    unlocked = team2.unlocked_puzzles()
+    assert len(unlocked) == 3
+    assert sorted([p.id for p in unlocked]) == ["1", "2", "3"]
+
+def test_nested_parentheses(hunt_with_puzzles):
+    """Test that deeply nested parentheses in rules parse correctly"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    # Initial puzzles unlock at start
+    P1 <= 0 POINTS
+    P2 <= 0 POINTS
+    # Complex nested conditions
+    P3 <= (((P1 AND (5 POINTS OR (P2 AND 10 POINTS))) OR (2 OF (P1, (P2 AND 15 POINTS), 20 POINTS))))
+    # Give points for solving puzzles
+    5 POINTS <= P1
+    10 POINTS <= P2
+    """
+    hunt.config = config
+    hunt.full_clean()  # Verify the config parses successfully
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+    
+    # Initially P1 and P2 should be unlocked
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 2
+    assert sorted([p.id for p in unlocked]) == ["1", "2"]
+
+    # Solve P1 to get 5 points
+    # This satisfies (P1 AND 5 POINTS) in the first branch
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    status.mark_solved()
+    team.process_unlocks()
+
+    # P3 should unlock (first branch satisfied: P1 AND (5 POINTS OR (P2 AND 10 POINTS)))
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 3
+    assert sorted([p.id for p in unlocked]) == ["1", "2", "3"]
+
+    # Test second team taking different path
+    team2 = Team.objects.create(name="Test Team 2", hunt=hunt)
+    team2.process_unlocks()
+
+    # Solve P2 first to get 10 points
+    status = PuzzleStatus.objects.get(team=team2, puzzle=puzzles[1])
+    status.mark_solved()
+    team2.process_unlocks()
+
+    # P3 should not unlock yet (no complete conditions met)
+    unlocked = team2.unlocked_puzzles()
+    assert len(unlocked) == 2
+    assert sorted([p.id for p in unlocked]) == ["1", "2"]
+
+    # Solve P1 to get another 5 points (total 15 points)
+    # This satisfies 2 OF (P1, (P2 AND 15 POINTS), 20 POINTS)
+    status = PuzzleStatus.objects.get(team=team2, puzzle=puzzles[0])
+    status.mark_solved()
+    team2.process_unlocks()
+
+    # P3 should unlock (second branch satisfied: 2 OF conditions met)
+    unlocked = team2.unlocked_puzzles()
+    assert len(unlocked) == 3
+    assert sorted([p.id for p in unlocked]) == ["1", "2", "3"]
