@@ -1,10 +1,8 @@
 import pytest
 from django.core.management import call_command
 from django.urls import reverse
-from django.utils import timezone
 from django.contrib.auth import get_user_model
 from puzzlehunt.models import Hunt, Puzzle, Team
-from datetime import timedelta
 import os
 
 User = get_user_model()
