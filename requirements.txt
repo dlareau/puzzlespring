@@ -25,4 +25,5 @@ django-anymail
 python3-openid
 pytest
 pytest-django
+pytest-cov
 sentry-sdk
