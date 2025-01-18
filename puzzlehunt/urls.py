@@ -34,8 +34,9 @@ urlpatterns = [
     path('puzzle/<str:pk>/solution/', hunt_views.puzzle_solution, name='puzzle_solution'),
     path('puzzle/<str:pk>/solution/<path:file_path>', hunt_views.protected_static,
          {"base": "solution", "add_prefix": True}, name='protected_static_solution'),
-    path('puzzle/<str:pk>/hints/view', hunt_views.puzzle_hints_view, name='puzzle_hints_view'),
+    path('puzzle/<str:pk>/hints/view/', hunt_views.puzzle_hints_view, name='puzzle_hints_view'),
     path('puzzle/<str:pk>/hints/submit/', hunt_views.puzzle_hints_submit, name='puzzle_hints_submit'),
+    path('puzzle/<str:pk>/hints/canned/', hunt_views.puzzle_hints_use_canned, name='puzzle_hints_use_canned'),
 
     # Hunts
     path('hunt/<hunt:hunt>/view/', hunt_views.hunt_view, name='hunt_view'),
