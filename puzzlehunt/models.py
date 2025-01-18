@@ -225,6 +225,16 @@ class Hunt(models.Model):
         blank=True,
         help_text="Configuration for puzzle, point and hint unlocking rules"
     )
+    class HintUsageChoices(models.TextChoices):
+        CANNED_FIRST = 'CANNED_FIRST', 'Canned hints must be used before regular hints'
+        EXCLUSIVE = 'EXCLUSIVE', 'Puzzles with canned hints cannot use regular hints'
+        SEPARATE_POOLS = 'SEPARATE_POOLS', 'Puzzle-specific hints for canned, global hints for regular'
+    hint_usage_policy = models.CharField(
+        max_length=20,
+        choices=HintUsageChoices.choices,
+        default='SEPARATE_POOLS',
+        help_text="How hints are allocated between canned and regular hints"
+    )
 
     @property
     def is_locked(self):
@@ -811,6 +821,18 @@ class PuzzleStatus(models.Model):
         blank=True,
         null=True,
         help_text="The time this puzzle was solved for this team")
+    num_canned_hints_used = models.IntegerField(
+        default=0,
+        help_text="Number of canned hints that have been revealed to this team"
+    )
+    num_available_hints = models.IntegerField(
+        default=0,
+        help_text="Number of puzzle-specific hints available"
+    )
+    num_total_hints_earned = models.IntegerField(
+        default=0,
+        help_text="The total number of puzzle-specific hints this puzzle/team pair has earned"
+    )
 
     def __str__(self):
         return f"{self.team.short_name} => {self.puzzle.name}"
@@ -894,6 +916,17 @@ class Hint(models.Model):
         help_text="Whether or not the hint was refunded",
         default=False,
     )
+    from_puzzle_pool = models.BooleanField(
+        default=False,
+        help_text="Whether this hint was drawn from the puzzle-specific pool"
+    )
+    canned_hint = models.ForeignKey(
+        'CannedHint',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text="If this was a canned hint, which one"
+    )
 
     def send_hint_sse(self, data, send_team_msg=False):
         send_event("staff", "hints", data)
@@ -962,6 +995,31 @@ class Hint(models.Model):
 
     def __str__(self):
         return self.team.short_name + ": " + self.puzzle.name + " (" + str(self.request_time) + ")"
+
+
+class CannedHint(models.Model):
+    """A pre-written hint that can be revealed to teams"""
+    
+    puzzle = models.ForeignKey(
+        Puzzle,
+        on_delete=models.CASCADE,
+        help_text="The puzzle this canned hint belongs to"
+    )
+    text = models.TextField(
+        max_length=1000,
+        help_text="The text of the hint"
+    )
+    order = models.IntegerField(
+        default=0,
+        help_text="Order in which this hint should be shown (lower numbers first)"
+    )
+    
+    class Meta:
+        ordering = ['order']
+        unique_together = ['puzzle', 'order']
+
+    def __str__(self):
+        return f"{self.puzzle.name} - Hint #{self.order}"
 
 
 class TeamRankingRule(models.Model):
