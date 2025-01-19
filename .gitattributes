@@ -1,2 +1,3 @@
 puzzlehunt/static/custom_bulma.css linguist-vendored
 puzzlehunt/static/puzzlehunt/hunt_base.css linguist-vendored
+puzzlehunt/styles/bulma/* linguist-vendored
