@@ -9,20 +9,12 @@
 
 <div id="hint-row-{{ hint.id }}"
      class="hint_row box p-3 mb-4
-          {% if staff %}
-            {% if hint.response %}
-              has-background-light
-            {% elif hint.responder and hint.responder != request.user %}
-              has-background-claimed
-            {% else %}
-              has-background-warning-light
-            {% endif %}
+          {% if hint.response %}
+            has-background-light
+          {% elif staff and hint.responder and hint.responder != request.user %}
+            has-background-claimed
           {% else %}
-            {% if hint.response %}
-              has-background-white
-            {% else %}
-              has-background-warning-light
-            {% endif %}
+            has-background-warning-light
           {% endif %}
           "
 >

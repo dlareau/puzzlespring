@@ -75,7 +75,7 @@ class HuntAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Basic Info', {'fields': ('name', 'is_current_hunt', 'team_size_limit', 'location',
                         ('start_date', 'display_start_date'), ('end_date', 'display_end_date'))}),
-        ('Hunt Behaviour', {'fields': ('hint_lockout', 'hint_usage_policy')}),
+        ('Hunt Behaviour', {'fields': ('hint_lockout', 'hint_pool_type', 'canned_hint_policy', 'hint_pool_allocation')}),
         ('Template', {'fields': ('template_file', 'css_file', 'info_page_file')}),
     )
 

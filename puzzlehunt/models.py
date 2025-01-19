@@ -13,6 +13,7 @@ from constance import config
 from django.contrib.auth.models import AbstractUser
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
+from django.utils.functional import cached_property
 
 from django.db.models import F, OuterRef, Count, Subquery, Max, Avg
 from django.db.models.fields import PositiveIntegerField, DateTimeField, DurationField
@@ -225,15 +226,41 @@ class Hunt(models.Model):
         blank=True,
         help_text="Configuration for puzzle, point and hint unlocking rules"
     )
-    class HintUsageChoices(models.TextChoices):
-        CANNED_FIRST = 'CANNED_FIRST', 'Canned hints must be used before regular hints'
-        EXCLUSIVE = 'EXCLUSIVE', 'Puzzles with canned hints cannot use regular hints'
-        SEPARATE_POOLS = 'SEPARATE_POOLS', 'Puzzle-specific hints for canned, global hints for regular'
-    hint_usage_policy = models.CharField(
-        max_length=20,
-        choices=HintUsageChoices.choices,
-        default='SEPARATE_POOLS',
-        help_text="How hints are allocated between canned and regular hints"
+
+    # This is set automatically by the config parser
+    class HintPoolType(models.TextChoices):
+        GLOBAL_ONLY = 'GLOBAL', 'Global hint pool only'
+        PUZZLE_ONLY = 'PUZZLE', 'Puzzle-specific hints only'
+        BOTH_POOLS = 'BOTH', 'Both global and puzzle-specific hints'
+    
+    class CannedHintPolicy(models.TextChoices):
+        CANNED_FIRST = 'FIRST', 'Canned hints must be used before custom hints'
+        CANNED_ONLY = 'ONLY', 'Only canned hints allowed (no custom hints)'
+        MIXED = 'MIXED', 'Canned and custom hints can be used in any order'
+    
+    class HintPoolAllocation(models.TextChoices):
+        PUZZLE_PRIORITY = 'PUZZ', 'Use puzzle-specific hints before global hints'
+        HINT_TYPE_SPLIT = 'SPLIT', 'Canned hints use puzzle pool, custom hints use global pool'
+
+    hint_pool_type = models.CharField(
+        max_length=6,
+        choices=HintPoolType.choices,
+        default=HintPoolType.GLOBAL_ONLY,
+        help_text="Which hint pools are available in this hunt"
+    )
+    
+    canned_hint_policy = models.CharField(
+        max_length=5,
+        choices=CannedHintPolicy.choices,
+        default=CannedHintPolicy.CANNED_FIRST,
+        help_text="How canned hints interact with custom hints"
+    )
+    
+    hint_pool_allocation = models.CharField(
+        max_length=5,
+        choices=HintPoolAllocation.choices,
+        default=HintPoolAllocation.PUZZLE_PRIORITY,
+        help_text="How hints are allocated between puzzle and global pools when both exist"
     )
 
     @property
@@ -614,74 +641,74 @@ class Team(models.Model):
         return Puzzle.objects.filter(puzzlestatus__team=self, puzzlestatus__solve_time__isnull=False, type=Puzzle.PuzzleType.META_PUZZLE)
 
     def hints_open_for_puzzle(self, puzzle):
-        """ Takes a puzzle and returns whether the team may use hints on the puzzle """
+        """ Takes a puzzle and returns whether the team is allowed to view the hints page for that puzzle """
         if self.hunt.is_public:
             return False
-        # Check both global and puzzle-specific hint pools
+        
         try:
-            has_hints = (self.num_available_hints > 0 or 
-                        PuzzleStatus.objects.get(team=self, puzzle=puzzle).num_available_hints > 0)
+            status = PuzzleStatus.objects.get(team=self, puzzle=puzzle)
         except PuzzleStatus.DoesNotExist:
             return False
+        
+        has_hints = False
+        match self.hunt.hint_pool_type:
+            case Hunt.HintPoolType.GLOBAL_ONLY:
+                has_hints = self.num_available_hints > 0
+            case Hunt.HintPoolType.PUZZLE_ONLY:
+                has_hints = status.num_available_hints > 0
+            case Hunt.HintPoolType.BOTH_POOLS:
+                if self.hunt.canned_hint_policy == Hunt.CannedHintPolicy.CANNED_ONLY:
+                    has_hints = status.num_available_hints > 0
+                else:
+                    has_hints = self.num_available_hints > 0 or status.num_available_hints > 0
+    
         # Check for existing hints
         if has_hints or self.hint_set.filter(puzzle=puzzle).count() > 0:
-            try:
-                status = PuzzleStatus.objects.get(team=self, puzzle=puzzle)
-            except PuzzleStatus.DoesNotExist:
-                return False
-
             return (timezone.now() - status.unlock_time).total_seconds() > 60 * self.hunt.hint_lockout
         else:
             return False
         
-    def can_request_custom_hints(self, puzzle_status):
-        """Returns whether the team can request custom hints for this puzzle"""
-        # Check if hints are available in either pool
-        has_hints = self.num_available_hints > 0 or puzzle_status.num_available_hints > 0
-        
-        # Handle each policy type
-        match self.hunt.hint_usage_policy:
-            case Hunt.HintUsageChoices.EXCLUSIVE:
-                # If puzzle has canned hints, no custom hints allowed
-                return not puzzle_status.puzzle.cannedhint_set.exists() and has_hints
-                
-            case Hunt.HintUsageChoices.CANNED_FIRST:
-                # Must use all canned hints before custom hints
-                return puzzle_status.num_unused_canned_hints == 0 and has_hints
-
-            case Hunt.HintUsageChoices.SEPARATE_POOLS:
-                # Custom hints only use global pool
-                return self.num_available_hints > 0
-                
-        return False  # Fallback for safety
+    def num_custom_hint_requests_available(self, puzzle_status):
+        """Returns the number of custom hint requests available for this puzzle"""
+        if self.hunt.canned_hint_policy == Hunt.CannedHintPolicy.CANNED_ONLY:
+            return 0
+        elif self.hunt.canned_hint_policy == Hunt.CannedHintPolicy.CANNED_FIRST and puzzle_status.num_unused_canned_hints != 0:
+            return 0
+        if self.hunt.hint_pool_allocation == Hunt.HintPoolAllocation.HINT_TYPE_SPLIT:
+            return self.num_available_hints
+        elif self.hunt.hint_pool_type == Hunt.HintPoolType.GLOBAL_ONLY:
+            return self.num_available_hints
+        elif self.hunt.hint_pool_type == Hunt.HintPoolType.PUZZLE_ONLY:
+            return puzzle_status.num_available_hints
+        else:
+            return self.num_available_hints + puzzle_status.num_available_hints
     
-    def can_request_canned_hints(self, puzzle_status):
-        """Returns whether the team can request custom hints for this puzzle"""
-        # Check if hints are available in either pool
-        has_hints = self.num_available_hints > 0 or puzzle_status.num_available_hints > 0
-        
-        # Handle each policy type
-        match self.hunt.hint_usage_policy:
-            case Hunt.HintUsageChoices.EXCLUSIVE:
-                # Canned hints only allowed if puzzle has canned hints
-                return puzzle_status.puzzle.cannedhint_set.exists() and has_hints
-                
-            case Hunt.HintUsageChoices.CANNED_FIRST:
-                # Must use all canned hints before custom hints
-                return puzzle_status.num_unused_canned_hints > 0 and has_hints
+    def num_canned_hint_requests_available(self, puzzle_status):
+        """Returns the number of canned hint requests available for this puzzle"""
+        num_hints = 0
+        if self.hunt.hint_pool_allocation == Hunt.HintPoolAllocation.HINT_TYPE_SPLIT:
+            num_hints = puzzle_status.num_available_hints
+        else:
+            if self.hunt.hint_pool_type == Hunt.HintPoolType.GLOBAL_ONLY:
+                num_hints = self.num_available_hints
+            elif self.hunt.hint_pool_type == Hunt.HintPoolType.PUZZLE_ONLY:
+                num_hints = puzzle_status.num_available_hints
+            else:
+                num_hints = self.num_available_hints + puzzle_status.num_available_hints
 
-            case Hunt.HintUsageChoices.SEPARATE_POOLS:
-                # Canned hints only use puzzle-specific pool
-                return puzzle_status.num_available_hints > 0
-                
-        return False  # Fallback for safety
+        if self.hunt.canned_hint_policy == Hunt.CannedHintPolicy.CANNED_ONLY:
+            return min(num_hints, puzzle_status.num_unused_canned_hints)
+        else:
+            return num_hints
     
+
     def hint_uses_puzzle_pool(self, puzzle_status, is_canned_hint):
         """Returns whether the team's hints use the puzzle-specific pool"""
-        if self.hunt.hint_usage_policy == Hunt.HintUsageChoices.SEPARATE_POOLS:
-            return is_canned_hint
-        else:
-            return puzzle_status.num_available_hints > 0
+        match self.hunt.hint_pool_allocation:
+            case Hunt.HintPoolAllocation.HINT_TYPE_SPLIT:
+                return is_canned_hint
+            case Hunt.HintPoolAllocation.PUZZLE_PRIORITY:
+                return puzzle_status.num_available_hints > 0
 
     def process_unlocks(self):
         """
@@ -877,10 +904,6 @@ class PuzzleStatus(models.Model):
         blank=True,
         null=True,
         help_text="The time this puzzle was solved for this team")
-    num_canned_hints_used = models.IntegerField(
-        default=0,
-        help_text="Number of canned hints that have been revealed to this team"
-    )
     num_available_hints = models.IntegerField(
         default=0,
         help_text="Number of puzzle-specific hints available"
@@ -915,25 +938,30 @@ class PuzzleStatus(models.Model):
         self.save()
         self.team.process_unlocks()
 
-    @property
+    @cached_property
     def next_canned_hint(self):
         """Returns the next available canned hint or None if all used"""
-        return self.puzzle.cannedhint_set.filter(order=self.num_canned_hints_used).first()
+        return self.puzzle.cannedhint_set.order_by('order')[self.num_canned_hints_used:self.num_canned_hints_used + 1].first()
 
-    @property
+    @cached_property
+    def num_canned_hints_used(self):
+        """Returns the number of canned hints that have been revealed to this team"""
+        return Hint.objects.filter(team=self.team, puzzle=self.puzzle, canned_hint__isnull=False).count()
+
+    @cached_property
     def num_unused_canned_hints(self):
-        """Returns whether there are any unused canned hints"""
+        """Returns the number of unused canned hints"""
         return self.puzzle.cannedhint_set.count() - self.num_canned_hints_used
 
     @property
-    def can_request_custom_hints(self):
-        """Returns whether the team can request custom hints for this puzzle"""
-        return self.team.can_request_custom_hints(self)
+    def num_custom_hint_requests_available(self):
+        """Returns the number of custom hint requests available for this puzzle"""
+        return self.team.num_custom_hint_requests_available(self)
     
     @property
-    def can_request_canned_hints(self):
-        """Returns whether the team can request canned hints for this puzzle"""
-        return self.team.can_request_canned_hints(self)
+    def num_canned_hint_requests_available(self):
+        """Returns the number of canned hint requests available for this puzzle"""
+        return self.team.num_canned_hint_requests_available(self)
     
     def hint_uses_puzzle_pool(self, is_canned_hint):
         return self.team.hint_uses_puzzle_pool(self, is_canned_hint)

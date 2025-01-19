@@ -159,12 +159,34 @@ def puzzle_hints_view(request, pk):
     
     # Get the puzzle status for this team
     status = PuzzleStatus.objects.get(team=team, puzzle=puzzle)
-    hints = Hint.objects.filter(team=team, puzzle=puzzle).order_by("-pk")
+    
+    # Get all canned hints and their used versions
+    canned_hints = puzzle.cannedhint_set.all()
+    used_hints = {
+        h.canned_hint_id: h for h in Hint.objects.filter(
+            team=team,
+            puzzle=puzzle,
+            canned_hint__isnull=False
+        )
+    }
+    
+    # Zip them together
+    canned_hint_pairs = [
+        (canned, used_hints.get(canned.id, None)) 
+        for canned in canned_hints
+    ]
+    
+    custom_hints = Hint.objects.filter(
+        team=team, 
+        puzzle=puzzle,
+        canned_hint__isnull=True
+    ).order_by("-pk")
     
     context = {
         "puzzle": puzzle,
         "team": team,
-        "hints": hints,
+        "custom_hints": custom_hints,
+        "canned_hint_pairs": canned_hint_pairs,
         "status": status,
     }
     return render(request, "puzzle_hints.html", context)
@@ -181,7 +203,7 @@ def puzzle_hints_submit(request, pk):
         return render(request, 'access_error.html', {'reason': "hint"})
 
     status = PuzzleStatus.objects.get(team=team, puzzle=puzzle)
-    if not status.can_request_custom_hints:
+    if not status.num_custom_hint_requests_available:
         messages.error(request, "You cannot request hints for this puzzle at this time.")
         return redirect("puzzlehunt:puzzle_hints_view", pk)
 
@@ -206,11 +228,12 @@ def puzzle_hints_use_canned(request, pk):
     
     # Get the puzzle status and next canned hint
     status = PuzzleStatus.objects.get(team=team, puzzle=puzzle)
-    if not status.can_request_canned_hints:
+    if not status.num_canned_hint_requests_available:
         messages.error(request, "You cannot request canned hints for this puzzle at this time.")
         return redirect("puzzlehunt:puzzle_hints_view", pk)
     
-    next_hint = puzzle.cannedhint_set.filter(order=status.num_canned_hints_used).first()
+    # TODO: this assumes the hints are ordered without gaps and starting at 0
+    next_hint = status.next_canned_hint
     
     if not next_hint:
         messages.error(request, "No more canned hints available for this puzzle.")
@@ -227,10 +250,6 @@ def puzzle_hints_use_canned(request, pk):
         response_time=timezone.now(),
         canned_hint=next_hint
     )
-    
-    # Update the number of canned hints used
-    status.num_canned_hints_used = F('num_canned_hints_used') + 1
-    status.save(update_fields=['num_canned_hints_used'])
     
     return redirect("puzzlehunt:puzzle_hints_view", pk)
 
