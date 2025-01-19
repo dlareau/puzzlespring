@@ -36,6 +36,16 @@
 {% block bulma_includes %}
   <link rel="stylesheet" type="text/css" href="{% static "hunt_bulma.css" %}">
   <link rel="stylesheet" type="text/css" href="{% static "bulma-tooltip.min.css" %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.0.0/animate.min.css"/>
+  <script src="{% static "bulma-js/bulma-toast.min.js" %}"></script>
+  <script>
+    bulmaToast.setDefaults({
+      duration: 3000,
+      position: 'top-center',
+      dismissible: true, 
+      animate: { in: 'fadeIn', out: 'fadeOut' },
+    });
+  </script>
 {% endblock bulma_includes %}
 
 {% block includes %}

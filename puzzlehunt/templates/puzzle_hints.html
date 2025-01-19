@@ -37,25 +37,39 @@
           </div>
 
           {# Canned Hint Section #}
-          {% if puzzle.cannedhint_set.exists %}
-          <h2 class="mb-2 is-size-4"><b>Canned hints</b></h2>
-          <div class="box">
+          {% if canned_hint_pairs|length > 0 %}
+          {# Title #}
+          <h2 class="mb-2 is-size-4">
+            <b>
+              {% if puzzle.hunt.canned_hint_policy == 'ONLY' or puzzle.hunt.hint_pool_allocation == 'SPLIT' and puzzle.hunt.hint_pool_type == 'PUZZ' %}
+                Hints
+              {% else %}
+                Canned hints
+              {% endif %}
+            </b>
+          </h2>
+
+          <div id="canned-hint-rows-outer"
+               class="box"
+               hx-trigger="sse:hints"
+               hx-get="{{ request.get_full_path }}"
+               hx-select="#canned-hint-rows-outer"
+               hx-swap="outerHTML swap:200ms"
+               hx-disinherit="*">
+              {# Hint Counts #}
             <p class="mb-2">
-              {% comment %} TODO: Update with new hunt fields {% endcomment %}
               {% if puzzle.hunt.hint_pool_type == 'BOTH' and puzzle.hunt.hint_pool_allocation == 'PUZZ' %}
                 {{ team.num_available_hints }} global hint request{{ team.num_available_hints|pluralize }} available
                 <br>{{ status.num_available_hints }} puzzle-specific hint request{{ status.num_available_hints|pluralize }} available
+              {% elif puzzle.hunt.hint_pool_allocation == 'SPLIT' %}
               {% else %}
                 {{ status.num_canned_hint_requests_available }} hint request{{ status.num_canned_hint_requests_available|pluralize }} available
               {% endif %}
             </p>
-            <p>
-              There are {{ status.num_unused_canned_hints }} canned hints remaining.
-            </p>
 
+            {# Hint Rows #}
             {% for canned_hint, used_hint in canned_hint_pairs %}
               {% if used_hint %}
-                {# Show revealed hint #}
                 {% with hint=used_hint %}
                   {% include "partials/_hint_row.html" with staff=False %}
                 {% endwith %}
@@ -68,7 +82,7 @@
                         <span class="icon">
                           <i class="fa fa-lg fa-lock"></i>
                         </span>
-                        <span class="ml-2">Canned Hint #{{ forloop.counter }}</span>
+                        <span class="ml-2">Canned Hint #{{ canned_hint.order }}</span>
                       </div>
                     </div>
                     <div class="level-right">
@@ -95,7 +109,8 @@
           {% endif %}
 
           {# Regular Hint Request Form #}
-          {% if status.num_canned_hint_requests_available > 0 %}
+          {# TODO: At the moment, this won't load in on SSE if it wasn't there before #}
+          {% if status.num_custom_hint_requests_available > 0 or custom_hints|length > 0 %}
             <h2 class="mb-2 is-size-4"><b>Submit a new hint request</b></h2>
             <div class="box">
               <p class="mb-2">
@@ -136,11 +151,17 @@
                 </div>
               </form>
 
-              <h3 class="mt-4 mb-2 is-size-5"><b>Previous custom hints</b></h3>
-              <div id="hint-rows-outer"
+              <h3 class="mt-4 mb-2 is-size-5"><b>
+                {% if puzzle.hunt.hint_pool_allocation == 'SPLIT' and puzzle.hunt.hint_pool_type == 'GLOBAL' %}
+                  Previous Hints
+                {% else %}
+                  Previous Custom Hints
+                {% endif %}
+              </b></h3>
+              <div id="custom-hint-rows-outer"
                    hx-trigger="sse:hints"
                    hx-get="{{ request.get_full_path }}"
-                   hx-select="#hint-rows-outer"
+                   hx-select="#custom-hint-rows-outer"
                    hx-swap="outerHTML swap:200ms"
                    hx-disinherit="*">
                 {% for hint in custom_hints %}

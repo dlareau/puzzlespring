@@ -234,8 +234,8 @@ class Hunt(models.Model):
         BOTH_POOLS = 'BOTH', 'Both global and puzzle-specific hints'
     
     class CannedHintPolicy(models.TextChoices):
-        CANNED_FIRST = 'FIRST', 'Canned hints must be used before custom hints'
         CANNED_ONLY = 'ONLY', 'Only canned hints allowed (no custom hints)'
+        CANNED_FIRST = 'FIRST', 'Canned hints must be used before custom hints'
         MIXED = 'MIXED', 'Canned and custom hints can be used in any order'
     
     class HintPoolAllocation(models.TextChoices):
@@ -649,21 +649,11 @@ class Team(models.Model):
             status = PuzzleStatus.objects.get(team=self, puzzle=puzzle)
         except PuzzleStatus.DoesNotExist:
             return False
-        
-        has_hints = False
-        match self.hunt.hint_pool_type:
-            case Hunt.HintPoolType.GLOBAL_ONLY:
-                has_hints = self.num_available_hints > 0
-            case Hunt.HintPoolType.PUZZLE_ONLY:
-                has_hints = status.num_available_hints > 0
-            case Hunt.HintPoolType.BOTH_POOLS:
-                if self.hunt.canned_hint_policy == Hunt.CannedHintPolicy.CANNED_ONLY:
-                    has_hints = status.num_available_hints > 0
-                else:
-                    has_hints = self.num_available_hints > 0 or status.num_available_hints > 0
-    
-        # Check for existing hints
-        if has_hints or self.hint_set.filter(puzzle=puzzle).count() > 0:
+
+        custom_open = self.num_custom_hint_requests_available(status) > 0
+        canned_open = self.num_canned_hint_requests_available(status) > 0
+        already_used_hints = self.hint_set.filter(puzzle=puzzle).count() > 0
+        if custom_open or canned_open or already_used_hints:
             return (timezone.now() - status.unlock_time).total_seconds() > 60 * self.hunt.hint_lockout
         else:
             return False

@@ -31,7 +31,7 @@
           {% endif %}
           <br>
           {% if hint.canned_hint %}
-            <span class="tag is-primary is-light mr-2">Canned Hint #{{ hint.canned_hint.order|add:"1" }}</span>
+            <span class="tag is-primary is-light mr-2">Canned Hint #{{ hint.canned_hint.order }}</span>
           {% endif %}
           <span id="request-text-{{ hint.id }}">
             {% if hint.canned_hint %}

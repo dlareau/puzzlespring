@@ -232,7 +232,6 @@ def puzzle_hints_use_canned(request, pk):
         messages.error(request, "You cannot request canned hints for this puzzle at this time.")
         return redirect("puzzlehunt:puzzle_hints_view", pk)
     
-    # TODO: this assumes the hints are ordered without gaps and starting at 0
     next_hint = status.next_canned_hint
     
     if not next_hint:

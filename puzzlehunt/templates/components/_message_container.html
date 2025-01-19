@@ -6,18 +6,18 @@
   DEFAULT_MESSAGE_LEVELS: Django's message level constants
 {% endcomment %}
 
-<div id="outer-message-container" class="bulma" {% if request.htmx and not request.htmx.boosted %}hx-swap-oob="true"{% endif %} style="position: absolute; width: 100%; z-index: 10;">
+<div id="outer-message-container" class="bulma" {% if request.htmx and not request.htmx.boosted %}hx-swap-oob="true"{% endif %} style="position: absolute; width: 100%;">
   {% if messages %}
     <script>
     {% for message in messages %}
       {% if message.level == DEFAULT_MESSAGE_LEVELS.INFO %}
-        bulmaToast.toast({ message: '{{ message }}', type: 'is-info'});
+        bulmaToast.toast({ message: '{{ message }}', type: 'is-info', appendTo: document.getElementById('outer-message-container')});
       {% elif message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS %}
-        bulmaToast.toast({ message: '{{ message }}', type: 'is-success'});
+        bulmaToast.toast({ message: '{{ message }}', type: 'is-success', appendTo: document.getElementById('outer-message-container')});
       {% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}
-        bulmaToast.toast({ message: '{{ message }}', type: 'is-warning'});
+        bulmaToast.toast({ message: '{{ message }}', type: 'is-warning', appendTo: document.getElementById('outer-message-container')});
       {% elif message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}
-        bulmaToast.toast({ message: '{{ message }}', type: 'is-danger'});
+        bulmaToast.toast({ message: '{{ message }}', type: 'is-danger', appendTo: document.getElementById('outer-message-container')});
       {% endif %}
 
     {% endfor %}
