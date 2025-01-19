@@ -193,7 +193,7 @@ def hints_view(request, hunt):
     The hints are paginated and rendered in the 'staff_hints.html' template.
     """
     # Fetch hints related to the current hunt
-    hints = Hint.objects.filter(puzzle__hunt=hunt)
+    hints = Hint.objects.filter(puzzle__hunt=hunt, canned_hint__isnull=True)
 
     # Optional filters from GET parameters
     team_id = request.GET.get("team_id", None)
