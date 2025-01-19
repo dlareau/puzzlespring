@@ -17,13 +17,9 @@ dj-database-url
 crispy-bulma
 python-dateutil==2.6.1
 gunicorn
-coverage
 psycopg2==2.9.*
 redis>=4.0.0
 huey>=2.4.0
 django-anymail
 python3-openid
-pytest
-pytest-django
-pytest-cov
 sentry-sdk

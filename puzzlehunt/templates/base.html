@@ -52,7 +52,9 @@
     <link rel="stylesheet" type="text/css" href="{% static "puzzlehunt/normalize.css" %}">
     {% block bulma_includes %}
       {#  TODO: Use static template tag:  #}
-      <link rel="stylesheet" href="/static/custom_bulma.css">
+      {% comment %} TODO: see if we can safely move base.css to the base_includes block {% endcomment %}
+      <link rel="stylesheet" href="{% static "puzzlehunt/base.css" %}">
+      <link rel="stylesheet" href="/static/base_bulma.css">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.0.0/animate.min.css"/>
       <script src="{% static "bulma-js/bulma-toast.min.js" %}"></script>
       <script>

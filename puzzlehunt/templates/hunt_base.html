@@ -31,14 +31,19 @@
 
 {% block base_includes %}
   <link rel="stylesheet" type="text/css" href="{% static "puzzlehunt/hunt_base.css" %}">
+{% endblock base_includes %}
+
+{% block bulma_includes %}
+  <link rel="stylesheet" type="text/css" href="{% static "hunt_bulma.css" %}">
   <link rel="stylesheet" type="text/css" href="{% static "bulma-tooltip.min.css" %}">
+{% endblock bulma_includes %}
+
+{% block includes %}
   {% set_hunt_from_context %}
   {% if tmpl_hunt.css_file %}
     <link rel="stylesheet" type="text/css" href="{{ tmpl_hunt.css_file.file.url }}">
   {% endif %}
-{% endblock base_includes %}
-
-{% block bulma_includes %}{% endblock bulma_includes %}
+{% endblock includes %}
 
 {% block content_wrapper %}
   <div id="huntContent" 

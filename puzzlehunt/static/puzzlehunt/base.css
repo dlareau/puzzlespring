@@ -1,0 +1,23 @@
+[x-cloak] { display: none !important; }
+
+html {
+  height: auto;
+  max-width: 100%;
+}
+
+#content-box {
+    border-radius: 15px;
+    box-shadow: 2px 2px 10px
+}
+
+.columns.message-container:not(:last-child) {
+    margin-bottom: 0px;
+}
+
+.columns.message-container:last-child {
+    margin-bottom: -40px;
+}
+
+.bulma {
+  box-sizing: inherit;
+}
