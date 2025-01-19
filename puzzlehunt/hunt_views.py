@@ -8,6 +8,9 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
+from django.contrib import messages
+from django.db.models import F
+from django.db import transaction
 
 from django_htmx.http import retarget, reswap
 from django_ratelimit.core import get_usage
@@ -97,6 +100,7 @@ def puzzle_solution(request, pk):
 
 
 @require_POST
+@transaction.atomic
 def puzzle_submit(request, pk):
     puzzle = get_object_or_404(Puzzle, pk=pk)
     team = puzzle.hunt.team_from_user(request.user)
@@ -151,22 +155,102 @@ def puzzle_hints_view(request, pk):
     puzzle = get_object_or_404(Puzzle, pk=pk)
     team = puzzle.hunt.team_from_user(request.user)
     if not team.hints_open_for_puzzle(puzzle):
-        render(request, 'access_error.html', {'reason': "hint"})
-    hints = Hint.objects.filter(team=team, puzzle=puzzle).order_by("-pk")
-    context = {"puzzle": puzzle, "team": team, "hints": hints}
+        return render(request, 'access_error.html', {'reason': "hint"})
+    
+    # Get the puzzle status for this team
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzle)
+    
+    # Get all canned hints and their used versions
+    canned_hints = puzzle.cannedhint_set.all()
+    used_hints = {
+        h.canned_hint_id: h for h in Hint.objects.filter(
+            team=team,
+            puzzle=puzzle,
+            canned_hint__isnull=False
+        )
+    }
+    
+    # Zip them together
+    canned_hint_pairs = [
+        (canned, used_hints.get(canned.id, None)) 
+        for canned in canned_hints
+    ]
+    
+    custom_hints = Hint.objects.filter(
+        team=team, 
+        puzzle=puzzle,
+        canned_hint__isnull=True
+    ).order_by("-pk")
+    
+    context = {
+        "puzzle": puzzle,
+        "team": team,
+        "custom_hints": custom_hints,
+        "canned_hint_pairs": canned_hint_pairs,
+        "status": status,
+    }
     return render(request, "puzzle_hints.html", context)
 
 
+@require_POST
+@transaction.atomic
 def puzzle_hints_submit(request, pk):
     if "hintText" not in request.POST:
         raise SuspiciousOperation
     puzzle = get_object_or_404(Puzzle, pk=pk)
     team = puzzle.hunt.team_from_user(request.user)
-    if not team.hints_open_for_puzzle(puzzle) or team.num_available_hints <= 0:
-        render(request, 'access_error.html', {'reason': "hint"})
+    if not team.hints_open_for_puzzle(puzzle):
+        return render(request, 'access_error.html', {'reason': "hint"})
 
-    Hint.objects.create(puzzle=puzzle, team=team, request=request.POST.get("hintText"),
-                        request_time=timezone.now(), last_modified_time=timezone.now())
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzle)
+    if not status.num_custom_hint_requests_available:
+        messages.error(request, "You cannot request hints for this puzzle at this time.")
+        return redirect("puzzlehunt:puzzle_hints_view", pk)
+
+    Hint.objects.create(
+        puzzle=puzzle,
+        team=team,
+        request=request.POST.get('hintText'),
+        request_time=timezone.now(),
+        last_modified_time=timezone.now()
+    )
+    
+    return redirect("puzzlehunt:puzzle_hints_view", pk)
+
+
+@require_POST
+@transaction.atomic
+def puzzle_hints_use_canned(request, pk):
+    puzzle = get_object_or_404(Puzzle, pk=pk)
+    team = puzzle.hunt.team_from_user(request.user)
+    if not team.hints_open_for_puzzle(puzzle):
+        return render(request, 'access_error.html', {'reason': "hint"})
+    
+    # Get the puzzle status and next canned hint
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzle)
+    if not status.num_canned_hint_requests_available:
+        messages.error(request, "You cannot request canned hints for this puzzle at this time.")
+        return redirect("puzzlehunt:puzzle_hints_view", pk)
+    
+    # TODO: this assumes the hints are ordered without gaps and starting at 0
+    next_hint = status.next_canned_hint
+    
+    if not next_hint:
+        messages.error(request, "No more canned hints available for this puzzle.")
+        return redirect("puzzlehunt:puzzle_hints_view", pk)
+    
+    # Create the hint with the canned hint text
+    Hint.objects.create(
+        puzzle=puzzle,
+        team=team,
+        request="Used canned hint #{}".format(status.num_canned_hints_used + 1),
+        request_time=timezone.now(),
+        last_modified_time=timezone.now(),
+        response=next_hint.text,
+        response_time=timezone.now(),
+        canned_hint=next_hint
+    )
+    
     return redirect("puzzlehunt:puzzle_hints_view", pk)
 
 

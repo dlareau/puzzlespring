@@ -13,6 +13,7 @@ from constance import config
 from django.contrib.auth.models import AbstractUser
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
+from django.utils.functional import cached_property
 
 from django.db.models import F, OuterRef, Count, Subquery, Max, Avg
 from django.db.models.fields import PositiveIntegerField, DateTimeField, DurationField
@@ -224,6 +225,42 @@ class Hunt(models.Model):
     config = models.TextField(
         blank=True,
         help_text="Configuration for puzzle, point and hint unlocking rules"
+    )
+
+    # This is set automatically by the config parser
+    class HintPoolType(models.TextChoices):
+        GLOBAL_ONLY = 'GLOBAL', 'Global hint pool only'
+        PUZZLE_ONLY = 'PUZZLE', 'Puzzle-specific hints only'
+        BOTH_POOLS = 'BOTH', 'Both global and puzzle-specific hints'
+    
+    class CannedHintPolicy(models.TextChoices):
+        CANNED_FIRST = 'FIRST', 'Canned hints must be used before custom hints'
+        CANNED_ONLY = 'ONLY', 'Only canned hints allowed (no custom hints)'
+        MIXED = 'MIXED', 'Canned and custom hints can be used in any order'
+    
+    class HintPoolAllocation(models.TextChoices):
+        PUZZLE_PRIORITY = 'PUZZ', 'Use puzzle-specific hints before global hints'
+        HINT_TYPE_SPLIT = 'SPLIT', 'Canned hints use puzzle pool, custom hints use global pool'
+
+    hint_pool_type = models.CharField(
+        max_length=6,
+        choices=HintPoolType.choices,
+        default=HintPoolType.GLOBAL_ONLY,
+        help_text="Which hint pools are available in this hunt"
+    )
+    
+    canned_hint_policy = models.CharField(
+        max_length=5,
+        choices=CannedHintPolicy.choices,
+        default=CannedHintPolicy.CANNED_FIRST,
+        help_text="How canned hints interact with custom hints"
+    )
+    
+    hint_pool_allocation = models.CharField(
+        max_length=5,
+        choices=HintPoolAllocation.choices,
+        default=HintPoolAllocation.PUZZLE_PRIORITY,
+        help_text="How hints are allocated between puzzle and global pools when both exist"
     )
 
     @property
@@ -604,18 +641,74 @@ class Team(models.Model):
         return Puzzle.objects.filter(puzzlestatus__team=self, puzzlestatus__solve_time__isnull=False, type=Puzzle.PuzzleType.META_PUZZLE)
 
     def hints_open_for_puzzle(self, puzzle):
-        """ Takes a puzzle and returns whether the team may use hints on the puzzle """
+        """ Takes a puzzle and returns whether the team is allowed to view the hints page for that puzzle """
         if self.hunt.is_public:
             return False
-        if self.num_available_hints > 0 or self.hint_set.filter(puzzle=puzzle).count() > 0:
-            try:
-                status = PuzzleStatus.objects.get(team=self, puzzle=puzzle)
-            except PuzzleStatus.DoesNotExist:
-                return False
-
+        
+        try:
+            status = PuzzleStatus.objects.get(team=self, puzzle=puzzle)
+        except PuzzleStatus.DoesNotExist:
+            return False
+        
+        has_hints = False
+        match self.hunt.hint_pool_type:
+            case Hunt.HintPoolType.GLOBAL_ONLY:
+                has_hints = self.num_available_hints > 0
+            case Hunt.HintPoolType.PUZZLE_ONLY:
+                has_hints = status.num_available_hints > 0
+            case Hunt.HintPoolType.BOTH_POOLS:
+                if self.hunt.canned_hint_policy == Hunt.CannedHintPolicy.CANNED_ONLY:
+                    has_hints = status.num_available_hints > 0
+                else:
+                    has_hints = self.num_available_hints > 0 or status.num_available_hints > 0
+    
+        # Check for existing hints
+        if has_hints or self.hint_set.filter(puzzle=puzzle).count() > 0:
             return (timezone.now() - status.unlock_time).total_seconds() > 60 * self.hunt.hint_lockout
         else:
             return False
+        
+    def num_custom_hint_requests_available(self, puzzle_status):
+        """Returns the number of custom hint requests available for this puzzle"""
+        if self.hunt.canned_hint_policy == Hunt.CannedHintPolicy.CANNED_ONLY:
+            return 0
+        elif self.hunt.canned_hint_policy == Hunt.CannedHintPolicy.CANNED_FIRST and puzzle_status.num_unused_canned_hints != 0:
+            return 0
+        if self.hunt.hint_pool_allocation == Hunt.HintPoolAllocation.HINT_TYPE_SPLIT:
+            return self.num_available_hints
+        elif self.hunt.hint_pool_type == Hunt.HintPoolType.GLOBAL_ONLY:
+            return self.num_available_hints
+        elif self.hunt.hint_pool_type == Hunt.HintPoolType.PUZZLE_ONLY:
+            return puzzle_status.num_available_hints
+        else:
+            return self.num_available_hints + puzzle_status.num_available_hints
+    
+    def num_canned_hint_requests_available(self, puzzle_status):
+        """Returns the number of canned hint requests available for this puzzle"""
+        num_hints = 0
+        if self.hunt.hint_pool_allocation == Hunt.HintPoolAllocation.HINT_TYPE_SPLIT:
+            num_hints = puzzle_status.num_available_hints
+        else:
+            if self.hunt.hint_pool_type == Hunt.HintPoolType.GLOBAL_ONLY:
+                num_hints = self.num_available_hints
+            elif self.hunt.hint_pool_type == Hunt.HintPoolType.PUZZLE_ONLY:
+                num_hints = puzzle_status.num_available_hints
+            else:
+                num_hints = self.num_available_hints + puzzle_status.num_available_hints
+
+        if self.hunt.canned_hint_policy == Hunt.CannedHintPolicy.CANNED_ONLY:
+            return min(num_hints, puzzle_status.num_unused_canned_hints)
+        else:
+            return num_hints
+    
+
+    def hint_uses_puzzle_pool(self, puzzle_status, is_canned_hint):
+        """Returns whether the team's hints use the puzzle-specific pool"""
+        match self.hunt.hint_pool_allocation:
+            case Hunt.HintPoolAllocation.HINT_TYPE_SPLIT:
+                return is_canned_hint
+            case Hunt.HintPoolAllocation.PUZZLE_PRIORITY:
+                return puzzle_status.num_available_hints > 0
 
     def process_unlocks(self):
         """
@@ -811,6 +904,14 @@ class PuzzleStatus(models.Model):
         blank=True,
         null=True,
         help_text="The time this puzzle was solved for this team")
+    num_available_hints = models.IntegerField(
+        default=0,
+        help_text="Number of puzzle-specific hints available"
+    )
+    num_total_hints_earned = models.IntegerField(
+        default=0,
+        help_text="The total number of puzzle-specific hints this puzzle/team pair has earned"
+    )
 
     def __str__(self):
         return f"{self.team.short_name} => {self.puzzle.name}"
@@ -836,6 +937,34 @@ class PuzzleStatus(models.Model):
         self.solve_time = timezone.now()
         self.save()
         self.team.process_unlocks()
+
+    @cached_property
+    def next_canned_hint(self):
+        """Returns the next available canned hint or None if all used"""
+        return self.puzzle.cannedhint_set.order_by('order')[self.num_canned_hints_used:self.num_canned_hints_used + 1].first()
+
+    @cached_property
+    def num_canned_hints_used(self):
+        """Returns the number of canned hints that have been revealed to this team"""
+        return Hint.objects.filter(team=self.team, puzzle=self.puzzle, canned_hint__isnull=False).count()
+
+    @cached_property
+    def num_unused_canned_hints(self):
+        """Returns the number of unused canned hints"""
+        return self.puzzle.cannedhint_set.count() - self.num_canned_hints_used
+
+    @property
+    def num_custom_hint_requests_available(self):
+        """Returns the number of custom hint requests available for this puzzle"""
+        return self.team.num_custom_hint_requests_available(self)
+    
+    @property
+    def num_canned_hint_requests_available(self):
+        """Returns the number of canned hint requests available for this puzzle"""
+        return self.team.num_canned_hint_requests_available(self)
+    
+    def hint_uses_puzzle_pool(self, is_canned_hint):
+        return self.team.hint_uses_puzzle_pool(self, is_canned_hint)
 
 
 class Response(models.Model):
@@ -894,6 +1023,17 @@ class Hint(models.Model):
         help_text="Whether or not the hint was refunded",
         default=False,
     )
+    from_puzzle_pool = models.BooleanField(
+        default=False,
+        help_text="Whether this hint was drawn from the puzzle-specific pool"
+    )
+    canned_hint = models.ForeignKey(
+        'CannedHint',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text="If this was a canned hint, which one"
+    )
 
     def send_hint_sse(self, data, send_team_msg=False):
         send_event("staff", "hints", data)
@@ -901,12 +1041,24 @@ class Hint(models.Model):
             send_event(f"team-{self.team.pk}", "hints", data)
 
     def save(self, *args, **kwargs):
-        if not self.pk:  # Only trigger this section on creation
-            team = self.team
-            team.num_available_hints = F("num_available_hints") - 1
-            team.save(update_fields=["num_available_hints"])
-            self.send_hint_sse("request", True)
+        """Override save to decrement the correct hint pool"""
         is_new = not bool(self.pk)
+        if is_new:  # Only trigger this section on creation
+            team = self.team
+            try:
+                status = PuzzleStatus.objects.get(team=team, puzzle=self.puzzle)
+            except PuzzleStatus.DoesNotExist:
+                raise ValidationError("Puzzle status does not exist")
+            is_canned_hint = self.canned_hint is not None
+            if status.hint_uses_puzzle_pool(is_canned_hint):
+                status.num_available_hints = F("num_available_hints") - 1
+                status.save(update_fields=["num_available_hints"])
+                self.from_puzzle_pool = True
+            else:
+                team.num_available_hints = F("num_available_hints") - 1
+                team.save(update_fields=["num_available_hints"])
+                self.from_puzzle_pool = False
+            self.send_hint_sse("request", True)
         super().save(*args, **kwargs)
         if is_new:
             Event.objects.create_event(Event.EventType.HINT_REQUEST, self, user=None)
@@ -949,19 +1101,50 @@ class Hint(models.Model):
         return self
 
     def refund(self):
+        """Refund a hint to the correct pool"""
         if self.refunded:
             return self
         self.refunded = True
         self.last_modified_time = timezone.now()
         self.save()
         team = self.team
-        team.num_available_hints = F("num_available_hints") + 1
-        team.save(update_fields=["num_available_hints"])
+        if self.from_puzzle_pool:
+            status = PuzzleStatus.objects.get(team=team, puzzle=self.puzzle)
+            status.num_available_hints = F("num_available_hints") + 1
+            status.save(update_fields=["num_available_hints"])
+        else:
+            team.num_available_hints = F("num_available_hints") + 1
+            team.save(update_fields=["num_available_hints"])
         self.send_hint_sse("refund", True)
         return self
 
     def __str__(self):
         return self.team.short_name + ": " + self.puzzle.name + " (" + str(self.request_time) + ")"
+
+
+class CannedHint(models.Model):
+    """A pre-written hint that can be revealed to teams"""
+    
+    puzzle = models.ForeignKey(
+        Puzzle,
+        on_delete=models.CASCADE,
+        help_text="The puzzle this canned hint belongs to"
+    )
+    text = models.TextField(
+        max_length=1000,
+        help_text="The text of the hint"
+    )
+    order = models.IntegerField(
+        default=0,
+        help_text="Order in which this hint should be shown (lower numbers first)"
+    )
+    
+    class Meta:
+        ordering = ['order']
+        unique_together = ['puzzle', 'order']
+
+    def __str__(self):
+        return f"{self.puzzle.name} - Hint #{self.order}"
 
 
 class TeamRankingRule(models.Model):

@@ -10,6 +10,7 @@
   puzzle: The puzzle object hints are being requested for
   team: The current team object
   hints: List of previous Hint objects for this puzzle
+  status: PuzzleStatus object for this team and puzzle
 {% endcomment %}
 
 
@@ -34,56 +35,122 @@
             </a>
             <h1 class="is-size-3" style="margin: 0 6rem;">Hints for: {{puzzle.name}}</h1>
           </div>
-          <h2 class="mb-2 is-size-4"><b>Submit a new hint request</b></h2>
+
+          {# Canned Hint Section #}
+          {% if puzzle.cannedhint_set.exists %}
+          <h2 class="mb-2 is-size-4"><b>Canned hints</b></h2>
           <div class="box">
-            {# TODO: Disable this form if the team has no hints #}
-            <form id="hint-submit-form"
-                  method="post"
-                  action="{% url 'puzzlehunt:puzzle_hints_submit' puzzle.pk %}"
-                  x-data="{ hintText: '' }"
-                  {# TODO: This could be better as a htmx submit with hx-confirm and alpine to clear the box #}
-            >
-              {% csrf_token %}
-              <div class="field">
-                <div class="control">
-                  <textarea id="hint-request-text"
-                            name="hintText"
-                            class="textarea"
-                            placeholder="Hint Request"
-                            maxlength="800"
-                            x-model="hintText"
-                  ></textarea>
-                  <small>Max length 800 characters.</small>
+            <p class="mb-2">
+              {% comment %} TODO: Update with new hunt fields {% endcomment %}
+              {% if puzzle.hunt.hint_pool_type == 'BOTH' and puzzle.hunt.hint_pool_allocation == 'PUZZ' %}
+                {{ team.num_available_hints }} global hint request{{ team.num_available_hints|pluralize }} available
+                <br>{{ status.num_available_hints }} puzzle-specific hint request{{ status.num_available_hints|pluralize }} available
+              {% else %}
+                {{ status.num_canned_hint_requests_available }} hint request{{ status.num_canned_hint_requests_available|pluralize }} available
+              {% endif %}
+            </p>
+            <p>
+              There are {{ status.num_unused_canned_hints }} canned hints remaining.
+            </p>
+
+            {% for canned_hint, used_hint in canned_hint_pairs %}
+              {% if used_hint %}
+                {# Show revealed hint #}
+                {% with hint=used_hint %}
+                  {% include "partials/_hint_row.html" with staff=False %}
+                {% endwith %}
+              {% else %}
+                {# Show locked hint with unlock button #}
+                <div class="box {% if not forloop.counter0 == status.num_canned_hints_used %}has-background-grey-lighter{% endif %}">
+                  <div class="level is-mobile">
+                    <div class="level-left">
+                      <div class="level-item">
+                        <span class="icon">
+                          <i class="fa fa-lg fa-lock"></i>
+                        </span>
+                        <span class="ml-2">Canned Hint #{{ forloop.counter }}</span>
+                      </div>
+                    </div>
+                    <div class="level-right">
+                      <div class="level-item">
+                        <form method="post"
+                              action="{% url 'puzzlehunt:puzzle_hints_use_canned' puzzle.pk %}"
+                              onsubmit="return confirm('Are you sure you want to use this canned hint?')"
+                              class="has-text-centered">
+                          {% csrf_token %}
+                          <button class="button is-primary" 
+                                  {% if not forloop.counter0 == status.num_canned_hints_used or not status.num_canned_hint_requests_available %}
+                                    disabled
+                                  {% endif %}>
+                            Unlock Hint
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div class="field is-grouped is-grouped-centered">
-                <div class="control">
-                  <button id="hint-submit-button"
-                          x-bind:disabled="hintText==''"
-                          class="button is-primary"
-                          onclick="return confirm('Are you sure you would like to submit this hint request?')"
-                  >
-                    Submit
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-          <h2 class="mb-2 is-size-4"><b>Previous Hint requests</b></h2>
-          {# The rows of hints, taken care of by the _hint_row partial template #}
-          {# This div will refresh its contents whenever there are new hints available via SSE #}
-          <div id="hint-rows-outer"
-               hx-trigger="sse:hints"
-               hx-get="{{ request.get_full_path }}"
-               hx-select="#hint-rows-outer"
-               hx-swap="outerHTML swap:200ms"
-               hx-disinherit="*">
-            {% for hint in hints %}
-              {% include "partials/_hint_row.html" with staff=False %}
-            {% empty %}
-              You have not submitted any hint requests for this puzzle yet.
+              {% endif %}
             {% endfor %}
           </div>
+          {% endif %}
+
+          {# Regular Hint Request Form #}
+          {% if status.num_canned_hint_requests_available > 0 %}
+            <h2 class="mb-2 is-size-4"><b>Submit a new hint request</b></h2>
+            <div class="box">
+              <p class="mb-2">
+                {% if puzzle.hunt.hint_pool_type == 'BOTH' and puzzle.hunt.hint_pool_allocation == 'PUZZ' %}
+                  {{ team.num_available_hints }} global hint request{{ team.num_available_hints|pluralize }} available
+                  <br>{{ status.num_available_hints }} puzzle-specific hint request{{ status.num_available_hints|pluralize }} available
+                {% else %}
+                  {{ status.num_custom_hint_requests_available }} hint request{{ status.num_custom_hint_requests_available|pluralize }} available
+                {% endif %}
+              </p>
+              <form id="hint-submit-form"
+                    method="post"
+                    action="{% url 'puzzlehunt:puzzle_hints_submit' puzzle.pk %}"
+                    x-data="{ hintText: '' }">
+                {% csrf_token %}
+                <div class="field">
+                  <div class="control">
+                    <textarea id="hint-request-text"
+                              name="hintText"
+                              class="textarea"
+                              placeholder="Hint Request"
+                              maxlength="800"
+                              x-model="hintText"
+                    ></textarea>
+                    <small>Max length 800 characters.</small>
+                  </div>
+                </div>
+                <div class="field is-grouped is-grouped-centered">
+                  <div class="control">
+                    <button id="hint-submit-button"
+                            x-bind:disabled="hintText==''"
+                            class="button is-primary"
+                            onclick="return confirm('Are you sure you would like to submit this hint request?')"
+                    >
+                      Submit
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              <h3 class="mt-4 mb-2 is-size-5"><b>Previous custom hints</b></h3>
+              <div id="hint-rows-outer"
+                   hx-trigger="sse:hints"
+                   hx-get="{{ request.get_full_path }}"
+                   hx-select="#hint-rows-outer"
+                   hx-swap="outerHTML swap:200ms"
+                   hx-disinherit="*">
+                {% for hint in custom_hints %}
+                  {% include "partials/_hint_row.html" with staff=False %}
+                {% empty %}
+                  You have not submitted any custom hint requests for this puzzle yet.
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
         </div>
       </div>
     </div>

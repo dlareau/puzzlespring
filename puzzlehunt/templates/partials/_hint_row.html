@@ -9,20 +9,12 @@
 
 <div id="hint-row-{{ hint.id }}"
      class="hint_row box p-3 mb-4
-          {% if staff %}
-            {% if hint.response %}
-              has-background-light
-            {% elif hint.responder and hint.responder != request.user %}
-              has-background-claimed
-            {% else %}
-              has-background-warning-light
-            {% endif %}
+          {% if hint.response %}
+            has-background-light
+          {% elif staff and hint.responder and hint.responder != request.user %}
+            has-background-claimed
           {% else %}
-            {% if hint.response %}
-              has-background-white
-            {% else %}
-              has-background-warning-light
-            {% endif %}
+            has-background-warning-light
           {% endif %}
           "
 >
@@ -38,7 +30,16 @@
             <strong>Puzzle: {{hint.puzzle.name}}</strong> &mdash; <small>Team: {{hint.team.short_name}}</small>
           {% endif %}
           <br>
-          <span id="request-text-{{ hint.id }}">{{ hint.request|linebreaksbr }}</span>
+          {% if hint.canned_hint %}
+            <span class="tag is-primary is-light mr-2">Canned Hint #{{ hint.canned_hint.order|add:"1" }}</span>
+          {% endif %}
+          <span id="request-text-{{ hint.id }}">
+            {% if hint.canned_hint %}
+              {{ hint.canned_hint.text|linebreaksbr }}
+            {% else %}
+              {{ hint.request|linebreaksbr }}
+            {% endif %}
+          </span>
         </p>
 
         <div class="level mb-0">
@@ -69,14 +70,14 @@
                     Release claim
                   </button>
                 {% endif %}
-              {% elif not hint.refunded %}
+              {% elif not hint.refunded and not hint.canned_hint %}
                 <small><a hx-post="{% url 'puzzlehunt:staff:hints_refund' hint.pk %}"
                           hx-target="closest .hint_row"
                           hx-confirm="Are you sure you want to refund this hint?"
                           hx-swap="outerHTML transition:true">
                   Refund Hint
                 </a></small>
-              {% else %}
+              {% elif hint.refunded %}
                 <b>This hint was refunded.</b>
               {% endif %}
             {% else %}
@@ -102,9 +103,9 @@
           </div>
         </div>
       </div>
-    
-      {# The hint response #}
-      {% if hint.response %}
+
+      {# The hint response section #}
+      {% if hint.response and not hint.canned_hint %}
         <article class="media">
           <figure class="media-left" style="width: 20px;">
           </figure>
@@ -121,21 +122,21 @@
               </p>
               <div class="level mb-0">
                 <div class="level-left">
-                  {% if staff %}
-                  <div class="level-item">
-                    <small><a @click='modal = !modal;'
-                              hx-post="{% url "puzzlehunt:staff:get_modal" hint.pk %}"
-                              hx-target="#staff-hint-modal-contents"
-                              hx-swap="outerHTML"
-                    >
-                      Edit Response
-                    </a></small>
-                  </div>
+                  {% if staff and not hint.canned_hint %}
+                    <div class="level-item">
+                      <small><a @click='modal = !modal;'
+                                hx-post="{% url "puzzlehunt:staff:get_modal" hint.pk %}"
+                                hx-target="#staff-hint-modal-contents"
+                                hx-swap="outerHTML"
+                      >
+                        Edit Response
+                      </a></small>
+                    </div>
                   {% endif %}
                 </div>
                 <div class="level-right">
                   <div class="level-item">
-                    <small>{{ hint.request_time|time:"h:i a" }}</small>
+                    <small>{{ hint.response_time|time:"h:i a" }}</small>
                   </div>
                 </div>
               </div>

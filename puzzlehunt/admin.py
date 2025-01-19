@@ -3,12 +3,13 @@ from django.db.models.functions import Lower
 
 from puzzlehunt.models import Hunt, Puzzle, Prepuzzle, Team, PuzzleStatus, Submission, User, Event,\
     Response, Hint, Update, TeamRankingRule, PuzzleFile, SolutionFile, HuntFile,\
-    PrepuzzleFile, DisplayOnlyHunt, NotificationPlatform, NotificationSubscription
+    PrepuzzleFile, DisplayOnlyHunt, NotificationPlatform, NotificationSubscription, CannedHint
 from puzzlehunt.utils import create_media_files
 from admin_interface.models import Theme
 from django.utils.translation import gettext_lazy as _
 
 from django import forms
+from django.contrib.auth.models import Group
 from django.contrib.flatpages.admin import FlatPageAdmin
 from django.contrib.flatpages.forms import FlatpageForm
 from django.contrib.flatpages.models import FlatPage
@@ -16,6 +17,11 @@ from django.contrib.sites.admin import Site
 from django.template.defaultfilters import truncatechars
 from django.utils.safestring import mark_safe
 from puzzlehunt.widgets import AceEditorWidget
+
+
+admin.site.unregister(Group)
+admin.site.unregister(FlatPage)
+admin.site.unregister(Theme)
 
 
 @admin.display(description="Team name", ordering=Lower("team__name"))
@@ -26,6 +32,7 @@ def short_team_name(teamable_object):
         return truncatechars(teamable_object.name, 50)
 
 
+@admin.register(User)
 class PuzzlehuntUserAdmin(admin.ModelAdmin):
     search_fields = ['email', 'display_name', 'first_name', 'last_name']
     list_display = ['email', 'display_name', 'is_staff', 'full_name']
@@ -61,21 +68,20 @@ class HuntAdminForm(forms.ModelForm):
                 self.fields["css_file"].queryset = HuntFile.objects.none()
 
 
+@admin.register(Hunt)
 class HuntAdmin(admin.ModelAdmin):
     form = HuntAdminForm
     inlines = (TeamRankingRuleInline,)
     fieldsets = (
         ('Basic Info', {'fields': ('name', 'is_current_hunt', 'team_size_limit', 'location',
                         ('start_date', 'display_start_date'), ('end_date', 'display_end_date'))}),
-        ('Hunt Behaviour', {'fields': ('hint_lockout',)}),
+        ('Hunt Behaviour', {'fields': ('hint_lockout', 'hint_pool_type', 'canned_hint_policy', 'hint_pool_allocation')}),
         ('Template', {'fields': ('template_file', 'css_file', 'info_page_file')}),
     )
 
     list_display = ['name', 'team_size_limit', 'start_date', 'is_current_hunt']
-# endregion
 
 
-# region Puzzle Admin
 class PuzzleAdminForm(forms.ModelForm):
     model = Puzzle
 
@@ -109,6 +115,7 @@ class ResponseInline(admin.TabularInline):
     extra = 1
 
 
+@admin.register(Puzzle)
 class PuzzleAdmin(admin.ModelAdmin):
     form = PuzzleAdminForm
 
@@ -143,7 +150,6 @@ class PuzzleAdmin(admin.ModelAdmin):
             create_media_files(obj, file, is_solution_file=True)
 
         super().save_model(request, obj, form, change)
-# endregion
 
 
 class PrepuzzleAdminForm(forms.ModelForm):
@@ -172,6 +178,7 @@ class PrepuzzleAdminForm(forms.ModelForm):
         return data
 
 
+@admin.register(Prepuzzle)
 class PrepuzzleAdmin(admin.ModelAdmin):
     form = PrepuzzleAdminForm
     list_display = ['name', 'hunt', 'released']
@@ -220,6 +227,7 @@ class PuzzleStatusInline(admin.StackedInline):
     extra = 0
 
 
+@admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
     search_fields = ['name']
     list_display = [short_team_name, 'hunt', 'is_local', 'playtester']
@@ -241,6 +249,7 @@ class TeamAdmin(admin.ModelAdmin):
     # inlines = [PuzzleStatusInline]
 
 
+@admin.register(Submission)
 class SubmissionAdmin(admin.ModelAdmin):
     search_fields = ['submission_text']
     list_filter = ['puzzle', 'submission_time']
@@ -248,6 +257,7 @@ class SubmissionAdmin(admin.ModelAdmin):
     autocomplete_fields = ['team', 'user']
 
 
+@admin.register(PuzzleStatus)
 class PuzzleStatusAdmin(admin.ModelAdmin):
     list_display = [short_team_name, 'puzzle', 'solved']
     autocomplete_fields = ['team']
@@ -263,6 +273,7 @@ class PuzzleStatusAdmin(admin.ModelAdmin):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
+@admin.register(Hint)
 class HintAdmin(admin.ModelAdmin):
     list_filter = ('puzzle__hunt', 'puzzle')
     list_display = [short_team_name, 'puzzle', 'request_time', 'has_been_answered']
@@ -273,11 +284,13 @@ class HintAdmin(admin.ModelAdmin):
         return hint.answered
 
 
+@admin.register(Update)
 class UpdateAdmin(admin.ModelAdmin):
     list_filter = ('hunt',)
     list_display = ['hunt', 'puzzle', 'time']
 
 
+@admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
     # search_fields = ['submission_text']
     list_filter = ['hunt', 'type']
@@ -285,7 +298,6 @@ class EventAdmin(admin.ModelAdmin):
     autocomplete_fields = ['team', 'user']
 
 
-# region Flatpage Admin
 class FlatPageProxyObject(FlatPage):
     class Meta:
         proxy = True
@@ -301,6 +313,7 @@ class FlatpageProxyForm(FlatpageForm):
 
 
 # Define a new FlatPageAdmin
+@admin.register(FlatPageProxyObject)
 class FlatPageProxyAdmin(FlatPageAdmin):
     list_filter = []
     fieldsets = (
@@ -328,33 +341,11 @@ class FlatPageProxyAdmin(FlatPageAdmin):
                                          "/info/contact-us/. Make sure to have leading and " +
                                          "trailing slashes.")
         return form
-# endregion
 
 
+@admin.register(DisplayOnlyHunt)
 class DisplayOnlyHuntAdmin(admin.ModelAdmin):
     list_display = ['name', 'display_start_date']
-
-
-# admin.site.unregister(Group)
-admin.site.unregister(FlatPage)
-admin.site.unregister(Theme)
-
-admin.site.register(User, PuzzlehuntUserAdmin)
-admin.site.register(PuzzleFile)
-admin.site.register(SolutionFile)
-admin.site.register(HuntFile)
-admin.site.register(PrepuzzleFile)
-admin.site.register(Hunt, HuntAdmin)
-admin.site.register(Puzzle, PuzzleAdmin)
-admin.site.register(Prepuzzle, PrepuzzleAdmin)
-admin.site.register(Team, TeamAdmin)
-admin.site.register(Submission, SubmissionAdmin)
-admin.site.register(PuzzleStatus, PuzzleStatusAdmin)
-admin.site.register(Hint, HintAdmin)
-admin.site.register(Update, UpdateAdmin)
-admin.site.register(FlatPageProxyObject, FlatPageProxyAdmin)
-admin.site.register(Event, EventAdmin)
-admin.site.register(DisplayOnlyHunt, DisplayOnlyHuntAdmin)
 
 
 @admin.register(NotificationPlatform)
@@ -397,3 +388,33 @@ class NotificationSubscriptionAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'platform', 'hunt')
+
+@admin.register(CannedHint)
+class CannedHintAdmin(admin.ModelAdmin):
+    list_display = ['puzzle', 'order', 'truncated_text']
+    list_filter = ['puzzle__hunt', 'puzzle']
+    search_fields = ['text', 'puzzle__name']
+    ordering = ['puzzle', 'order']
+    
+    @admin.display(description="Hint Text")
+    def truncated_text(self, obj):
+        return truncatechars(obj.text, 100)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('puzzle', 'puzzle__hunt')
+
+@admin.register(PuzzleFile)
+class PuzzleFileAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(SolutionFile)
+class SolutionFileAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(HuntFile)
+class HuntFileAdmin(admin.ModelAdmin):
+    pass
+
+@admin.register(PrepuzzleFile)
+class PrepuzzleFileAdmin(admin.ModelAdmin):
+    pass
