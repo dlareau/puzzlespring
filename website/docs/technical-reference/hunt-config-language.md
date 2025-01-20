@@ -52,6 +52,14 @@ Each rule follows the format:
 
 where `<unlockable>` specifies what should be unlocked or awarded, and `<condition>` specifies when this should happen.
 
+### Comments
+
+The language supports shell-style comments using the `#` character. Everything after a `#` on a line is treated as a comment and ignored by the parser:
+```
+# This entire line is a comment
+P2 <= P1  # This is an end-of-line comment
+```
+
 ## Unlockables
 
 ### Puzzles
