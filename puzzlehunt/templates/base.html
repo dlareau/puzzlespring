@@ -54,8 +54,8 @@
       {#  TODO: Use static template tag:  #}
       {% comment %} TODO: see if we can safely move base.css to the base_includes block {% endcomment %}
       <link rel="stylesheet" href="{% static "puzzlehunt/base.css" %}">
-      <link rel="stylesheet" href="/static/base_bulma.css">
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.0.0/animate.min.css"/>
+      <link rel="stylesheet" href="{% static "base_bulma.css" %}">
+      <link rel="stylesheet" href="{% static "animate.min.css" %}"/>
       <script src="{% static "bulma-js/bulma-toast.min.js" %}"></script>
       <script>
         bulmaToast.setDefaults({
@@ -67,10 +67,10 @@
       </script>
     {% endblock bulma_includes %}
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
-    <script defer src="/static/alpinejs.js"></script>
-    <script src="/static/htmx.min.js"></script>
-    <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script> {# TODO: download #}
+    <script defer src="{% static "alpine-ext-persist.min.js" %}"></script>
+    <script defer src="{% static "alpinejs.js" %}"></script>
+    <script src="{% static "htmx.min.js" %}"></script>
+    <script src="{% static "htmx-ext-sse.js" %}"></script>
     {% django_htmx_script %}
     {% block includes %} {% endblock includes %}
     {% block extra_head %}{% endblock extra_head %}

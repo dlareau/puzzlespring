@@ -16,7 +16,7 @@
 {% endblock title_meta_elements %}
 
 {% block content %}
-  <script src="https://unpkg.com/htmx-ext-head-support@2.0.1/head-support.js"></script>
+  <script src="{% static "htmx-ext-head-support.js" %}"></script>
   {% if puzzle.main_solution_file.extension == "html" %}
     <div hx-get="{{ puzzle.main_solution_file.file.url }}"
          hx-trigger="load"
