@@ -606,7 +606,11 @@ def hunt_config(request, hunt):
             hunt.save()
             messages.success(request, "Configuration saved successfully")
         except ValidationError as e:
-            messages.error(request, str(e))
+            # Extract only the config validation error if it exists
+            if 'config' in e.message_dict:
+                messages.error(request, e.message_dict['config'][0])
+            else:
+                messages.error(request, str(e))
     else:
         config_text = hunt.config or "# Write your config here"
     

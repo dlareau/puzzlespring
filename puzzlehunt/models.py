@@ -709,17 +709,17 @@ class Team(models.Model):
         """
         hunt = self.hunt
         if self.playtester:
-            time_since_start = timezone.now() - self.playtest_start_date
+            start_time = self.playtest_start_date
+            end_time = self.playtest_end_date
         else:
-            time_since_start = timezone.now() - hunt.start_date
-
-        if not self.hunt.config or time_since_start < timedelta(0):
+            start_time = hunt.start_date
+            end_time = hunt.end_date
+        
+        if not self.hunt.config or timezone.now() < start_time or timezone.now() > end_time:
             return
 
         # Get the team's solved puzzles by ID
-        solved_puzzles = set(
-            self.solved_puzzles().values_list('id', flat=True)
-        )
+        puzzle_statuses = self.puzzlestatus_set.all()
         
         # Get all valid puzzle IDs for this hunt
         puzzle_ids = set(hunt.puzzle_set.values_list('id', flat=True))
@@ -727,10 +727,11 @@ class Team(models.Model):
         try:
             # Parse the config and process unlocks
             config_rules = parse_config(self.hunt.config, puzzle_ids)
-            unlocked_puzzles, points, hints = process_config_rules(
+            unlocked_puzzles, points, hints, puzzle_hints = process_config_rules(
                 config_rules,
-                solved_puzzles,
-                time_since_start
+                puzzle_statuses,
+                start_time,
+                timezone.now()
             )
         except Exception as e:
             # Log the error if config parsing fails
@@ -747,7 +748,18 @@ class Team(models.Model):
                 puzzle_id=puzzle_id,
                 unlock_time=timezone.now()
             )
-
+        
+        for puzzle_id, num_hints in puzzle_hints.items():
+            try:
+                status = PuzzleStatus.objects.get(team=self, puzzle_id=puzzle_id)
+            except PuzzleStatus.DoesNotExist:
+                continue
+            if num_hints > status.num_total_hints_earned:
+                PuzzleStatus.objects.filter(team=self, puzzle_id=puzzle_id).update(
+                    num_available_hints=F('num_available_hints') + num_hints - F('num_total_hints_earned'),
+                    num_total_hints_earned=num_hints
+                )
+    
         # Update points
         self.points = points
         self.save(update_fields=["points"])

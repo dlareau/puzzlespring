@@ -4,101 +4,148 @@ from datetime import timedelta
 # Regexes
 time_delta = re.compile(r"\d?\d:\d\d")
 number = re.compile(r"\d+")
-puzzle_id = re.compile(r"[a-fA-F0-9]+")
+puzzle_id = re.compile(r"[a-fA-F0-9X]+")
 time_unit = re.compile(r"MINUTES?|HOURS?")
 point_unit = re.compile(r"POINTS?")
 hint_unit = re.compile(r"HINTS?")
 
-# region grammar classes
+# Object grammar classes
 class PuzzleID:
     grammar = "P", attr("id", puzzle_id)
 
-    def __repr__(self):
-        return "P" + self.id
+class PuzzleSolve:
+    grammar = attr("puzzle", PuzzleID), "SOLVE"
+
+class PuzzleUnlock:
+    grammar = attr("puzzle", PuzzleID), "UNLOCK"
 
 class TimeSinceStart:
     grammar = "+", attr("time", time_delta)
 
-    def __repr__(self):
-        return f"{self.time} after start"
-
 class NumPoints:
     grammar = attr("points", number), attr("unit", point_unit)
-
-    def __repr__(self):
-        return f"{self.points} points"
 
 class TimeUnit:
     grammar = attr("unit", time_unit)
 
-class TimeInterval:
-    grammar = "EVERY", attr("interval", number), attr("unit", TimeUnit)
-
-    def __repr__(self):
-        return f"every {self.interval} {self.unit.unit.lower()}"
-
-# Add new class for Hints
 class NumHints:
     grammar = attr("hints", number), attr("unit", hint_unit)
 
-    def __repr__(self):
-        return f"{self.hints} hints"
+class NumPuzzleHints:
+    grammar = attr("hints", number), attr("puzzle", PuzzleID), attr("unit", hint_unit)
 
-# Define what can be unlocked
-class Unlockable(List):
+PointInTime = [TimeSinceStart, PuzzleSolve, PuzzleUnlock]
+
+
+# Unlockables
+class UnlockableList(List):
     grammar = "[", csl([PuzzleID, NumPoints, NumHints]), "]"
 
-    def __repr__(self):
-        return f"[{', '.join(map(str, self))}]"
+Unlockable = [UnlockableList, PuzzleID, NumPoints, NumHints, NumPuzzleHints]
 
-# Single unlockable can be either a list or single item
-SingleUnlockable = [Unlockable, PuzzleID, NumPoints, NumHints]
 
-# Define what can be used in rules
-RuleItems = [PuzzleID, TimeSinceStart, NumPoints, TimeInterval]
-
-class Parenthesized:
-    grammar = "(", attr("item", RuleItems), ")"
-
-    def __repr__(self):
-        return f"({self.item})"
-
-class SomeOf(List):
-    grammar = attr("num", number), "OF", "(", csl(RuleItems), ")"
-
+# Single-use rules
+class Parenthesized: pass
+class SomeOf(List): pass
 class And(List): pass
 class Or(List): pass
 
-# Add SomeOf, And, Or, and Parenthesized to the list of possible rule items
-RuleItems.extend([SomeOf, Or, And, Parenthesized])
+SingleUseRuleItems = [PuzzleID, PointInTime, NumPoints, SomeOf, Or, And, Parenthesized]
 
-And.grammar = "(", RuleItems, some("AND", RuleItems), ")"
-Or.grammar = "(", RuleItems, some("OR", RuleItems), ")"
+Parenthesized.grammar = "(", attr("item", SingleUseRuleItems), ")"
+SomeOf.grammar = attr("num", number), "OF", "(", csl(SingleUseRuleItems), ")"
+And.grammar = "(", SingleUseRuleItems, some("AND", SingleUseRuleItems), ")"
+Or.grammar = "(", SingleUseRuleItems, some("OR", SingleUseRuleItems), ")"
 
+
+# Multi-use rules
+class TimeInterval:
+    grammar = "EVERY", attr("interval", number), attr("unit", TimeUnit)
+
+class TimeIntervalAfter:
+    grammar = attr("interval", TimeInterval), "AFTER", attr("start_time", PointInTime)
+
+class ConditionalTimeInterval:
+    grammar = attr("interval", [TimeInterval, TimeIntervalAfter]), "IF", attr("condition", SingleUseRuleItems)
+
+MultiUseRuleItems = [TimeInterval, TimeIntervalAfter, ConditionalTimeInterval]
+
+
+# File level grammars
 class UnlockRule:
-    # Use RuleItems for all rule types
-    grammar = attr("unlockable", SingleUnlockable), "<=", attr("rule", RuleItems)
-
-    def __repr__(self):
-        return f"{self.unlockable} <= {self.rule}"
+    grammar = attr("unlockable", Unlockable), "<=", attr("rule", [SingleUseRuleItems, MultiUseRuleItems])
 
 class ConfigFile(List):
     grammar = maybe_some(UnlockRule)
 
-    def __repr__(self):
-        return "\n".join(map(str, self))
 
-def parse_config(config_str, puzzle_ids=None):
+def preprocess_config(config_str, puzzle_ids):
+    """
+    Preprocess a config string to expand PX patterns into individual lines.
+    
+    Args:
+        config_str: The configuration string to preprocess
+        puzzle_ids: Set of valid puzzle IDs to expand PX with
+    
+    Returns:
+        The preprocessed configuration string
+    """
+    lines = config_str.split('\n')
+    expanded_lines = []
+    
+    for line in lines:
+        if 'PX' in line.upper():
+            # Skip comment lines
+            if line.strip().startswith('#'):
+                expanded_lines.append(line)
+                continue
+                
+            # Replace PX with each puzzle ID
+            for pid in sorted(puzzle_ids):
+                expanded_lines.append(line.upper().replace('PX', f'P{pid}'))
+        else:
+            expanded_lines.append(line)
+            
+    return '\n'.join(expanded_lines)
+
+def parse_config(config_str, puzzle_ids):
     """
     Parse a config string and validate puzzle IDs and check for circular dependencies.
     
     Args:
         config_str: The configuration string to parse
-        puzzle_ids: Optional set of valid puzzle IDs to check against
+        puzzle_ids: Set of valid puzzle IDs to check against
     
     Raises:
         ValueError: If an invalid puzzle ID is referenced or circular dependencies are found
     """
+    # Check that the original config string is valid
+    try:
+        config = parse(config_str.upper(), ConfigFile, comment=comment_sh)
+    except SyntaxError as e:
+        error_msg = str(e)
+        # Extract line number from error message
+        line_num = None
+        if "(line " in error_msg:
+            try:
+                line_num = int(error_msg.split("(line ")[1].split(")")[0])
+            except:
+                pass
+
+        # If we have a line number, show the problematic line
+        context = ""
+        if line_num is not None:
+            lines = config_str.split('\n')
+            if 0 <= line_num - 1 < len(lines):
+                context = f"on line {line_num}:\n{lines[line_num-1]}"
+
+        # The error message will now use the friendly names from __str__ methods
+        error_msg = f"Syntax error in configuration {context}"
+        raise ValueError(error_msg)
+
+    # Preprocess the config to expand PX patterns
+    config_str = preprocess_config(config_str, puzzle_ids)
+
     config = parse(config_str.upper(), ConfigFile, comment=comment_sh)
     
     # Build dependency graph
@@ -136,6 +183,8 @@ def parse_config(config_str, puzzle_ids=None):
             unlockables = [item for item in rule.unlockable if isinstance(item, PuzzleID)]
         elif isinstance(rule.unlockable, PuzzleID):
             unlockables = [rule.unlockable]
+        # elif isinstance(rule.unlockable, NumPuzzleHints):
+        #     unlockables = [rule.unlockable.puzzle]
         else:
             unlockables = []
             
@@ -148,10 +197,18 @@ def parse_config(config_str, puzzle_ids=None):
                 referenced_ids.add(rule_item.id)
                 for target in target_puzzles:
                     add_dependency(target.id, rule_item.id)
+            elif isinstance(rule_item, (PuzzleSolve, PuzzleUnlock)):
+                referenced_ids.add(rule_item.puzzle.id)
+                for target in target_puzzles:
+                    add_dependency(target.id, rule_item.puzzle.id)
             elif isinstance(rule_item, (And, Or, SomeOf)):
                 for item in rule_item:
                     if not isinstance(item, str):
                         collect_dependencies(item, target_puzzles)
+            elif isinstance(rule_item, Parenthesized):
+                collect_dependencies(rule_item.item, target_puzzles)
+            elif isinstance(rule_item, ConditionalTimeInterval):
+                collect_dependencies(rule_item.condition, target_puzzles)
         
         collect_dependencies(rule.rule, unlockables)
     
@@ -167,66 +224,116 @@ def parse_config(config_str, puzzle_ids=None):
     
     return config
 
-def check_rule(rule, solved_puzzles, time, points):
+
+def check_rule(rule, puzzle_statuses, time, points):
     # Handle string inputs (like parentheses and commas)
     if isinstance(rule, str):
         return True
 
     match rule:
         case Parenthesized():
-            return check_rule(rule.item, solved_puzzles, time, points)
+            return check_rule(rule.item, puzzle_statuses, time, points)
             
         case And():
             # Get all items that aren't strings (skip parentheses, AND, commas)
             subrules = [r for r in rule if not isinstance(r, str)]
-            return all(check_rule(subrule, solved_puzzles, time, points) for subrule in subrules)
+            return all(check_rule(subrule, puzzle_statuses, time, points) for subrule in subrules)
             
         case Or():
             # Get all items that aren't strings (skip parentheses, OR, commas)
             subrules = [r for r in rule if not isinstance(r, str)]
-            return any(check_rule(subrule, solved_puzzles, time, points) for subrule in subrules)
+            return any(check_rule(subrule, puzzle_statuses, time, points) for subrule in subrules)
             
         case SomeOf():
             # Get the number and the list of items
             num = rule.num
             # Get all items that aren't strings (skip OF, parentheses, commas)
             subrules = [r for r in rule if not isinstance(r, str) and not isinstance(r, int)]
-            return sum(1 for r in subrules if check_rule(r, solved_puzzles, time, points)) >= int(num)
+            return sum(1 for r in subrules if check_rule(r, puzzle_statuses, time, points)) >= int(num)
             
         case PuzzleID():
-            return rule.id in solved_puzzles
+            return any(status.solve_time is not None for status in puzzle_statuses if status.puzzle_id == rule.id)
             
         case TimeSinceStart():
             parts = rule.time.split(":")
             return time >= timedelta(hours=int(parts[0]), minutes=int(parts[1]))
+
+        case PuzzleSolve():
+            return any(status.solve_time is not None for status in puzzle_statuses if status.puzzle_id == rule.puzzle.id)
+
+        case PuzzleUnlock():
+            return any(status.unlock_time is not None for status in puzzle_statuses if status.puzzle_id == rule.puzzle.id)
             
         case NumPoints():
             return points >= int(rule.points)
             
-        case TimeInterval():
-            return True  # Time intervals are handled differently
-            
         case _:
             raise ValueError(f"Unknown rule type: {type(rule)} - {rule}")
 
-def process_config_rules(rules, solved_puzzles, time):
+
+def get_multi_use_count(rule, puzzle_statuses, start_time, current_time, points):
+    """Helper function to determine how many times a multi-use rule should be applied"""
+    time_elapsed = current_time - start_time
+    match rule:
+        case TimeInterval():
+            interval = int(rule.interval)
+            if rule.unit.unit.upper().startswith("HOUR"):
+                interval *= 60
+            # Convert total timedelta to minutes
+            total_minutes = int(time_elapsed.total_seconds() / 60)
+            return total_minutes // interval
+            
+        case TimeIntervalAfter():
+            new_start_time = None
+            match rule.start_time:
+                case TimeSinceStart():
+                    parts = rule.start_time.time.split(":")
+                    new_start_time = start_time + timedelta(hours=int(parts[0]), minutes=int(parts[1]))
+                case PuzzleSolve():
+                    for status in puzzle_statuses:
+                        if status.puzzle_id == rule.start_time.puzzle.id and status.solve_time is not None:
+                            new_start_time = status.solve_time
+                            break
+                case PuzzleUnlock():
+                    for status in puzzle_statuses:
+                        if status.puzzle_id == rule.start_time.puzzle.id and status.unlock_time is not None:
+                            new_start_time = status.unlock_time
+                            break
+            
+            # If we can't find a start time, return 0
+            if new_start_time is None:
+                return 0
+            
+            return get_multi_use_count(rule.interval, puzzle_statuses, new_start_time, current_time, points)
+            
+        case ConditionalTimeInterval():
+            if not check_rule(rule.condition, puzzle_statuses, time_elapsed, points):
+                return 0
+            return get_multi_use_count(rule.interval, puzzle_statuses, start_time, current_time, points)
+            
+        case _:
+            # Single use rules
+            return 1 if check_rule(rule, puzzle_statuses, time_elapsed, points) else 0
+
+
+def process_config_rules(rules, puzzle_statuses, start_time, current_time):
     points = 0
     hints = 0
     unlocked_puzzles = set()
     processed_rules = set()
+    puzzle_hints = {}  # Maps puzzle IDs to number of hints
     
-    def process_reward(rule, item_type, value):
-        rule_id = (str(rule.rule), item_type, value)
+    def process_reward(rule, item_type, value, puzzle_id=None):
+        rule_id = (str(rule.rule), item_type, value, puzzle_id)
         if rule_id not in processed_rules:
-            if isinstance(rule.rule, TimeInterval):
-                interval = int(rule.rule.interval)
-                if rule.rule.unit.unit.upper().startswith("HOUR"):
-                    interval *= 60
-                # Convert total timedelta to minutes
-                total_minutes = int(time.total_seconds() / 60)
-                reward = total_minutes * int(value) // interval
+            if isinstance(rule.rule, (TimeInterval, TimeIntervalAfter, ConditionalTimeInterval)):
+                reward = get_multi_use_count(rule.rule, puzzle_statuses, start_time, current_time, points) * int(value)
             else:
-                reward = int(value)
+                # Single use rules
+                if check_rule(rule.rule, puzzle_statuses, current_time - start_time, points):
+                    reward = int(value)
+                else:
+                    reward = 0
             processed_rules.add(rule_id)
             return reward, True
         return 0, False
@@ -236,7 +343,14 @@ def process_config_rules(rules, solved_puzzles, time):
     while changed:
         changed = False
         for rule in rules:
-            if check_rule(rule.rule, solved_puzzles, time, points):
+            # For single-use rules, check if condition is met
+            # For multi-use rules, get_multi_use_count will handle the logic
+            if isinstance(rule.rule, (TimeInterval, TimeIntervalAfter, ConditionalTimeInterval)):
+                rule_applies = get_multi_use_count(rule.rule, puzzle_statuses, start_time, current_time, points) > 0
+            else:
+                rule_applies = check_rule(rule.rule, puzzle_statuses, current_time - start_time, points)
+                
+            if rule_applies:
                 unlockables = [rule.unlockable] if not isinstance(rule.unlockable, List) else rule.unlockable
                 for item in unlockables:
                     match item:
@@ -252,5 +366,11 @@ def process_config_rules(rules, solved_puzzles, time):
                             reward, was_changed = process_reward(rule, "hints", item.hints)
                             hints += reward
                             changed = changed or was_changed
+                        case NumPuzzleHints():
+                            reward, was_changed = process_reward(rule, "puzzle_hints", item.hints, item.puzzle.id)
+                            if item.puzzle.id not in puzzle_hints:
+                                puzzle_hints[item.puzzle.id] = 0
+                            puzzle_hints[item.puzzle.id] += reward
+                            changed = changed or was_changed
 
-    return unlocked_puzzles, points, hints
+    return unlocked_puzzles, points, hints, puzzle_hints

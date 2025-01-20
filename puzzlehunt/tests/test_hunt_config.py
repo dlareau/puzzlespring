@@ -529,3 +529,104 @@ def test_nested_parentheses(hunt_with_puzzles):
     unlocked = team2.unlocked_puzzles()
     assert len(unlocked) == 3
     assert sorted([p.id for p in unlocked]) == ["1", "2", "3"]
+
+def test_px_pattern_expansion(hunt_with_puzzles):
+    """Test that PX patterns are correctly expanded for all puzzle IDs"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    # Initial puzzles unlock with points
+    PX <= 0 POINTS
+    # Give points for solving puzzles
+    5 POINTS <= PX
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+    
+    # Initially all puzzles should be unlocked since PX <= 0 POINTS expands to all puzzles
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 3
+    assert sorted([p.id for p in unlocked]) == ["1", "2", "3"]
+
+    # Solve first puzzle to get points
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    status.mark_solved()
+    team.process_unlocks()
+
+    # Should have 5 points from solving P1
+    assert team.points == 5
+
+    # Solve second puzzle to get more points
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[1])
+    status.mark_solved()
+    team.process_unlocks()
+
+    # Should have 10 points total from solving P1 and P2
+    assert team.points == 10
+
+def test_puzzle_hint_rules(hunt_with_puzzles):
+    """Test that puzzle-specific hint unlocking rules work correctly"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    # Initial puzzle unlocks with points
+    P1 <= 0 POINTS
+    P2 <= 0 POINTS
+    # Get general hints for solving puzzles
+    2 HINTS <= P1
+    # Get puzzle-specific hints
+    3 P1 HINTS <= P2
+    2 P2 HINTS <= P1
+    # Get puzzle hints every hour
+    1 P1 HINT <= EVERY 1 HOUR
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    
+    # Process unlocks at start
+    team.process_unlocks()
+    assert team.num_available_hints == 0
+    
+    # Check P1 and P2 are unlocked with no hints
+    p1_status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    p2_status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[1])
+    assert p1_status.num_available_hints == 0
+    assert p1_status.num_total_hints_earned == 0
+    assert p2_status.num_available_hints == 0
+    assert p2_status.num_total_hints_earned == 0
+
+    # Solve P1 to get general hints and P2-specific hints
+    p1_status.mark_solved()
+    team.process_unlocks()
+    assert team.num_available_hints == 2
+    p2_status.refresh_from_db()
+    assert p2_status.num_available_hints == 2  # 2 hints for P2
+    assert p2_status.num_total_hints_earned == 2
+
+    # Solve P2 to get P1-specific hints
+    p2_status.mark_solved()
+    team.process_unlocks()
+    assert team.num_available_hints == 2  # Unchanged
+    p1_status.refresh_from_db()
+    assert p1_status.num_available_hints == 3  # 3 hints for P1
+    assert p1_status.num_total_hints_earned == 3
+    assert p2_status.num_available_hints == 2  # Still 2 hints for P2
+    assert p2_status.num_total_hints_earned == 2
+
+    # Process after 1 hour to get additional P1 hint
+    one_hour = timezone.timedelta(hours=1)
+    current_time = timezone.now()
+    with patch.object(timezone, 'now', return_value=current_time + one_hour) as mock_now:
+        team.process_unlocks()
+        assert team.num_available_hints == 2  # Unchanged
+        p1_status.refresh_from_db()
+        p2_status.refresh_from_db()
+        assert p1_status.num_available_hints == 4  # One more hint for P1
+        assert p1_status.num_total_hints_earned == 4
+        assert p2_status.num_available_hints == 2  # Still 2 hints for P2
+        assert p2_status.num_total_hints_earned == 2

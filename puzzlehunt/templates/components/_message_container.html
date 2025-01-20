@@ -10,16 +10,11 @@
   {% if messages %}
     <script>
     {% for message in messages %}
-      {% if message.level == DEFAULT_MESSAGE_LEVELS.INFO %}
-        bulmaToast.toast({ message: '{{ message }}', type: 'is-info', appendTo: document.getElementById('outer-message-container')});
-      {% elif message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS %}
-        bulmaToast.toast({ message: '{{ message }}', type: 'is-success', appendTo: document.getElementById('outer-message-container')});
-      {% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}
-        bulmaToast.toast({ message: '{{ message }}', type: 'is-warning', appendTo: document.getElementById('outer-message-container')});
-      {% elif message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}
-        bulmaToast.toast({ message: '{{ message }}', type: 'is-danger', appendTo: document.getElementById('outer-message-container')});
-      {% endif %}
-
+      bulmaToast.toast({
+        message: '{{ message|linebreaks }}',
+        type: 'is-{% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}danger{% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}warning{% elif message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS %}success{% else %}info{% endif %}',
+        appendTo: document.getElementById('outer-message-container')
+      });
     {% endfor %}
     </script>
   {% endif %}
