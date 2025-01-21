@@ -23,7 +23,9 @@
           <th style="width: 160px;">Time</th>
           <th>Answer</th>
           <th>Response</th>
-          <th>User</th>
+          {% if config.SHOW_SUBMISSION_USER %}
+            <th>User</th>
+          {% endif %}
         </tr>
       </thead>
       <tbody>
@@ -32,10 +34,12 @@
           <td>{{ s.submission_time|date:"m/j - h:i a" }}</td>
           <td>{{ s.submission_text }}</td>
           <td>{{ s.convert_markdown_response|safe }}</td>
-          {% if s.user %}
-            <td>{{ s.user.display_name }}</td>
-          {% else %}
-            <td>N/A</td>
+          {% if config.SHOW_SUBMISSION_USER %}
+            {% if s.user %}
+              <td>{{ s.user.display_string }}</td>
+            {% else %}
+              <td>N/A</td>
+            {% endif %}
           {% endif %}
         </tr>
         {% empty %}

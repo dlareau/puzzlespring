@@ -40,29 +40,31 @@
       </div>
     
       {# Stats and other buttons area #}
-      <div class="column is-narrow">
-        <div class="">
-          <button class="button is-fullwidth is-static block has-tooltip-arrow has-tooltip-bottom"
-                  style="pointer-events: auto; cursor: help;"
-                  data-tooltip="{{ puzzle.solve_count }} teams have solved this puzzle."
-          >
-            Stats: &nbsp;&nbsp;&nbsp;&nbsp;
-            <span class="icon-text">
-              <span class="icon">
-                <i class="fa fl-lg fa-group"></i>
+      {% hints_open team puzzle as show_hint_link %}
+      {% if config.SHOW_SOLVE_COUNT_ON_PUZZLE or puzzle.hunt.is_public or show_hint_link %}
+        <div class="column is-narrow">
+          {% if config.SHOW_SOLVE_COUNT_ON_PUZZLE %}
+            <button class="button is-fullwidth is-static block has-tooltip-arrow has-tooltip-bottom"
+                    style="pointer-events: auto; cursor: help;"
+                    data-tooltip="{{ puzzle.solve_count }} teams have solved this puzzle."
+            >
+              Stats: &nbsp;&nbsp;&nbsp;&nbsp;
+              <span class="icon-text">
+                <span class="icon">
+                  <i class="fa fl-lg fa-group"></i>
+                </span>
+                <span>{{ puzzle.solve_count }}</span>
+                <span class="icon">
+                  <i class="fa fl-lg fa-check"></i>
+                </span>
               </span>
-              <span>{{ puzzle.solve_count }}</span>
-              <span class="icon">
-                <i class="fa fl-lg fa-check"></i>
-              </span>
-            </span>
-          </button>
+            </button>
+          {% endif %}
           {% if puzzle.hunt.is_public %}
             <a class="button is-fullwidth block" href="{% url 'puzzlehunt:puzzle_solution' puzzle.pk %}">
               View Solution
             </a>
           {% endif %}
-          {% hints_open team puzzle as show_hint_link %}
           {# TODO: rather than not show the button, consider greying it out #}
           {% if show_hint_link %}
             <a class="button is-fullwidth block" href="{% url 'puzzlehunt:puzzle_hints_view' puzzle.pk %}">
@@ -70,7 +72,7 @@
             </a>
           {% endif %}
         </div>
-      </div>
+      {% endif %}
     </div>
     
     {# Updates and other messages area #}

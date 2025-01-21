@@ -62,7 +62,11 @@
           {% for puzzle in puzzles %}
             <th>
               <div>
-                {{ puzzle.abbreviation }}
+                {% if config.PROGRESS_FULL_PUZZLE_NAMES %}
+                  {{ puzzle.name }}
+                {% else %}
+                  {{ puzzle.abbreviation }}
+                {% endif %}
               </div>
             </th>
           {% endfor %}
@@ -220,7 +224,7 @@
           {% for puzzle in puzzles %}
             {
               data: 'puzzles.{{ puzzle.pk }}',
-              title: '<div title="{{ puzzle.name }}"><div>{{ puzzle.abbreviation }}</div><div class="is-size-7">#{{ puzzle.order_number }}</div></div>',
+              title: '<div title="{{ puzzle.name }}"><div>{% if config.PROGRESS_FULL_PUZZLE_NAMES %}{{ puzzle.name }}{% else %}{{ puzzle.abbreviation }}{% endif %}</div><div class="is-size-7">#{{ puzzle.order_number }}</div></div>',
               defaultContent: '',
               render: function(data, type, row) {
                 if (!data) {

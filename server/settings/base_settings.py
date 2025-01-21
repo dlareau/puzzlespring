@@ -198,6 +198,7 @@ TEMPLATES = [
         'OPTIONS': {
             'builtins': ['puzzlehunt.templatetags.hunt_tags'],
             'context_processors': [
+                'constance.context_processors.config',
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.template.context_processors.static',
@@ -220,34 +221,21 @@ CONSTANCE_CONFIG = {
     'SITE_TITLE': ('PuzzleSpring', 'The title of the site'),
     
     # Team Settings
-    # Not yet implemented
-    'NO_TEAMS_MODE': (False, 'If enabled, each user will be their own team'),
-    
-    # Not yet implemented
-    'TEAM_MEMBERS_CAN_SEE_NAMES': (True, 'If enabled, team members will be able to see users names on the team page'),
+    'NO_TEAMS_MODE': (False, 'If enabled, each user will be their own team'), # Not yet implemented
     
     # Hunt Display Settings
-    # Not yet implemented
-    'SINGLE_HUNT_MODE': (False, 'If enabled, only one hunt will be visible and accessible'),
+    'SINGLE_HUNT_MODE': (False, 'If enabled, only one hunt will be visible and accessible'), # Not yet implemented
 
     # Puzzle Display Settings
-    # Not yet implemented
     'PROGRESS_FULL_PUZZLE_NAMES': (False, 'If enabled, the progress page will show full puzzle names'),
-    
-    # Not yet implemented
     'SHOW_SOLVE_COUNT_ON_PUZZLE': (True, 'If enabled, the puzzle page the current number of solves'),
-    
-    # Not yet implemented
-    'SHOW_UPDATE_FOR_LOCKED_PUZZLES': (True, 'If enabled, updates will be shown even when the puzzle is locked'),
+    'SHOW_UPDATE_FOR_LOCKED_PUZZLES': (True, 'If enabled, updates will be shown even when the puzzle is locked'), # Not yet implemented
 
     # Communication Settings
     'CONTACT_EMAIL': ('test@test.com', 'The contact email for help links'),
     
     # Submission and Hint Settings
-    # Not yet implemented
     'SHOW_SUBMISSION_USER': (True, 'If enabled, the submissions page will display usernames'),
-    
-    # Not yet implemented
     'SHOW_HINT_USER_STAFF': (True, 'If enabled, the staff hints page will show the staff responder'),
 
     # Image settings

@@ -112,7 +112,7 @@
           <div class="media-content">
             <div class="content">
               <p style="overflow-wrap: anywhere" class="mb-1">
-                {% if staff %}
+                {% if staff and config.SHOW_HINT_USER_STAFF %}
                   <strong>{{hint.responder.full_name}}</strong>
                 {% else %}
                   <strong>Response</strong>
