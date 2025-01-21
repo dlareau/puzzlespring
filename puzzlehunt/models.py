@@ -284,21 +284,6 @@ class Hunt(models.Model):
         return timezone.now().date() == self.start_date.date()
 
     @property
-    def in_reg_lockdown(self):
-        """ A boolean indicating whether registration has locked for this hunt """
-        return (self.start_date - timezone.now()).days <= config.HUNT_REGISTRATION_LOCKOUT
-
-    @property
-    def season(self):
-        """ Gets a season string from the hunt dates """
-        if 1 <= self.start_date.month <= 5:
-            return "Spring"
-        elif 9 <= self.start_date.month <= 12:
-            return "Fall"
-        else:
-            return "Summer"
-
-    @property
     def teams(self):
         """ Gets the teams for the hunt sorted alphabetically. """
         return self.team_set.order_by(Lower("name")).all()
@@ -1515,16 +1500,6 @@ class DisplayOnlyHunt(models.Model):
         help_text="The number of teams that were registered for this hunt")
     num_puzzles = models.IntegerField(
         help_text="The number of puzzles this hunt had")
-
-    @property
-    def season(self):
-        """ Gets a season string from the hunt dates """
-        if 1 <= self.display_start_date.month <= 5:
-            return "Spring"
-        elif 9 <= self.display_start_date.month <= 12:
-            return "Fall"
-        else:
-            return "Summer"
 
     def __str__(self):
         return self.name

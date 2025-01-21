@@ -220,27 +220,34 @@ CONSTANCE_CONFIG = {
     'SITE_TITLE': ('PuzzleSpring', 'The title of the site'),
     
     # Team Settings
+    # Not yet implemented
     'NO_TEAMS_MODE': (False, 'If enabled, each user will be their own team'),
+    
+    # Not yet implemented
     'TEAM_MEMBERS_CAN_SEE_NAMES': (True, 'If enabled, team members will be able to see users names on the team page'),
     
     # Hunt Display Settings
+    # Not yet implemented
     'SINGLE_HUNT_MODE': (False, 'If enabled, only one hunt will be visible and accessible'),
-    'HUNTS_HAVE_LOCATION': (True, 'If enabled, hunts will display their location on the main page'),
-    'SHOW_ARCHIVE_SEASONS': (True, 'If enabled, the archive page will show season labels on old hunts'),
-    
+
     # Puzzle Display Settings
+    # Not yet implemented
     'PROGRESS_FULL_PUZZLE_NAMES': (False, 'If enabled, the progress page will show full puzzle names'),
+    
+    # Not yet implemented
     'SHOW_SOLVE_COUNT_ON_PUZZLE': (True, 'If enabled, the puzzle page the current number of solves'),
+    
+    # Not yet implemented
     'SHOW_UPDATE_FOR_LOCKED_PUZZLES': (True, 'If enabled, updates will be shown even when the puzzle is locked'),
-    
-    # Registration Settings
-    'HUNT_REGISTRATION_LOCKOUT': (2, 'The number of days before the hunt when registration locks'),
-    
+
     # Communication Settings
     'CONTACT_EMAIL': ('test@test.com', 'The contact email for help links'),
     
     # Submission and Hint Settings
+    # Not yet implemented
     'SHOW_SUBMISSION_USER': (True, 'If enabled, the submissions page will display usernames'),
+    
+    # Not yet implemented
     'SHOW_HINT_USER_STAFF': (True, 'If enabled, the staff hints page will show the staff responder'),
 
     # Image settings

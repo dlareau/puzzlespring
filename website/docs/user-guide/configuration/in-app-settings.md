@@ -22,6 +22,12 @@ To access and modify these settings:
 
 ## Available Settings
 
+### Site Settings
+
+- `SITE_TITLE`: The title of the site
+
+    *Default: "PuzzleSpring" • Type: String*
+
 ### Team Settings
 
 - `NO_TEAMS_MODE`: If enabled, each user will be their own team
@@ -38,14 +44,6 @@ To access and modify these settings:
 
     *Default: False • Type: Boolean*
 
-- `HUNTS_HAVE_LOCATION`: If enabled, hunts will display their location on the main page
-
-    *Default: True • Type: Boolean*
-
-- `SHOW_ARCHIVE_SEASONS`: If enabled, the progress page will show season labels on old hunts
-
-    *Default: True • Type: Boolean*
-
 ### Puzzle Display Settings
 
 - `PROGRESS_FULL_PUZZLE_NAMES`: If enabled, the progress page will show full puzzle names
@@ -59,12 +57,6 @@ To access and modify these settings:
 - `SHOW_UPDATE_FOR_LOCKED_PUZZLES`: If enabled, updates will be shown even when the puzzle is locked
 
     *Default: True • Type: Boolean*
-
-### Registration Settings
-
-- `HUNT_REGISTRATION_LOCKOUT`: The number of days before the hunt when registration locks
-
-    *Default: 2 • Type: Integer*
 
 ### Communication Settings
 
@@ -81,3 +73,13 @@ To access and modify these settings:
 - `SHOW_HINT_USER_STAFF`: If enabled, the staff hints page will show the staff responder
 
     *Default: True • Type: Boolean*
+
+### Image Settings
+
+- `NAVBAR_IMAGE`: The image displayed on the navbar
+
+    *Default: "" • Type: Image Field*
+
+- `EMBED_IMAGE`: The image displayed in embeds
+
+    *Default: "" • Type: Image Field*

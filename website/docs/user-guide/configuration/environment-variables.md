@@ -57,12 +57,6 @@ Environment variables can be set in multiple ways, including directly in your sy
 
     *Required: No • Type: Integer • Example: 443*
 
-### Communication Settings
-
-- `CONTACT_EMAIL`: The email address used for system communications
-
-    *Required: Yes • Type: String • Example: "sample_email@example.com"*
-
 ### Monitoring
 
 - `SENTRY_DSN`: The Data Source Name for Sentry error tracking (optional)

@@ -71,21 +71,17 @@ For production environments:
 {: .warning }
 > Ensure you've set secure values for `DJANGO_SECRET_KEY` and `DB_PASSWORD`, and that `DJANGO_ENABLE_DEBUG=False`
 
-2. (Optional) Configure email settings:
-   - Set `CONTACT_EMAIL` for system communications
-   - Configure your email provider settings in `.env`
-
-3. Start the application:
+2. Start the application:
    ``` bash
    docker compose up -d
    ```
 
-4. Run the initial setup:
+3. Run the initial setup:
    ``` bash
    docker compose exec app python manage.py initial_setup
    ```
 
-5. Access your site at `https://your-domain.com`
+4. Access your site at `https://your-domain.com`
 
 {: .note }
 > The Caddy server will automatically obtain and manage SSL certificates for your domain.
