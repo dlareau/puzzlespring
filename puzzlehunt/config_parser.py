@@ -50,7 +50,7 @@ class SomeOf(List): pass
 class And(List): pass
 class Or(List): pass
 
-SingleUseRuleItems = [PuzzleID, PointInTime, NumPoints, SomeOf, Or, And, Parenthesized]
+SingleUseRuleItems = PointInTime + [PuzzleID, NumPoints, SomeOf, Or, And, Parenthesized]
 
 Parenthesized.grammar = "(", attr("item", SingleUseRuleItems), ")"
 SomeOf.grammar = attr("num", number), "OF", "(", csl(SingleUseRuleItems), ")"
@@ -225,44 +225,44 @@ def parse_config(config_str, puzzle_ids):
     return config
 
 
-def check_rule(rule, puzzle_statuses, time, points):
+def check_rule(rule, puzzle_status_dict, time, points):
     # Handle string inputs (like parentheses and commas)
     if isinstance(rule, str):
         return True
 
     match rule:
         case Parenthesized():
-            return check_rule(rule.item, puzzle_statuses, time, points)
+            return check_rule(rule.item, puzzle_status_dict, time, points)
             
         case And():
             # Get all items that aren't strings (skip parentheses, AND, commas)
             subrules = [r for r in rule if not isinstance(r, str)]
-            return all(check_rule(subrule, puzzle_statuses, time, points) for subrule in subrules)
+            return all(check_rule(subrule, puzzle_status_dict, time, points) for subrule in subrules)
             
         case Or():
             # Get all items that aren't strings (skip parentheses, OR, commas)
             subrules = [r for r in rule if not isinstance(r, str)]
-            return any(check_rule(subrule, puzzle_statuses, time, points) for subrule in subrules)
+            return any(check_rule(subrule, puzzle_status_dict, time, points) for subrule in subrules)
             
         case SomeOf():
             # Get the number and the list of items
             num = rule.num
             # Get all items that aren't strings (skip OF, parentheses, commas)
             subrules = [r for r in rule if not isinstance(r, str) and not isinstance(r, int)]
-            return sum(1 for r in subrules if check_rule(r, puzzle_statuses, time, points)) >= int(num)
+            return sum(1 for r in subrules if check_rule(r, puzzle_status_dict, time, points)) >= int(num)
             
         case PuzzleID():
-            return any(status.solve_time is not None for status in puzzle_statuses if status.puzzle_id == rule.id)
+            return rule.id in puzzle_status_dict and puzzle_status_dict[rule.id].solve_time is not None
             
         case TimeSinceStart():
             parts = rule.time.split(":")
             return time >= timedelta(hours=int(parts[0]), minutes=int(parts[1]))
 
         case PuzzleSolve():
-            return any(status.solve_time is not None for status in puzzle_statuses if status.puzzle_id == rule.puzzle.id)
+            return rule.puzzle.id in puzzle_status_dict and puzzle_status_dict[rule.puzzle.id].solve_time is not None
 
         case PuzzleUnlock():
-            return any(status.unlock_time is not None for status in puzzle_statuses if status.puzzle_id == rule.puzzle.id)
+            return rule.puzzle.id in puzzle_status_dict and puzzle_status_dict[rule.puzzle.id].unlock_time is not None
             
         case NumPoints():
             return points >= int(rule.points)
@@ -271,7 +271,7 @@ def check_rule(rule, puzzle_statuses, time, points):
             raise ValueError(f"Unknown rule type: {type(rule)} - {rule}")
 
 
-def get_multi_use_count(rule, puzzle_statuses, start_time, current_time, points):
+def get_multi_use_count(rule, puzzle_status_dict, start_time, current_time, points):
     """Helper function to determine how many times a multi-use rule should be applied"""
     time_elapsed = current_time - start_time
     match rule:
@@ -290,30 +290,27 @@ def get_multi_use_count(rule, puzzle_statuses, start_time, current_time, points)
                     parts = rule.start_time.time.split(":")
                     new_start_time = start_time + timedelta(hours=int(parts[0]), minutes=int(parts[1]))
                 case PuzzleSolve():
-                    for status in puzzle_statuses:
-                        if status.puzzle_id == rule.start_time.puzzle.id and status.solve_time is not None:
-                            new_start_time = status.solve_time
-                            break
+                    if rule.start_time.puzzle.id in puzzle_status_dict:
+                        new_start_time = puzzle_status_dict[rule.start_time.puzzle.id].solve_time
                 case PuzzleUnlock():
-                    for status in puzzle_statuses:
-                        if status.puzzle_id == rule.start_time.puzzle.id and status.unlock_time is not None:
-                            new_start_time = status.unlock_time
-                            break
+                    if rule.start_time.puzzle.id in puzzle_status_dict:
+                        new_start_time = puzzle_status_dict[rule.start_time.puzzle.id].unlock_time
+
             
             # If we can't find a start time, return 0
             if new_start_time is None:
                 return 0
             
-            return get_multi_use_count(rule.interval, puzzle_statuses, new_start_time, current_time, points)
+            return get_multi_use_count(rule.interval, puzzle_status_dict, new_start_time, current_time, points)
             
         case ConditionalTimeInterval():
-            if not check_rule(rule.condition, puzzle_statuses, time_elapsed, points):
+            if not check_rule(rule.condition, puzzle_status_dict, time_elapsed, points):
                 return 0
-            return get_multi_use_count(rule.interval, puzzle_statuses, start_time, current_time, points)
+            return get_multi_use_count(rule.interval, puzzle_status_dict, start_time, current_time, points)
             
         case _:
             # Single use rules
-            return 1 if check_rule(rule, puzzle_statuses, time_elapsed, points) else 0
+            return 1 if check_rule(rule, puzzle_status_dict, time_elapsed, points) else 0
 
 
 def process_config_rules(rules, puzzle_statuses, start_time, current_time):
@@ -323,32 +320,29 @@ def process_config_rules(rules, puzzle_statuses, start_time, current_time):
     processed_rules = set()
     puzzle_hints = {}  # Maps puzzle IDs to number of hints
     
-    def process_reward(rule, item_type, value, puzzle_id=None):
+    def process_reward(rule, rule_value, item_type, value, puzzle_id=None):
         rule_id = (str(rule.rule), item_type, value, puzzle_id)
         if rule_id not in processed_rules:
-            if isinstance(rule.rule, (TimeInterval, TimeIntervalAfter, ConditionalTimeInterval)):
-                reward = get_multi_use_count(rule.rule, puzzle_statuses, start_time, current_time, points) * int(value)
-            else:
-                # Single use rules
-                if check_rule(rule.rule, puzzle_statuses, current_time - start_time, points):
-                    reward = int(value)
-                else:
-                    reward = 0
+            reward = rule_value * int(value)
             processed_rules.add(rule_id)
             return reward, True
         return 0, False
+
+    puzzle_status_dict = {status.puzzle_id: status for status in puzzle_statuses}
+    time_elapsed = current_time - start_time
 
     # Keep processing rules until no new changes occur
     changed = True
     while changed:
         changed = False
         for rule in rules:
-            # For single-use rules, check if condition is met
-            # For multi-use rules, get_multi_use_count will handle the logic
+            # Calculate rule value once
             if isinstance(rule.rule, (TimeInterval, TimeIntervalAfter, ConditionalTimeInterval)):
-                rule_applies = get_multi_use_count(rule.rule, puzzle_statuses, start_time, current_time, points) > 0
+                rule_value = get_multi_use_count(rule.rule, puzzle_status_dict, start_time, current_time, points)
+                rule_applies = rule_value > 0
             else:
-                rule_applies = check_rule(rule.rule, puzzle_statuses, current_time - start_time, points)
+                rule_applies = check_rule(rule.rule, puzzle_status_dict, time_elapsed, points)
+                rule_value = 1 if rule_applies else 0
                 
             if rule_applies:
                 unlockables = [rule.unlockable] if not isinstance(rule.unlockable, List) else rule.unlockable
@@ -359,15 +353,15 @@ def process_config_rules(rules, puzzle_statuses, start_time, current_time):
                                 unlocked_puzzles.add(item.id)
                                 changed = True
                         case NumPoints():
-                            reward, was_changed = process_reward(rule, "points", item.points)
+                            reward, was_changed = process_reward(rule, rule_value, "points", item.points)
                             points += reward
                             changed = changed or was_changed
                         case NumHints():
-                            reward, was_changed = process_reward(rule, "hints", item.hints)
+                            reward, was_changed = process_reward(rule, rule_value, "hints", item.hints)
                             hints += reward
                             changed = changed or was_changed
                         case NumPuzzleHints():
-                            reward, was_changed = process_reward(rule, "puzzle_hints", item.hints, item.puzzle.id)
+                            reward, was_changed = process_reward(rule, rule_value, "puzzle_hints", item.hints, item.puzzle.id)
                             if item.puzzle.id not in puzzle_hints:
                                 puzzle_hints[item.puzzle.id] = 0
                             puzzle_hints[item.puzzle.id] += reward

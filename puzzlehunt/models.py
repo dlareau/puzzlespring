@@ -700,7 +700,7 @@ class Team(models.Model):
             case Hunt.HintPoolAllocation.PUZZLE_PRIORITY:
                 return puzzle_status.num_available_hints > 0
 
-    def process_unlocks(self):
+    def process_unlocks(self, parsed_config=None):
         """
         Calculate what puzzles, points, and hints this team has unlocked based on the hunt config.
         
@@ -717,26 +717,26 @@ class Team(models.Model):
         
         if not self.hunt.config or timezone.now() < start_time or timezone.now() > end_time:
             return
-
-        # Get the team's solved puzzles by ID
+        
+        if parsed_config:
+            config_rules = parsed_config
+        else:
+            puzzle_ids = set(hunt.puzzle_set.values_list('id', flat=True))
+            try:
+                # Parse the config and process unlocks
+                config_rules = parse_config(self.hunt.config, puzzle_ids)
+            except Exception as e:
+                # Log the error if config parsing fails
+                logger.error(f"Error processing hunt config: {e}")
+                return
+            
         puzzle_statuses = self.puzzlestatus_set.all()
-        
-        # Get all valid puzzle IDs for this hunt
-        puzzle_ids = set(hunt.puzzle_set.values_list('id', flat=True))
-        
-        try:
-            # Parse the config and process unlocks
-            config_rules = parse_config(self.hunt.config, puzzle_ids)
-            unlocked_puzzles, points, hints, puzzle_hints = process_config_rules(
-                config_rules,
-                puzzle_statuses,
-                start_time,
-                timezone.now()
-            )
-        except Exception as e:
-            # Log the error if config parsing fails
-            logger.error(f"Error processing hunt config: {e}")
-            return
+        unlocked_puzzles, points, hints, puzzle_hints = process_config_rules(
+            config_rules,
+            puzzle_statuses,
+            start_time,
+            timezone.now()
+        )
         
         # Unlock new puzzles
         current_unlocks = set(self.unlocked_puzzles().values_list('id', flat=True))
@@ -760,19 +760,23 @@ class Team(models.Model):
                     num_total_hints_earned=num_hints
                 )
     
+        updated = False
         # Update points
-        self.points = points
-        self.save(update_fields=["points"])
+        if points != self.points:
+            updated = True
+            self.points = points
+            self.save(update_fields=["points"])
 
         # Update hints
         if hints > self.num_total_hints_earned:
+            updated = True
             # Team earned new hints - perform atomic update
             Team.objects.filter(pk=self.pk).update(
                 num_available_hints=F('num_available_hints') + hints - F('num_total_hints_earned'),
                 num_total_hints_earned=hints
             )
-        # Refresh from db to get updated values
-        self.refresh_from_db()
+        if updated:
+            self.refresh_from_db()
 
     def validate_members(self, adding_pks=None, removing_pks=None):
         """

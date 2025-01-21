@@ -630,3 +630,45 @@ def test_puzzle_hint_rules(hunt_with_puzzles):
         assert p1_status.num_total_hints_earned == 4
         assert p2_status.num_available_hints == 2  # Still 2 hints for P2
         assert p2_status.num_total_hints_earned == 2
+
+def test_process_config_rules_looping(hunt_with_puzzles):
+    """Test that process_config_rules properly loops when changes cascade."""
+
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    # Initial puzzle unlocked
+    P1 <= 0 POINTS
+    # Chain reaction of points after solving P1
+    3 POINTS <= P1
+    3 POINTS <= 3 POINTS
+    3 POINTS <= 6 POINTS
+    P2 <= 9 POINTS
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    
+    # Initial state - just P1 unlocked
+    team.process_unlocks()
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 1
+    assert unlocked[0].id == "1"
+    assert team.points == 0
+
+    print("Solving P1")
+    # Solve P1 - this should trigger the chain reaction in a single process_unlocks:
+    # 1. Get 3 points from solving P1
+    # 2. Having 3 points gives 3 more points (total 6)
+    # 3. Having 6 points gives 3 more points (total 9)
+    # 4. Having 9 points unlocks P2
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    status.mark_solved()
+    team.process_unlocks()
+    
+    # Verify everything happened in that single process_unlocks call
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 2  # Both puzzles should be unlocked
+    assert sorted([p.id for p in unlocked]) == ["1", "2"]
+    assert team.points == 9  # Should have all points
