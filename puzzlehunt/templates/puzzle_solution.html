@@ -11,6 +11,8 @@
   puzzle: The puzzle object containing the solution file
 {% endcomment %}
 
+{% load static %}
+
 {% block title_meta_elements %}
   {% with title=puzzle.name|add:" - Solution" %} {{ block.super }} {% endwith %}
 {% endblock title_meta_elements %}
