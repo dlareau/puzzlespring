@@ -229,7 +229,7 @@ CONSTANCE_CONFIG = {
     # Puzzle Display Settings
     'PROGRESS_FULL_PUZZLE_NAMES': (False, 'If enabled, the progress page will show full puzzle names'),
     'SHOW_SOLVE_COUNT_ON_PUZZLE': (True, 'If enabled, the puzzle page the current number of solves'),
-    'SHOW_UPDATE_FOR_LOCKED_PUZZLES': (True, 'If enabled, updates will be shown even when the puzzle is locked'), # Not yet implemented
+    'SHOW_UPDATE_FOR_LOCKED_PUZZLES': (True, 'If enabled, updates will be shown even when the puzzle is locked'),
 
     # Communication Settings
     'CONTACT_EMAIL': ('test@test.com', 'The contact email for help links'),

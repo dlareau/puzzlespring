@@ -82,7 +82,7 @@
           <div class="message-body p-4">
             <b>Update:</b>&nbsp;&nbsp;<small>{{ e.time|date:"M jS - h:i a" }}</small>
             <br>
-            {{ e.text }}
+            {{ e.text|linebreaksbr }}
           </div>
         </article>
       {% endfor %}

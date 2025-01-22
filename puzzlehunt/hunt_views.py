@@ -15,6 +15,7 @@ from django.db import transaction
 from django_htmx.http import retarget, reswap
 from django_ratelimit.core import get_usage
 from django_sendfile import sendfile
+from constance import config
 
 from .forms import AnswerForm
 from .models import Puzzle, Submission, Prepuzzle, Hint, PuzzleStatus, Update
@@ -318,7 +319,12 @@ def hunt_leaderboard(request, hunt):
 
 
 def hunt_updates(request, hunt):
-    updates = hunt.update_set.all().order_by('time')
+    updates = hunt.update_set
+    if not config.SHOW_UPDATE_FOR_LOCKED_PUZZLES:
+        team = hunt.team_from_user(request.user)
+        updates = updates.filter(puzzle__in=team.unlocked_puzzles().all()) | updates.filter(puzzle__isnull=True)
+
+    updates = updates.all().order_by('time')
     return render(request, "updates.html", {"updates": updates})
 
 
