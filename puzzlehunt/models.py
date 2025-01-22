@@ -134,7 +134,7 @@ class MediaFile(models.Model):
     # TODO: Maybe make unique based on filepath with overwrite behavior?
 
     def __str__(self):
-        return self.file.name
+        return self.file.name.strip("trusted/")
 
 
 # We are purposefully choosing to have inherited models over a generic relation
@@ -824,7 +824,7 @@ class Submission(models.Model):
     response_text = models.CharField(
         blank=True,
         max_length=400,
-        help_text="Response to the given answer. Empty string indicates human response needed")
+        help_text="Response to the given answer.")
     puzzle = models.ForeignKey(
         Puzzle,
         on_delete=models.CASCADE,

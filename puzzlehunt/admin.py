@@ -75,7 +75,7 @@ class HuntAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Basic Info', {'fields': ('name', 'is_current_hunt', 'team_size_limit', 'location',
                         ('start_date', 'display_start_date'), ('end_date', 'display_end_date'))}),
-        ('Hunt Behaviour', {'fields': ('hint_lockout', 'hint_pool_type', 'canned_hint_policy', 'hint_pool_allocation')}),
+        ('Hint Behaviour', {'fields': ('hint_lockout', 'hint_pool_type', 'canned_hint_policy', 'hint_pool_allocation')}),
         ('Template', {'fields': ('template_file', 'css_file', 'info_page_file')}),
     )
 
@@ -150,6 +150,11 @@ class PuzzleAdmin(admin.ModelAdmin):
             create_media_files(obj, file, is_solution_file=True)
 
         super().save_model(request, obj, form, change)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "hunt":
+            kwargs["queryset"] = Hunt.objects.order_by('-id')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 class PrepuzzleAdminForm(forms.ModelForm):
@@ -230,18 +235,22 @@ class PuzzleStatusInline(admin.StackedInline):
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
     search_fields = ['name']
-    list_display = [short_team_name, 'hunt', 'is_local', 'playtester']
+    list_display = [short_team_name, 'hunt', 'playtester', 'is_local']
     list_filter = ['hunt']
     filter_horizontal = ['members']
+    readonly_fields = ('num_total_hints_earned', 'points')
     fieldsets = (
-        # TODO: make this warning more field specific
-        ("!!! Don't edit teams during a hunt unless absolutely necessary. Race conditions may occur. !!!",
+        ("Basic Info",
          {
             'fields': ['name', 'hunt', 'members', 'is_local', 'join_code', 'num_available_hints'],
          }),
         ("Playtesting",
          {
              'fields': ['playtester', 'playtest_start_date', 'playtest_end_date',]
+         }),
+        ("Team progress",
+         {
+             'fields': ['num_available_hints', 'num_total_hints_earned', 'points'],
          })
     )
 
@@ -254,13 +263,14 @@ class SubmissionAdmin(admin.ModelAdmin):
     search_fields = ['submission_text']
     list_filter = ['puzzle', 'submission_time']
     list_display = ['submission_text', short_team_name, 'submission_time']
-    autocomplete_fields = ['team', 'user']
+    autocomplete_fields = ['team', 'user', 'puzzle']
 
 
 @admin.register(PuzzleStatus)
 class PuzzleStatusAdmin(admin.ModelAdmin):
     list_display = [short_team_name, 'puzzle', 'solved']
-    autocomplete_fields = ['team']
+    autocomplete_fields = ['team', 'puzzle']
+    readonly_fields = ['num_total_hints_earned']
 
     @admin.display(boolean=True, description="Solved?")
     def solved(self, puzzle_status):
@@ -277,7 +287,7 @@ class PuzzleStatusAdmin(admin.ModelAdmin):
 class HintAdmin(admin.ModelAdmin):
     list_filter = ('puzzle__hunt', 'puzzle')
     list_display = [short_team_name, 'puzzle', 'request_time', 'has_been_answered']
-    autocomplete_fields = ['responder', 'team']
+    autocomplete_fields = ['responder', 'team', 'puzzle', 'canned_hint']
 
     @admin.display(boolean=True, description="Answered?")
     def has_been_answered(self, hint):
@@ -295,7 +305,7 @@ class EventAdmin(admin.ModelAdmin):
     # search_fields = ['submission_text']
     list_filter = ['hunt', 'type']
     list_display = ['timestamp', 'type', 'user']
-    autocomplete_fields = ['team', 'user']
+    autocomplete_fields = ['team', 'user', 'puzzle']
 
 
 class FlatPageProxyObject(FlatPage):
@@ -395,6 +405,7 @@ class CannedHintAdmin(admin.ModelAdmin):
     list_filter = ['puzzle__hunt', 'puzzle']
     search_fields = ['text', 'puzzle__name']
     ordering = ['puzzle', 'order']
+    autocomplete_fields = ['puzzle']
     
     @admin.display(description="Hint Text")
     def truncated_text(self, obj):
