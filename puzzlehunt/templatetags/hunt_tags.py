@@ -41,6 +41,13 @@ def navbar_image():
     return settings.STATIC_URL + "puzzlehunt/navbar_logo.png"
 
 
+@register.simple_tag()
+def favicon():
+    if config.FAVICON:
+        return f"{settings.MEDIA_URL}{config.FAVICON}"
+    return settings.STATIC_URL + "puzzlehunt/favicon.ico"
+
+
 @register.filter()
 def render_with_context(value):
     return Template(value).render(Context({'curr_hunt': Hunt.objects.get(is_current_hunt=True)}))

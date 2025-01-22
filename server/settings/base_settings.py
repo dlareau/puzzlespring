@@ -238,6 +238,7 @@ CONSTANCE_CONFIG = {
     # Image settings
     'NAVBAR_IMAGE': ('', 'Image displayed on the navbar', 'image_field'),
     'EMBED_IMAGE': ('', 'Image displayed in embeds', 'image_field'),
+    'FAVICON': ('', 'Image displayed in the browser tab', 'image_field'),
 }
 
 CONSTANCE_ADDITIONAL_FIELDS = {

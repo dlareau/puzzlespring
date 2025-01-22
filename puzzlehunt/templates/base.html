@@ -46,7 +46,7 @@
     <meta property="og:url" content="{% block og_url %}{{ request.build_absolute_uri }}{% endblock %}">
     <meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}">
 
-    <link rel="shortcut icon" href="{% static "huntserver/favicon.ico" %}" />
+    <link rel="shortcut icon" href="{% favicon %}" />
 
     {% block base_includes %}{% endblock base_includes %}
     <link rel="stylesheet" type="text/css" href="{% static "puzzlehunt/normalize.css" %}">
