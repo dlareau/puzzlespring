@@ -26,9 +26,9 @@
     {% if reason == "team" %}
     <p>
       You must be participating in the current hunt to view this resource or 
-      page, and it does not appear you are on a team for this hunt. Please
-      ensure you are signed in correctly and that you have properly added
-      yourself to a team on the <a href="{% url 'huntserver:registration' %}"> 
+      page, and it does not appear you are registered for this hunt. Please
+      ensure you are signed in correctly and that you have properly registered
+      for the hunt on the <a href="{% url 'puzzlehunt:team_create' %}"> 
       registration page</a>. 
     </p>
     {% endif %}

@@ -295,6 +295,11 @@ class Hunt(models.Model):
             return self.team_set.exclude(playtester=True)
         else:
             return self.team_set.filter(playtester=True)
+        
+    @property
+    def no_team_mode(self):
+        """ A boolean indicating whether the hunt is in no team mode """
+        return self.team_size_limit == 1
 
     def __str__(self):
         if self.is_current_hunt:

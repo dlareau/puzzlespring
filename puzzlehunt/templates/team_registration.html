@@ -10,52 +10,66 @@
   content: Displays team creation form and join team interface
 @context:
   form: Form for creating a new team
+  current_hunt: The current hunt
   errors: Error messages from join team attempts
 {% endcomment %}
 
 {% load crispy_forms_tags %}
 
-{% block title %}Team Registration{% endblock title %}
+{% block title_meta_elements %}
+  {% with title="Registration - "|add:current_hunt.name %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
 
 {% block content_wrapper %}
-  {% with info_size='wide' %}
-    {{ block.super }}
-  {% endwith %}
+  {% if current_hunt.no_team_mode %}
+    {% with info_size='narrow' %}
+      {{ block.super }}
+    {% endwith %}
+  {% else %}
+    {% with info_size='wide' %}
+      {{ block.super }}
+    {% endwith %}
+  {% endif %}
 {% endblock %}
 
 {% block content %}
 <div class="content p-4">
   <div class="columns is-multiline">
-    <div class="column is-8-tablet is-5-desktop is-offset-2-tablet is-offset-0-desktop">
-      <h3>Create a New Team</h3>
+    <div {% if not current_hunt.no_team_mode %} class="column is-8-tablet is-5-desktop is-offset-2-tablet is-offset-0-desktop"{% else %} class="column is-12"{% endif %}>
+      {% if current_hunt.no_team_mode %}
+        <h3>Register for the Hunt</h3>
+      {% else %}
+        <h3>Create a New Team</h3>
+      {% endif %}
       <hr class="has-background-grey-lighter mt-0">
       {% crispy form %}
-
     </div>
-    <div class="divider is-vertical is-hidden-touch">OR</div>
-    <div class="column divider is-hidden-desktop is-12-tablet my-0">OR</div>
-    <div class="column is-8-tablet is-6-desktop is-offset-2-tablet is-offset-0-desktop">
-      <h3> Join an Existing Team </h3>
-      <hr class="has-background-grey-lighter mt-0">
-      <p>
-        The recommended way to join a team is to have someone on your team send you the <b>join link</b>
-        from your team's info page.
-      </p>
-      <p>
-        If you want, you can alternatively enter the <b>join code</b> for your team below,
-        which can also be found on your team's info page.
-      </p>
-      <form method="get" action="{% url 'puzzlehunt:team_join_current' %}">
-        <label for="join_code" class="label">Enter Join Code:</label>
-        <div class="field has-addons">
-          <div class="control">
-            <input id="join_code" name="code" class="input" placeholder="Join Code" value="">
+    {% if not current_hunt.no_team_mode %}
+      <div class="divider is-vertical is-hidden-touch">OR</div>
+      <div class="column divider is-hidden-desktop is-12-tablet my-0">OR</div>
+      <div class="column is-8-tablet is-6-desktop is-offset-2-tablet is-offset-0-desktop">
+        <h3> Join an Existing Team </h3>
+        <hr class="has-background-grey-lighter mt-0">
+        <p>
+          The recommended way to join a team is to have someone on your team send you the <b>join link</b>
+          from your team's info page.
+        </p>
+        <p>
+          If you want, you can alternatively enter the <b>join code</b> for your team below,
+          which can also be found on your team's info page.
+        </p>
+        <form method="get" action="{% url 'puzzlehunt:team_join_current' %}">
+          <label for="join_code" class="label">Enter Join Code:</label>
+          <div class="field has-addons">
+            <div class="control">
+              <input id="join_code" name="code" class="input" placeholder="Join Code" value="">
+            </div>
+            <button class="button is-primary" type="submit"> Join </button>
           </div>
-          <button class="button is-primary" type="submit"> Join </button>
-        </div>
-        <p class="help is-danger">{{ errors }}</p>
-      </form>
-    </div>
+          <p class="help is-danger">{{ errors }}</p>
+        </form>
+      </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

@@ -26,13 +26,17 @@
 
 {% block content %}
 <div class="content px-5">
-  <h1 style="text-align: center;"> Team Leaderboard - {{hunt.name}}</h1>
+  <h1 style="text-align: center;"> Leaderboard - {{hunt.name}}</h1>
   <br>
   <br>
   <table class="table is-striped is-size-7-mobile">
     <tr>
       <th>Rank</th>
-      <th>Team</th>
+      {% if hunt.no_team_mode %}
+        <th>Player</th>
+      {% else %}
+        <th>Team</th>
+      {% endif %}
       {% for rule in ruleset %}
         {% if rule.visible %}
           <th>{{ rule.display_name }}</th>

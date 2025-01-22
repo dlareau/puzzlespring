@@ -52,19 +52,25 @@
   
   <h4>How do I register?</h4>
   <p>
-    Register your team of {{hunt.team_size_limit|apnumber}} (or fewer if you want)
-    <a href="{% url 'puzzlehunt:team_create' %}">here!</a>
+    {% if hunt.no_team_mode %}
+      You can register <a href="{% url 'puzzlehunt:team_create' %}">here!</a>
+    {% else %}
+      Register your team of {{hunt.team_size_limit|apnumber}} (or fewer if you want)
+      <a href="{% url 'puzzlehunt:team_create' %}">here!</a>
+    {% endif %}
   </p>
 
   <h4>What do I need?</h4>
   <p>
     <ul>
+      {% if not hunt.no_team_mode %}
         <li>A team of no more than {{hunt.team_size_limit|apnumber}} people.</li>
-        <li>
-          A phone or other device with internet access. You'll need this to register your team,
-          view puzzles, and submit your answers.
-        </li>
-        <li>Paper and pencil may be useful for scratch work.</li>
+      {% endif %}
+      <li>
+        A laptop, phone, or other device with internet access. You'll need this to register,
+        view puzzles, and submit your answers.
+      </li>
+      <li>Paper and pencil may be useful for scratch work.</li>
     </ul>
   </p>
   

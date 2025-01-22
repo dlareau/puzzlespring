@@ -121,7 +121,7 @@ def team_create(request):
     else:
         team_form = TeamForm()
 
-    return render(request, "team_registration.html", {'form': team_form})
+    return render(request, "team_registration.html", {'form': team_form, 'current_hunt': current_hunt})
 
 
 @require_GET
@@ -129,12 +129,12 @@ def team_create(request):
 @ratelimit(key='user', rate='6/m')
 def team_join(request, pk=None):
     join_code = request.GET.get("code", "")
+    current_hunt = Hunt.objects.get(is_current_hunt=True)
     if not join_code:
         error = "Join code cannot be empty."
-        return render(request, "team_registration.html", {"form": TeamForm(), 'errors': error})
+        return render(request, "team_registration.html", {"form": TeamForm(), 'errors': error, 'current_hunt': current_hunt})
 
     if pk is None:
-        current_hunt = Hunt.objects.get(is_current_hunt=True)
         current_team = current_hunt.team_from_user(request.user)
         if current_team:
             return redirect('puzzlehunt:team_view', current_team.pk)
@@ -143,7 +143,7 @@ def team_join(request, pk=None):
             team = current_hunt.team_set.get(join_code=join_code.upper())
         except Team.DoesNotExist:
             error = "No team with that join code exists."
-            return render(request, "team_registration.html", {"form": TeamForm(), 'errors': error})
+            return render(request, "team_registration.html", {"form": TeamForm(), 'errors': error, 'current_hunt': current_hunt})
     else:
         team = get_object_or_404(Team, pk=pk)
         possible_current_team = team.hunt.team_from_user(request.user)

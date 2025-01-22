@@ -220,9 +220,6 @@ CONSTANCE_CONFIG = {
     # Site Settings
     'SITE_TITLE': ('PuzzleSpring', 'The title of the site'),
     
-    # Team Settings
-    'NO_TEAMS_MODE': (False, 'If enabled, each user will be their own team'), # Not yet implemented
-    
     # Hunt Display Settings
     'SINGLE_HUNT_MODE': (False, 'If enabled, only one hunt will be visible and accessible'), # Not yet implemented
 

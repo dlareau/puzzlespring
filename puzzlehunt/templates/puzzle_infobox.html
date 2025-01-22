@@ -46,7 +46,7 @@
           {% if config.SHOW_SOLVE_COUNT_ON_PUZZLE %}
             <button class="button is-fullwidth is-static block has-tooltip-arrow has-tooltip-bottom"
                     style="pointer-events: auto; cursor: help;"
-                    data-tooltip="{{ puzzle.solve_count }} teams have solved this puzzle."
+                    data-tooltip="{{ puzzle.solve_count }} {% if puzzle.hunt.no_team_mode %}players{% else %}teams{% endif %} have solved this puzzle."
             >
               Stats: &nbsp;&nbsp;&nbsp;&nbsp;
               <span class="icon-text">
