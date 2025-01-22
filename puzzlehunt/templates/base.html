@@ -36,17 +36,21 @@
       {%endif%}
     {% endblock title_meta_elements %}
     
-    <meta property="og:description" content="{% block og_description %}{% site_title %} - Online Puzzle Hunt{% endblock %}">
-    <meta name="twitter:description" content="{% block twitter_description %}{% site_title %} - Online Puzzle Hunt{% endblock %}">
-    <meta name="description" content="{% block meta_description %}{% site_title %} - Online Puzzle Hunt{% endblock %}">
-    <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% embed_image %}{% endblock %}">
-    <meta name="twitter:image" content="{% block twitter_image %}{{ request.scheme }}://{{ request.get_host }}{% embed_image %}{% endblock %}">
+    {% block extra_meta_elements %}
+      <meta property="og:description" content="{% block og_description %}{% site_title %} - Online Puzzle Hunt{% endblock %}">
+      <meta name="twitter:description" content="{% block twitter_description %}{% site_title %} - Online Puzzle Hunt{% endblock %}">
+      <meta name="description" content="{% block meta_description %}{% site_title %} - Online Puzzle Hunt{% endblock %}">
+      <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% embed_image %}{% endblock %}">
+      <meta name="twitter:image" content="{% block twitter_image %}{{ request.scheme }}://{{ request.get_host }}{% embed_image %}{% endblock %}">
 
-    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
-    <meta property="og:url" content="{% block og_url %}{{ request.build_absolute_uri }}{% endblock %}">
-    <meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}">
+      <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+      <meta property="og:url" content="{% block og_url %}{{ request.build_absolute_uri }}{% endblock %}">
+      <meta name="twitter:card" content="{% block twitter_card %}summary_large_image{% endblock %}">
+    {% endblock extra_meta_elements %}
 
-    <link rel="shortcut icon" href="{% favicon %}" />
+    {% block favicon %}
+      <link rel="shortcut icon" href="{% favicon %}" />
+    {% endblock favicon %}
 
     {% block base_includes %}{% endblock base_includes %}
     <link rel="stylesheet" type="text/css" href="{% static "puzzlehunt/normalize.css" %}">
