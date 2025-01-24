@@ -43,6 +43,8 @@ def feed(request, hunt):
     if checkboxes != "all":
         types = checkboxes.split(",")
         events = events.filter(type__in=types)
+    else:
+        events = events.filter(type__in=Event.queue_types)
     display_checkboxes = Event.queue_types if checkboxes == "all" else checkboxes.split(",")
 
     events = events.select_related('team', 'puzzle', 'user').order_by('-timestamp')

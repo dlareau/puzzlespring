@@ -1309,6 +1309,7 @@ class EventManager(models.Manager):
                 timestamp = related_object.request_time
                 puzzle = related_object.puzzle
                 team = related_object.team
+                extra_data = "canned" if related_object.canned_hint is not None else "custom"
                 hunt = team.hunt
             case Event.EventType.HINT_RESPONSE:  # related object hint
                 timestamp = related_object.response_time
@@ -1338,7 +1339,7 @@ class EventManager(models.Manager):
         event = self.create(
             timestamp=timestamp,
             type=event_type,
-            related_data=extra_data,
+            related_data=extra_data if len(extra_data) > 0 else '',
             related_object_id=related_object_id,
             user=user,
             hunt=hunt,
@@ -1460,7 +1461,7 @@ class Event(models.Model):
             case Event.EventType.PUZZLE_UNLOCK:
                 return f"<b>{ self.team.name }</b> has unlocked <b>{ self.puzzle.name }</b>."
             case Event.EventType.HINT_REQUEST:
-                return f"<b>{ self.team.name }</b> has requested a hint for <b>{ self.puzzle.name }</b>."
+                return f"<b>{ self.team.name }</b> has requested a { self.related_data if self.related_data != '{}' else ''} hint for <b>{ self.puzzle.name }</b>."
             case Event.EventType.HINT_RESPONSE:
                 return (f"<b>{ self.user.first_name } { self.user.last_name }</b> has responded to the hint request from "
                         f"<b>{ self.team.name }</b> for <b>{ self.puzzle.name }</b>.")
