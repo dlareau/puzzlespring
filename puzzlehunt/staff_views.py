@@ -471,7 +471,6 @@ def search(request, hunt):
     return render(request, "staff_search.html", context)
 
 
-@staff_member_required
 def get_hunt_template_errors(template_text, hunt, request):
     team = Team(
         name="Preview Team",
