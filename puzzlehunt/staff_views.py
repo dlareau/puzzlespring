@@ -23,9 +23,10 @@ from django.http import JsonResponse
 from django.core import serializers
 
 from django_sendfile import sendfile
-from .utils import create_media_files, get_media_file_model, get_media_file_parent_model, create_hunt_export_zip, import_hunt_from_zip, import_hunt_from_zip
+from .utils import create_media_files, get_media_file_model, get_media_file_parent_model, create_hunt_export_zip, import_hunt_from_zip, import_hunt_from_zip, validate_hunt_zip
 from .hunt_views import protected_static
 from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile
+from .tasks import import_hunt_background
 
 
 @staff_member_required
@@ -840,7 +841,7 @@ def import_hunt(request, hunt):
     """
     Import a hunt from a zip file.
     
-    This view accepts a zip file upload and processes it using import_hunt_from_zip.
+    This view accepts a zip file upload and queues it for background processing.
     The zip file should have been created by the export_hunt view.
     """
     if 'hunt_file' not in request.FILES:
@@ -860,16 +861,26 @@ def import_hunt(request, hunt):
         with open(zip_path, 'wb+') as destination:
             for chunk in hunt_file.chunks():
                 destination.write(chunk)
-        
-        # Import the hunt
-        try:
-            new_hunt = import_hunt_from_zip(zip_path, include_activity)
-            messages.success(request, f"Successfully imported hunt: {new_hunt.name}")
-        except (ValidationError, Exception) as e:
-            messages.error(request, f"Error importing hunt: {str(e)}")
-            
-    finally:
+
+        # Validate the zip file before queueing
+        validate_hunt_zip(zip_path, include_activity)
+
+        # Queue the import task
+        import_hunt_background(str(zip_path), include_activity)
+        messages.success(request, "Hunt import queued successfully. This may take a few minutes.")
+    except ValidationError as e:
+        # Clean up the temporary file
+        if zip_path.exists():
+            zip_path.unlink()
         if temp_dir.exists():
-            shutil.rmtree(temp_dir)
-            
+            temp_dir.rmdir()
+        messages.error(request, f"Invalid hunt file: {str(e)}")
+    except Exception as e:
+        # Clean up the temporary file
+        if zip_path.exists():
+            zip_path.unlink()
+        if temp_dir.exists():
+            temp_dir.rmdir()
+        messages.error(request, f"Error importing hunt: {str(e)}")
+
     return render(request, "staff_hunts.html", {'hunt': hunt, 'hunts': Hunt.objects.order_by('-is_current_hunt', '-display_start_date').all()})

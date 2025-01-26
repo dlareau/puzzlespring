@@ -171,33 +171,44 @@ def create_hunt_export_zip(hunt, zip_path, include_activity=False):
                 'hunt.json': Hunt.objects.filter(pk=hunt.pk),
                 'ranking_rules.json': TeamRankingRule.objects.filter(hunt=hunt),
                 'puzzles.json': Puzzle.objects.filter(hunt=hunt),
-                'puzzle_files.json': PuzzleFile.objects.filter(parent__hunt=hunt),
-                'solution_files.json': SolutionFile.objects.filter(parent__hunt=hunt),
-                'hunt_files.json': HuntFile.objects.filter(parent=hunt),
-                'prepuzzle_files.json': PrepuzzleFile.objects.filter(parent__hunt=hunt),
-                'canned_hints.json': CannedHint.objects.filter(puzzle__hunt=hunt),
-                'responses.json': Response.objects.filter(puzzle__hunt=hunt),
+                'puzzle_files.json': PuzzleFile.objects.filter(parent__hunt=hunt).select_related('parent'),
+                'solution_files.json': SolutionFile.objects.filter(parent__hunt=hunt).select_related('parent'),
+                'hunt_files.json': HuntFile.objects.filter(parent=hunt).select_related('parent'),
+                'prepuzzle_files.json': PrepuzzleFile.objects.filter(parent__hunt=hunt).select_related('parent'),
+                'canned_hints.json': CannedHint.objects.filter(puzzle__hunt=hunt).select_related('puzzle'),
+                'responses.json': Response.objects.filter(puzzle__hunt=hunt).select_related('puzzle'),
                 'prepuzzles.json': Prepuzzle.objects.filter(hunt=hunt),
             }
 
             if include_activity:
                 activity_models = {
-                    'teams.json': Team.objects.filter(hunt=hunt),
-                    'hints.json': Hint.objects.filter(puzzle__hunt=hunt),
-                    'updates.json': Update.objects.filter(hunt=hunt),
-                    'puzzle_statuses.json': PuzzleStatus.objects.filter(puzzle__hunt=hunt),
-                    'submissions.json': Submission.objects.filter(puzzle__hunt=hunt),
+                    'teams.json': Team.objects.filter(hunt=hunt).select_related('hunt'),
+                    'hints.json': Hint.objects.filter(puzzle__hunt=hunt).select_related('puzzle', 'team', 'team__hunt'),
+                    'updates.json': Update.objects.filter(hunt=hunt).select_related('hunt', 'puzzle'),
+                    'puzzle_statuses.json': PuzzleStatus.objects.filter(puzzle__hunt=hunt).select_related('puzzle', 'team', 'team__hunt'),
+                    'submissions.json': Submission.objects.filter(puzzle__hunt=hunt).select_related('puzzle', 'team', 'team__hunt', 'puzzle__hunt'),
                 }
                 models_to_export.update(activity_models)
 
-            # Export model data
+            # Export model data in chunks to avoid memory issues
             for filename, queryset in models_to_export.items():
-                serialized_data = serializers.serialize('json', queryset,
-                    use_natural_foreign_keys=True,
-                    use_natural_primary_keys=True,
-                    indent=2
-                )
-                zip_file.writestr(filename, serialized_data)
+                print(filename)
+                # Use iterator() to avoid loading entire queryset into memory
+                serialized_chunks = []
+                for chunk in queryset.iterator(chunk_size=100):
+                    chunk_data = serializers.serialize('json', [chunk],
+                        use_natural_foreign_keys=True,
+                        use_natural_primary_keys=True,
+                        indent=2
+                    )
+                    # Remove the outer list brackets from the chunk
+                    chunk_data = chunk_data.strip()[1:-1].strip()
+                    if chunk_data:  # Only add non-empty chunks
+                        serialized_chunks.append(chunk_data)
+                
+                # Combine all chunks into a single JSON array
+                combined_data = "[\n" + ",\n".join(serialized_chunks) + "\n]"
+                zip_file.writestr(filename, combined_data)
 
             # Export template and info page files
             if hunt.template_file:
@@ -236,20 +247,16 @@ def create_hunt_export_zip(hunt, zip_path, include_activity=False):
             hunt.prepuzzle.save()
 
 
-def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -> Hunt:
+def validate_hunt_zip(zip_path: str | Path, include_activity: bool = False) -> None:
     """
-    Imports a hunt from a zip file created by create_hunt_export_zip.
+    Validates a hunt zip file created by create_hunt_export_zip.
     
     Args:
         zip_path (str|Path): Path to the zip file containing the hunt data
-        include_activity (bool): Whether to import activity data (teams, hints, etc.)
+        include_activity (bool): Whether to validate activity data (teams, hints, etc.)
     
-    Returns:
-        Hunt: The newly created hunt object
-        
     Raises:
         ValidationError: If the zip file is invalid or missing required data
-        IntegrityError: If referenced users don't exist
     """
     zip_path = Path(zip_path)
     if not zip_path.exists():
@@ -289,6 +296,43 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
             if missing_activity:
                 raise ValidationError(f"Missing activity files: {missing_activity}")
 
+        # Validate file references can be parsed
+        try:
+            with zip_file.open('file_references.json') as f:
+                json.loads(f.read().decode('utf-8'))
+        except json.JSONDecodeError:
+            raise ValidationError("Invalid file_references.json format")
+
+        # Validate all JSON files can be parsed
+        for json_file in required_files | (activity_files if include_activity else set()):
+            if not json_file.endswith('.json'):
+                continue
+            try:
+                with zip_file.open(json_file) as f:
+                    json.loads(f.read().decode('utf-8'))
+            except json.JSONDecodeError:
+                raise ValidationError(f"Invalid {json_file} format")
+
+
+def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -> Hunt:
+    """
+    Imports a hunt from a zip file created by create_hunt_export_zip.
+    
+    Args:
+        zip_path (str|Path): Path to the zip file containing the hunt data
+        include_activity (bool): Whether to import activity data (teams, hints, etc.)
+    
+    Returns:
+        Hunt: The newly created hunt object
+        
+    Raises:
+        ValidationError: If the zip file is invalid or missing required data
+        IntegrityError: If referenced users don't exist
+    """
+    # First validate the zip file
+    validate_hunt_zip(zip_path, include_activity)
+
+    with zipfile.ZipFile(zip_path, 'r') as zip_file:
         # Load file references
         with zip_file.open('file_references.json') as f:
             file_references = json.loads(f.read().decode('utf-8'))
@@ -303,10 +347,10 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
             new_hunt.save()
 
             # Import template and info page files
-            if 'files/template.html' in zip_contents:
+            if 'files/template.html' in zip_file.namelist():
                 with zip_file.open('files/template.html') as f:
                     new_hunt.template_file.save('template.html', File(f))
-            if 'files/info_page.html' in zip_contents:
+            if 'files/info_page.html' in zip_file.namelist():
                 with zip_file.open('files/info_page.html') as f:
                     new_hunt.info_page_file.save('info_page.html', File(f))
 
@@ -337,7 +381,7 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                 file_obj = obj.object
                 file_obj.parent = new_hunt
                 zip_path = f'files/hunt/{file_obj.relative_name}'
-                if zip_path in zip_contents:
+                if zip_path in zip_file.namelist():
                     with zip_file.open(zip_path) as f:
                         file_obj.file = File(f, name=Path(file_obj.file.name).name)
                         file_obj.save()
@@ -353,7 +397,7 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                 puzzle_id = file_obj.parent_id
                 file_obj.parent = puzzles[puzzle_id]
                 zip_path = f'files/puzzle/{puzzle_id}/{file_obj.relative_name}'
-                if zip_path in zip_contents:
+                if zip_path in zip_file.namelist():
                     with zip_file.open(zip_path) as f:
                         file_obj.file = File(f, name=Path(file_obj.file.name).name)
                         file_obj.save()
@@ -364,7 +408,7 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                 puzzle_id = file_obj.parent_id
                 file_obj.parent = puzzles[puzzle_id]
                 zip_path = f'files/solution/{puzzle_id}/{file_obj.relative_name}'
-                if zip_path in zip_contents:
+                if zip_path in zip_file.namelist():
                     with zip_file.open(zip_path) as f:
                         file_obj.file = File(f, name=Path(file_obj.file.name).name)
                         file_obj.save()
@@ -374,7 +418,7 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                 file_obj = obj.object
                 file_obj.parent = new_hunt.prepuzzle  # We know there's only one prepuzzle
                 zip_path = f'files/prepuzzle/{file_obj.relative_name}'
-                if zip_path in zip_contents:
+                if zip_path in zip_file.namelist():
                     with zip_file.open(zip_path) as f:
                         file_obj.file = File(f, name=Path(file_obj.file.name).name)
                         file_obj.save()
