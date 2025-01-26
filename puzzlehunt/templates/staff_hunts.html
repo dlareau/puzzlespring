@@ -12,13 +12,21 @@
 
 {% block staff_content %}
   <div class="columns"><div class="column is-12 is-12-desktop is-10-widescreen is-offset-1-widescreen is-8-fullhd is-offset-2-fullhd">
-    <div class="box p-4">
-      <h3 class="is-size-4 mb-3">Import Hunt</h3>
-      <form hx-post="{% url 'puzzlehunt:staff:hunt_import' hunt.pk %}"
+    <div class="box p-4" x-data="{ showImport: false }">
+      <div class="is-flex is-justify-content-space-between is-align-items-center" @click="showImport = !showImport" style="cursor: pointer;">
+        <h3 class="is-size-4 mb-0">Import Hunt</h3>
+        <span class="icon">
+          <i class="fa" :class="showImport ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+        </span>
+      </div>
+      <form x-show="showImport"
+            x-transition
+            hx-post="{% url 'puzzlehunt:staff:hunt_import' hunt.pk %}"
             hx-target="#staff-content-container"
             hx-select="#staff-content-container"
             hx-swap="outerHTML"
-            hx-encoding="multipart/form-data">
+            hx-encoding="multipart/form-data"
+            class="mt-3">
         {% csrf_token %}
         <div class="field">
           <div class="file has-name" x-data="{ fileName: 'No file selected' }">
@@ -113,14 +121,43 @@
                 <i class="fa fa-lg fa-eye"></i>
               </span>
             </a>
-            <a href="{% url 'puzzlehunt:staff:hunt_export' hunt.pk %}"
-               class="button mr-1 has-tooltip-arrow has-tooltip-top"
-               data-tooltip="Export Hunt"
-            >
-                <span class="icon is-small">
+            <div class="dropdown is-right" x-data="{ isActive: false }" :class="{ 'is-active': isActive }">
+              <div class="dropdown-trigger">
+                <button class="button has-tooltip-arrow has-tooltip-top" 
+                        @click="isActive = !isActive"
+                        @click.away="isActive = false"
+                        data-tooltip="Export Hunt"
+                        aria-haspopup="true">
+                  <span class="icon is-small">
                     <i class="fa fa-lg fa-download"></i>
-                </span>
-            </a>
+                  </span>
+                </button>
+              </div>
+              <div class="dropdown-menu" role="menu">
+                <div class="dropdown-content" style="box-shadow: 0 2px 4px rgba(10, 10, 10, 0.1); border: 1px solid #dbdbdb;">
+                  <a href="{% url 'puzzlehunt:staff:hunt_export' hunt.pk %}" 
+                     class="dropdown-item">
+                    <span class="icon-text">
+                      <span class="icon">
+                        <i class="fa fa-puzzle-piece"></i>
+                      </span>
+                      <span>Export Hunt Structure</span>
+                    </span>
+                    <p class="help">Puzzles and hunt configuration only</p>
+                  </a>
+                  <a href="{% url 'puzzlehunt:staff:hunt_export' hunt.pk %}?include_activity=true" 
+                     class="dropdown-item">
+                    <span class="icon-text">
+                      <span class="icon">
+                        <i class="fa fa-database"></i>
+                      </span>
+                      <span>Export Complete Hunt</span>
+                    </span>
+                    <p class="help">Includes all team activity and submissions</p>
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
           <div>
             {% if hunt.is_current_hunt %}
