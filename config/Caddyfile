@@ -24,6 +24,7 @@
                 uri strip_prefix /app/media
                 root    * /app/media
                 rewrite * {rp.header.X-Accel-Redirect}
+                header Content-Disposition {http.reverse_proxy.header.Content-Disposition}
                 method  * GET
                 file_server
             }

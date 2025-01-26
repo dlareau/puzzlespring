@@ -81,7 +81,8 @@ urlpatterns = [
         path('hunt/<hunt:hunt>/config/', staff_views.hunt_config, name='hunt_config'),
         path('hunt/<hunt:hunt>/puzzles/', staff_views.hunt_puzzles, name='hunt_puzzles'),
         path('hunt/<hunt:hunt>/set_current/', staff_views.hunt_set_current, name='hunt_set_current'),
-
+        path('hunt/<hunt:hunt>/export/', staff_views.export_hunt, name='hunt_export'),
+        path('hunt/<hunt:hunt>/import/', staff_views.import_hunt, name='hunt_import'),
 
         path('<str:parent_type>/file/<str:pk>/delete/', staff_views.file_delete, name='file_delete'),
         path('<str:parent_type>/file/<str:pk>/replace/', staff_views.file_replace, name='file_replace'),

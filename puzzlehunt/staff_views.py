@@ -1,6 +1,11 @@
 import io
 from collections import Counter
+import json
+import shutil
+from pathlib import Path
+from zipfile import ZipFile
 
+from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import SuspiciousOperation
 from django.core.files import File
@@ -15,11 +20,12 @@ from django.contrib import messages
 from django.template.loader import engines
 from django.db.models import Q, F, Prefetch
 from django.http import JsonResponse
+from django.core import serializers
 
-from .utils import create_media_files, get_media_file_model, get_media_file_parent_model
+from django_sendfile import sendfile
+from .utils import create_media_files, get_media_file_model, get_media_file_parent_model, create_hunt_export_zip, import_hunt_from_zip, import_hunt_from_zip
 from .hunt_views import protected_static
-from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, \
-    SolutionFile, HuntFile
+from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile
 
 
 @staff_member_required
@@ -806,3 +812,64 @@ def file_upload(request, parent_type, pk):
     create_media_files(parent, request.FILES.get('uploadFile', None), parent_type == "solution")
     context = {'parent': parent, 'parent_type': parent_type}
     return render(request, "partials/_staff_file_list.html", context)
+
+
+@staff_member_required
+def export_hunt(request, hunt):
+    temp_dir = Path(settings.MEDIA_ROOT) / 'exports' / f'hunt_{hunt.pk}_{timezone.now().timestamp()}'
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    
+    include_activity = request.GET.get('include_activity', 'false').lower() == 'true'
+
+    try:
+        zip_path = temp_dir.with_suffix('.phe')
+        create_hunt_export_zip(hunt, zip_path, include_activity)
+
+        response = sendfile(request, str(zip_path), attachment=True, attachment_filename=f"{hunt.name}.phe")
+        response['Content-Disposition'] = f'attachment; filename="{hunt.name}.phe"'
+        return response
+        
+    finally:
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir)
+
+
+@require_POST
+@staff_member_required
+def import_hunt(request, hunt):
+    """
+    Import a hunt from a zip file.
+    
+    This view accepts a zip file upload and processes it using import_hunt_from_zip.
+    The zip file should have been created by the export_hunt view.
+    """
+    if 'hunt_file' not in request.FILES:
+        messages.error(request, "No file was uploaded")
+        return render(request, "staff_hunts.html", {'hunt': hunt, 'hunts': Hunt.objects.order_by('-is_current_hunt', '-display_start_date').all()})
+    
+    hunt_file = request.FILES['hunt_file']
+    include_activity = request.POST.get('include_activity', 'false').lower() == 'true'
+    
+    # Create a temporary directory to store the uploaded file
+    temp_dir = Path(settings.MEDIA_ROOT) / 'imports' / f'hunt_import_{timezone.now().timestamp()}'
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    
+    try:
+        # Save the uploaded file
+        zip_path = temp_dir.with_suffix('.phe')
+        with open(zip_path, 'wb+') as destination:
+            for chunk in hunt_file.chunks():
+                destination.write(chunk)
+        
+        # Import the hunt
+        try:
+            new_hunt = import_hunt_from_zip(zip_path, include_activity)
+            messages.success(request, f"Successfully imported hunt: {new_hunt.name}")
+        except (ValidationError, Exception) as e:
+            messages.error(request, f"Error importing hunt: {str(e)}")
+            
+    finally:
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir)
+            
+    return render(request, "staff_hunts.html", {'hunt': hunt, 'hunts': Hunt.objects.order_by('-is_current_hunt', '-display_start_date').all()})

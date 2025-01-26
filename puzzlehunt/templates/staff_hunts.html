@@ -12,7 +12,51 @@
 
 {% block staff_content %}
   <div class="columns"><div class="column is-12 is-12-desktop is-10-widescreen is-offset-1-widescreen is-8-fullhd is-offset-2-fullhd">
-  {% for hunt in hunts %}
+    <div class="box p-4">
+      <h3 class="is-size-4 mb-3">Import Hunt</h3>
+      <form hx-post="{% url 'puzzlehunt:staff:hunt_import' hunt.pk %}"
+            hx-target="#staff-content-container"
+            hx-select="#staff-content-container"
+            hx-swap="outerHTML"
+            hx-encoding="multipart/form-data">
+        {% csrf_token %}
+        <div class="field">
+          <div class="file has-name" x-data="{ fileName: 'No file selected' }">
+            <label class="file-label">
+              <input class="file-input" type="file" name="hunt_file" accept=".phe"
+                     @change="fileName = $event.target.files[0] ? $event.target.files[0].name : 'No file selected'">
+              <span class="file-cta">
+                <span class="file-icon">
+                  <i class="fa fa-upload"></i>
+                </span>
+                <span class="file-label">
+                  Choose a file...
+                </span>
+              </span>
+              <span class="file-name" x-text="fileName">
+                No file selected
+              </span>
+            </label>
+          </div>
+        </div>
+        <div class="field">
+          <label class="checkbox">
+            <input type="checkbox" name="include_activity" value="true">
+            Include activity data (teams, hints, submissions)
+          </label>
+        </div>
+        <div class="field">
+          <button type="submit" class="button is-primary">
+            <span class="icon">
+              <i class="fa fa-upload"></i>
+            </span>
+            <span>Import Hunt</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    {% for hunt in hunts %}
     <div class="box p-4">
       <div class="columns is-multiline" x-data="{openFiles: false}">
         <div class="column">
@@ -69,6 +113,14 @@
                 <i class="fa fa-lg fa-eye"></i>
               </span>
             </a>
+            <a href="{% url 'puzzlehunt:staff:hunt_export' hunt.pk %}"
+               class="button mr-1 has-tooltip-arrow has-tooltip-top"
+               data-tooltip="Export Hunt"
+            >
+                <span class="icon is-small">
+                    <i class="fa fa-lg fa-download"></i>
+                </span>
+            </a>
           </div>
           <div>
             {% if hunt.is_current_hunt %}
@@ -97,6 +149,6 @@
     {% if forloop.counter == 1 %}
       <hr class="has-background-grey" style="height:1px">
     {% endif %}
-  {% endfor %}
+    {% endfor %}
   </div></div>
 {% endblock %}
