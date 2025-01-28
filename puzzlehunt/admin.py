@@ -242,7 +242,7 @@ class TeamAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Basic Info",
          {
-            'fields': ['name', 'hunt', 'members', 'is_local', 'join_code', 'num_available_hints'],
+            'fields': ['name', 'hunt', 'members', 'is_local', 'join_code'],
          }),
         ("Playtesting",
          {

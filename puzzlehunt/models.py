@@ -108,12 +108,31 @@ def get_media_file_path(instance, filename):
     return f"trusted/{instance.save_path}/{instance.parent.pk}/files/{filename}"
 
 
+class MediaFileManager(models.Manager):
+    def get_by_natural_key(self, *args):
+        # The last argument is always the relative_name
+        relative_name = args[-1]
+        parent_natural_key = args[:-1]
+        
+        # Check if the parent model is Puzzle, matching natural_key logic
+        parent_model = self.model.parent.field.related_model
+        if parent_model == Puzzle:
+            puzzle_id = parent_natural_key[0]
+            return self.get(parent_id=puzzle_id, file__endswith=relative_name)
+        
+        # For other file types, find the parent using its natural key
+        parent = parent_model.objects.get_by_natural_key(*parent_natural_key)
+        return self.get(parent=parent, file__endswith=relative_name)
+
+
 class MediaFile(models.Model):
     file = models.FileField(
         upload_to=get_media_file_path,
         storage=OverwriteStorage(),
         unique=True,
     )
+
+    objects = MediaFileManager()
 
     class Meta:
         abstract = True
@@ -134,8 +153,12 @@ class MediaFile(models.Model):
     # TODO: Maybe make unique based on filepath with overwrite behavior?
 
     def __str__(self):
-        return self.file.name.strip("trusted/")
+        return self.file.name.removeprefix("trusted/")
 
+    def natural_key(self):
+        if isinstance(self.parent, Puzzle):
+            return (self.parent.id, self.relative_name)
+        return self.parent.natural_key() + (self.relative_name,)
 
 # We are purposefully choosing to have inherited models over a generic relation
 class PuzzleFile(MediaFile):
@@ -179,8 +202,15 @@ def get_hunt_info_page_path(instance, filename):
     return f"trusted/hunt/{instance.pk}/info_page.html"
 
 
+class HuntManager(models.Manager):
+    def get_by_natural_key(self, name, start_date):
+        return self.get(name=name, start_date=start_date)
+
+
 class Hunt(models.Model):
     """ Base class for a hunt. Contains basic details about a puzzlehunt. """
+
+    objects = HuntManager()
 
     name = models.CharField(
         max_length=200,
@@ -307,8 +337,16 @@ class Hunt(models.Model):
         else:
             return self.name
 
+    def clean_config(self):
+        """ Validates the hunt config """
+        if self.pk and self.config:
+            try:
+                parse_config(self.config, self.puzzle_set.values_list('id', flat=True))
+            except Exception as e:
+                raise ValidationError(str(e))
+
     def clean(self):
-        """ Validates the hunt model, including config parsing """
+        """ Validates the hunt model """
         if not self.is_current_hunt:
             try:
                 old_obj = Hunt.objects.get(pk=self.pk)
@@ -317,13 +355,6 @@ class Hunt(models.Model):
                                         ["There must always be one current hunt", ]})
             except ObjectDoesNotExist:
                 pass
-
-        # Validate config if present
-        if self.config:
-            try:
-                parse_config(self.config, self.puzzle_set.values_list('id', flat=True))
-            except Exception as e:
-                raise ValidationError({'config': [str(e)]})
 
         super(Hunt, self).clean()
 
@@ -349,6 +380,10 @@ class Hunt(models.Model):
         if team is not None and (self.is_open or team.playtest_happening):
             return True
         return False
+
+    def natural_key(self):
+        return (self.name, self.start_date)
+
 # endregion
 
 
@@ -467,11 +502,18 @@ class Puzzle(models.Model):
         return f"{self.id} - {self.name}"
 
 
+class PrepuzzleManager(models.Manager):
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
+
 class Prepuzzle(models.Model):
     """ A class representing a pre-puzzle within a hunt """
 
+    objects = PrepuzzleManager()
+
     name = models.CharField(
         max_length=200,
+        unique=True,
         help_text="The name of the puzzle as it will be seen by hunt participants")
     released = models.BooleanField(
         default=False)
@@ -515,6 +557,9 @@ class Prepuzzle(models.Model):
             return True
         return self.released
 
+    def natural_key(self):
+        return (self.name,)
+
 # region Team Model
 def team_key_gen():
     join_code = "JOIN123"
@@ -525,8 +570,15 @@ def team_key_gen():
     return join_code
 
 
+class TeamManager(models.Manager):
+    def get_by_natural_key(self, join_code, hunt_name, hunt_start_date):
+        return self.get(join_code=join_code, hunt__name=hunt_name, hunt__start_date=hunt_start_date)
+
+
 class Team(models.Model):
     """ A class representing a team within a hunt """
+
+    objects = TeamManager()
 
     name = models.CharField(
         verbose_name="Team Name",
@@ -796,6 +848,9 @@ class Team(models.Model):
                         raise ValidationError(
                             f'User {user.display_string()} is already on another team in this hunt'
                         )
+
+    def natural_key(self):
+        return (self.join_code,) + self.hunt.natural_key()
 
     def __str__(self):
         return f"{self.short_name} - {self.hunt.name}"
@@ -1118,9 +1173,15 @@ class Hint(models.Model):
         return self.team.short_name + ": " + self.puzzle.name + " (" + str(self.request_time) + ")"
 
 
+class CannedHintManager(models.Manager):
+    def get_by_natural_key(self, puzzle_id, order):
+        return self.get(puzzle__id=puzzle_id, order=order)
+
 class CannedHint(models.Model):
     """A pre-written hint that can be revealed to teams"""
-    
+
+    objects = CannedHintManager()
+
     puzzle = models.ForeignKey(
         Puzzle,
         on_delete=models.CASCADE,
@@ -1141,6 +1202,9 @@ class CannedHint(models.Model):
 
     def __str__(self):
         return f"{self.puzzle.name} - Hint #{self.order}"
+
+    def natural_key(self):
+        return (self.puzzle.id, self.order)
 
 
 class TeamRankingRule(models.Model):

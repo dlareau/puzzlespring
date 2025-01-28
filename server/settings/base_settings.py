@@ -251,6 +251,7 @@ CONSTANCE_ADDITIONAL_FIELDS = {
     }]
 }
 CONSTANCE_BACKEND = 'constance.backends.database.DatabaseBackend'
+CONSTANCE_DATABASE_CACHE_BACKEND = 'default'
 CONSTANCE_FILE_ROOT = 'constance'
 
 # Crispy Forms
@@ -338,12 +339,15 @@ ANYMAIL = {
 
 if os.environ.get("ENABLE_DEBUG_TOOLBAR"):
     DEBUG_TOOLBAR_PANELS = (
-        'debug_toolbar.panels.version.VersionDebugPanel',
-        'debug_toolbar.panels.timer.TimerDebugPanel',
-        'debug_toolbar.panels.profiling.ProfilingDebugPanel',
+        'debug_toolbar.panels.versions.VersionsPanel',
+        'debug_toolbar.panels.timer.TimerPanel',
+        'debug_toolbar.panels.profiling.ProfilingPanel',
+        'debug_toolbar.panels.cache.CachePanel',
+        'debug_toolbar.panels.sql.SQLPanel',
     )
-    INSTALLED_APPS = INSTALLED_APPS + ('debug_toolbar',)
-    MIDDLEWARE = ('debug_toolbar.middleware.DebugToolbarMiddleware',) + MIDDLEWARE
+    INSTALLED_APPS = INSTALLED_APPS + ['debug_toolbar',]
+    MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware',] + MIDDLEWARE
+    DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda request: DEBUG}
 
 # ====================
 # SENTRY
