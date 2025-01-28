@@ -6,6 +6,7 @@ __pycache__
 *.md
 custom/
 converted_data/
+locust/
 .github/
 config/
 website/
