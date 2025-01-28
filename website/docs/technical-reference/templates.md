@@ -58,6 +58,8 @@ _Description:_ The base template that all other templates extend from. Provides 
 _Template Blocks:_
 
 - `title_meta_elements`: Block containing all meta elements for the page title and social sharing
+- `extra_meta_elements`: Block for additional meta elements
+- `favicon`: Block for the favicon
 - `base_includes`: Block for including base CSS/JS files
 - `bulma_includes`: Block for including Bulma-specific CSS/JS files
 - `includes`: Block for template-specific includes
@@ -356,6 +358,7 @@ _Context Variables:_
 - `puzzle`: The puzzle object hints are being requested for
 - `team`: The current team object
 - `hints`: List of previous Hint objects for this puzzle
+- `status`: PuzzleStatus object for this team and puzzle
 
 
 _Template Blocks:_
@@ -669,6 +672,7 @@ _Extends:_ info_base.html
 _Context Variables:_
 
 - `form`: Form for creating a new team
+- `current_hunt`: The current hunt
 - `errors`: Error messages from join team attempts
 
 

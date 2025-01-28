@@ -119,12 +119,22 @@ _URL Patterns:_
 _Parameters:_
 - `pk`: any
 
+### <u>puzzle_hints_use_canned</u>
+
+_Description:_ No description available.
+
+_URL Patterns:_
+- `puzzle/<str:pk>/hints/canned/`
+
+_Parameters:_
+- `pk`: any
+
 ### <u>puzzle_hints_view</u>
 
 _Description:_ No description available.
 
 _URL Patterns:_
-- `puzzle/<str:pk>/hints/view`
+- `puzzle/<str:pk>/hints/view/`
 
 _Parameters:_
 - `pk`: any
@@ -265,6 +275,16 @@ _Description:_ No description available.
 
 _URL Patterns:_
 - `staff/hunt/<hunt:hunt>/charts/`
+
+_Parameters:_
+- `hunt`: any
+
+### <u>export_hunt</u>
+
+_Description:_ No description available.
+
+_URL Patterns:_
+- `staff/hunt/<hunt:hunt>/export/`
 
 _Parameters:_
 - `hunt`: any
@@ -521,6 +541,19 @@ _Description:_ No description available.
 
 _URL Patterns:_
 - `staff/hunt/<hunt:hunt>/template/`
+
+_Parameters:_
+- `hunt`: any
+
+### <u>import_hunt</u>
+
+_Description:_ Import a hunt from a zip file.
+
+This view accepts a zip file upload and queues it for background processing.
+The zip file should have been created by the export_hunt view.
+
+_URL Patterns:_
+- `staff/hunt/<hunt:hunt>/import/`
 
 _Parameters:_
 - `hunt`: any

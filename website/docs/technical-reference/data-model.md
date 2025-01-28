@@ -9,6 +9,16 @@ nav_order: 2
 
 This document describes the data models used in the PuzzleSpring application.
 
+## CannedHint Model
+
+A pre-written hint that can be revealed to teams
+
+Fields:
+- `id` (AutoField): No description available
+- `puzzle` (ForeignKey): The puzzle this canned hint belongs to
+- `text` (TextField): The text of the hint
+- `order` (IntegerField): Order in which this hint should be shown (lower numbers first)
+
 ## DisplayOnlyHunt Model
 
 Model for the display only hunt, only to be shown on the archive page 
@@ -65,6 +75,8 @@ Fields:
 - `last_modified_time` (DateTimeField): Last time of modification
 - `responder` (ForeignKey): Staff member that has claimed the hint.
 - `refunded` (BooleanField): Whether or not the hint was refunded
+- `from_puzzle_pool` (BooleanField): Whether this hint was drawn from the puzzle-specific pool
+- `canned_hint` (ForeignKey): If this was a canned hint, which one
 
 ## Hunt Model
 
@@ -85,6 +97,9 @@ Fields:
 - `hint_lockout` (IntegerField): Time (in minutes) teams must wait before a hint can be used on a newly unlocked puzzle
 - `css_file` (ForeignKey): No description available
 - `config` (TextField): Configuration for puzzle, point and hint unlocking rules
+- `hint_pool_type` (CharField): Which hint pools are available in this hunt
+- `canned_hint_policy` (CharField): How canned hints interact with custom hints
+- `hint_pool_allocation` (CharField): How hints are allocated between puzzle and global pools when both exist
 
 ## HuntFile Model
 
@@ -183,6 +198,8 @@ Fields:
 - `team` (ForeignKey): The team that this puzzle status for
 - `unlock_time` (DateTimeField): The time this puzzle was unlocked for this team
 - `solve_time` (DateTimeField): The time this puzzle was solved for this team
+- `num_available_hints` (IntegerField): Number of puzzle-specific hints available
+- `num_total_hints_earned` (IntegerField): The total number of puzzle-specific hints this puzzle/team pair has earned
 
 ## Response Model
 
@@ -212,7 +229,7 @@ Fields:
 - `team` (ForeignKey): The team that made the submission
 - `submission_time` (DateTimeField): No description available
 - `submission_text` (CharField): No description available
-- `response_text` (CharField): Response to the given answer. Empty string indicates human response needed
+- `response_text` (CharField): Response to the given answer.
 - `puzzle` (ForeignKey): The puzzle that this submission is in response to
 - `modified_time` (DateTimeField): Last date/time of response modification
 - `user` (ForeignKey): The user who created the submission
