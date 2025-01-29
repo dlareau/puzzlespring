@@ -11,6 +11,9 @@ DATABASES = {
     }
 }
 
+# Disable constance database caching
+CONSTANCE_DATABASE_CACHE_BACKEND = ''
+
 # Use local memory cache for tests (needed for ratelimit)
 CACHES = {
     'default': {
