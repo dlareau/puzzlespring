@@ -143,6 +143,8 @@ def is_prepuzzle(context, **kwargs):
 @register.filter()
 def smooth_timedelta(timedeltaobj):
     """Convert a datetime.timedelta object into Days, Hours, Minutes, Seconds."""
+    if not timedeltaobj:
+        return ""
     secs = timedeltaobj.total_seconds()
     timetot = ""
     if secs > 86400: # 60sec * 60min * 24hrs

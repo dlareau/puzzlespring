@@ -344,7 +344,10 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
             new_hunt = hunt_objects[0].object
             new_hunt.is_current_hunt = False
             new_hunt.css_file = None
+            config = new_hunt.config
+            new_hunt.config = ""
             new_hunt.save()
+            new_hunt.refresh_from_db()
 
             # Import template and info page files
             if 'files/template.html' in zip_file.namelist():
@@ -363,6 +366,10 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                 puzzle.main_solution_file = None  # Will be set later
                 puzzle.save()
                 puzzles[puzzle.id] = puzzle
+
+            # Only set config after puzzles are created
+            new_hunt.config = config
+            new_hunt.save()
 
             # 3. Import prepuzzles without file references
             for obj in serializers.deserialize('json', zip_file.read('prepuzzles.json')):
@@ -401,6 +408,9 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                     with zip_file.open(zip_path) as f:
                         file_obj.file = File(f, name=Path(file_obj.file.name).name)
                         file_obj.save()
+                        print(f"Imported puzzle file {file_obj.relative_name} with natural key {tuple(file_obj.natural_key())}")
+                else:
+                    print(f"Puzzle file {file_obj.relative_name} not found in zip")
 
             # Import solution files
             for obj in serializers.deserialize('json', zip_file.read('solution_files.json')):
@@ -412,6 +422,8 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                     with zip_file.open(zip_path) as f:
                         file_obj.file = File(f, name=Path(file_obj.file.name).name)
                         file_obj.save()
+                else:
+                    print(f"Solution file {file_obj.relative_name} not found in zip")
 
             # Import prepuzzle files
             for obj in serializers.deserialize('json', zip_file.read('prepuzzle_files.json')):
@@ -428,6 +440,8 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                             tuple(file_obj.natural_key()) == tuple(file_references['prepuzzle']['main_file'])
                         ):
                             prepuzzle_main_file = file_obj
+                else:
+                    print(f"Prepuzzle file {file_obj.relative_name} not found in zip")
 
             # 5. Import remaining models that don't need special handling
             for filename in ['responses.json', 'canned_hints.json', 'ranking_rules.json']:
@@ -458,8 +472,10 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
             for puzzle_id, refs in file_references['puzzles'].items():
                 puzzle = puzzles[puzzle_id]
                 if refs['main_file']:
+                    print(f"Setting main file for puzzle {puzzle_id} to {refs['main_file']}")
                     puzzle.main_file = PuzzleFile.objects.get_by_natural_key(*refs['main_file'])
                 if refs['main_solution_file']:
+                    print(f"Setting main solution file for puzzle {puzzle_id} to {refs['main_solution_file']}")
                     puzzle.main_solution_file = SolutionFile.objects.get_by_natural_key(*refs['main_solution_file'])
                 puzzle.save()
 

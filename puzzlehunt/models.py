@@ -337,14 +337,6 @@ class Hunt(models.Model):
         else:
             return self.name
 
-    def clean_config(self):
-        """ Validates the hunt config """
-        if self.pk and self.config:
-            try:
-                parse_config(self.config, self.puzzle_set.values_list('id', flat=True))
-            except Exception as e:
-                raise ValidationError(str(e))
-
     def clean(self):
         """ Validates the hunt model """
         if not self.is_current_hunt:
@@ -355,6 +347,11 @@ class Hunt(models.Model):
                                         ["There must always be one current hunt", ]})
             except ObjectDoesNotExist:
                 pass
+        if self.pk and self.config:
+            try:
+                parse_config(self.config, self.puzzle_set.values_list('id', flat=True))
+            except Exception as e:
+                raise ValidationError({'config': [str(e)]})
 
         super(Hunt, self).clean()
 
