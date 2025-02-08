@@ -192,7 +192,6 @@ def create_hunt_export_zip(hunt, zip_path, include_activity=False):
 
             # Export model data in chunks to avoid memory issues
             for filename, queryset in models_to_export.items():
-                print(filename)
                 # Use iterator() to avoid loading entire queryset into memory
                 serialized_chunks = []
                 for chunk in queryset.iterator(chunk_size=100):
@@ -408,7 +407,6 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                     with zip_file.open(zip_path) as f:
                         file_obj.file = File(f, name=Path(file_obj.file.name).name)
                         file_obj.save()
-                        print(f"Imported puzzle file {file_obj.relative_name} with natural key {tuple(file_obj.natural_key())}")
                 else:
                     print(f"Puzzle file {file_obj.relative_name} not found in zip")
 
@@ -472,10 +470,8 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
             for puzzle_id, refs in file_references['puzzles'].items():
                 puzzle = puzzles[puzzle_id]
                 if refs['main_file']:
-                    print(f"Setting main file for puzzle {puzzle_id} to {refs['main_file']}")
                     puzzle.main_file = PuzzleFile.objects.get_by_natural_key(*refs['main_file'])
                 if refs['main_solution_file']:
-                    print(f"Setting main solution file for puzzle {puzzle_id} to {refs['main_solution_file']}")
                     puzzle.main_solution_file = SolutionFile.objects.get_by_natural_key(*refs['main_solution_file'])
                 puzzle.save()
 
