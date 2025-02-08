@@ -905,9 +905,11 @@ class Submission(models.Model):
     def save(self, *args, **kwargs):
         """ Overrides the default save function to update the modified date on save """
         self.modified_time = timezone.now()
-        send_event(f"team-{self.team.pk}", f"submission-{self.puzzle.pk}", "modification")
         is_new = not bool(self.pk)
         super(Submission, self).save(*args, **kwargs)
+        # This is to ensure that the event is sent after the view has completed the transaction
+        # It has no effect if the caller is not in a transaction
+        transaction.on_commit(lambda: send_event(f"team-{self.team.pk}", f"submission-{self.puzzle.pk}", "modification"))
         if is_new:
             Event.objects.create_event(Event.EventType.PUZZLE_SUBMISSION, self, self.user)
 
@@ -965,17 +967,10 @@ class PuzzleStatus(models.Model):
         return f"{self.team.short_name} => {self.puzzle.name}"
     
     def save(self, *args, **kwargs):
-        is_new = not bool(self.pk)
-        previous_solve_time = self.solve_time
         super().save(*args, **kwargs)
-        if is_new:
+        if not bool(self.pk):
             send_event(f"team-{self.team.pk}", f"huntUpdate", "unlock")
             Event.objects.create_event(Event.EventType.PUZZLE_UNLOCK, self, user=None)
-        if previous_solve_time is None and self.solve_time is not None:
-            send_event(f"team-{self.team.pk}", f"huntUpdate", "solve")
-            Event.objects.create_event(Event.EventType.PUZZLE_SOLVE, self, user=None)
-            if self.puzzle.type == Puzzle.PuzzleType.FINAL_PUZZLE:
-                Event.objects.create_event(Event.EventType.FINISH_HUNT, self, user=None)
 
     def mark_solved(self):
         """ Update the solved timestamp to indicate this puzzle has been solved. """
@@ -985,6 +980,11 @@ class PuzzleStatus(models.Model):
         self.solve_time = timezone.now()
         self.save()
         self.team.process_unlocks()
+        # TODO: maybe put this in the transaction.on_commit lambda?
+        send_event(f"team-{self.team.pk}", f"huntUpdate", "solve")
+        Event.objects.create_event(Event.EventType.PUZZLE_SOLVE, self, user=None)
+        if self.puzzle.type == Puzzle.PuzzleType.FINAL_PUZZLE:
+            Event.objects.create_event(Event.EventType.FINISH_HUNT, self, user=None)
 
     @cached_property
     def next_canned_hint(self):
@@ -1472,33 +1472,61 @@ class Event(models.Model):
 
     objects = EventManager()
 
+    @cached_property
+    def related_object(self):
+        match self.type:
+            case Event.EventType.PUZZLE_SUBMISSION:
+                return Submission.objects.get(pk=self.related_object_id)
+            case Event.EventType.PUZZLE_SOLVE:
+                return PuzzleStatus.objects.get(pk=self.related_object_id)
+            case Event.EventType.PUZZLE_UNLOCK:
+                return PuzzleStatus.objects.get(pk=self.related_object_id)
+            case Event.EventType.HINT_REQUEST:
+                return Hint.objects.get(pk=self.related_object_id)
+            case Event.EventType.HINT_RESPONSE:
+                return Hint.objects.get(pk=self.related_object_id)
+            case Event.EventType.FINISH_HUNT:
+                return PuzzleStatus.objects.get(pk=self.related_object_id)
+            case Event.EventType.TEAM_JOIN:
+                return Team.objects.get(pk=self.related_object_id)
+            case Event.EventType.UPDATE:
+                return Update.objects.get(pk=self.related_object_id)
+            case _:
+                return None
+
     @property
     def color(self):
         match self.type:
             case Event.EventType.PUZZLE_SUBMISSION:
-                return "#ff9999"  # Darker shade of #ffc8c8
+                if self.related_object.is_correct:
+                    return "#a3d7a3"
+                else:
+                    return "#ff9999"
             case Event.EventType.PUZZLE_SOLVE:
-                return "#a3d7a3"  # Darker shade of #d7ffdd
+                return "#079103"
             case Event.EventType.PUZZLE_UNLOCK:
-                return "#a3c7ff"  # Darker shade of #d6eeff
+                return "#a3c7ff"
             case Event.EventType.HINT_REQUEST:
-                return "#f5b78a"  # Darker shade of #fbe1cb
+                return "#f5b78a"
             case Event.EventType.HINT_RESPONSE:
-                return "#dcdc9f"  # Darker shade of #feffdf
+                return "#dcdc9f"
             case Event.EventType.FINISH_HUNT:
-                return "#d6a3ff"  # Darker shade of #f5d6ff
+                return "#d6a3ff"
             case Event.EventType.TEAM_JOIN:
-                return "#aaaaaa"  # Darker shade of #dddddd
+                return "#aaaaaa"
             case _:
-                return "#cccccc"  # Darker shade of #eeeeee
+                return "#cccccc"
 
     @property
     def icon(self):
         match self.type:
             case Event.EventType.PUZZLE_SUBMISSION:
-                return "fa-ban"
+                if self.related_object.is_correct:
+                    return "fa-check"
+                else:
+                    return "fa-ban"
             case Event.EventType.PUZZLE_SOLVE:
-                return "fa-check"
+                return "fa-puzzle-piece"
             case Event.EventType.PUZZLE_UNLOCK:
                 return "fa-unlock"
             case Event.EventType.HINT_REQUEST:

@@ -1,0 +1,6 @@
+gevent
+locust
+sseclient
+requests
+beautifulsoup4
+locust-plugins
