@@ -25,8 +25,8 @@ class PuzzlehuntUser(HttpUser):
     Base locust user class that supports Server-Sent Events (SSE) connections
     and common puzzlehunt functionality like static content loading.
     """
-    abstract = True  # This is a base class that should be inherited from
-    host = "http://localhost:8000"  # Default to localhost, override with -H flag
+    abstract = True
+    host = "http://localhost:8000"
     
     # Rate limit tracking
     _rate_limit_stats = {
@@ -46,13 +46,13 @@ class PuzzlehuntUser(HttpUser):
         self._event_handlers = []
         self._processing_greenlet = None
         self._should_stop = False
-        self.static_cache = set()  # Track which static files we've "cached"
+        self.static_cache = set()
         self.email = None
         self.password = None
         self.csrf_token = None
         self.team_id = None
         self.is_staff = False
-        # Add rate limit tracking to client
+
         events.request.add_listener(self._track_rate_limits)
 
     def _track_rate_limits(self, request_type=None, name=None, response=None, exception=None, **kwargs):
@@ -629,10 +629,9 @@ class StaffMember(PuzzlehuntUser):
         if response and response.status_code == 200:
             # Connect to SSE for progress page
             self._connect_sse_for_page("progress")
-            
-            # Monitor progress data for 5 minutes, fetching every 60 seconds
+
             start_time = time.time()
-            end_time = start_time + (5 * 60)  # 5 minutes
+            end_time = start_time + (5 * 60)
             
             while time.time() < end_time:
                 # Fetch progress data

@@ -66,14 +66,17 @@ class TimeIntervalAfter:
     grammar = attr("interval", TimeInterval), "AFTER", attr("start_time", PointInTime)
 
 class ConditionalTimeInterval:
-    grammar = attr("interval", [TimeInterval, TimeIntervalAfter]), "IF", attr("condition", SingleUseRuleItems)
+    grammar = attr("interval", [TimeIntervalAfter, TimeInterval]), "IF", attr("condition", SingleUseRuleItems)
 
-MultiUseRuleItems = [TimeInterval, TimeIntervalAfter, ConditionalTimeInterval]
+class LimitedTimeInterval:
+    grammar = attr("interval", [ConditionalTimeInterval, TimeIntervalAfter, TimeInterval]), "LIMIT", attr("limit", number)
+
+MultiUseRuleItems = [LimitedTimeInterval, ConditionalTimeInterval, TimeIntervalAfter, TimeInterval]
 
 
 # File level grammars
 class UnlockRule:
-    grammar = attr("unlockable", Unlockable), "<=", attr("rule", [SingleUseRuleItems, MultiUseRuleItems])
+    grammar = attr("unlockable", Unlockable), "<=", attr("rule", [SingleUseRuleItems] + MultiUseRuleItems)
 
 class ConfigFile(List):
     grammar = maybe_some(UnlockRule)
@@ -308,6 +311,9 @@ def get_multi_use_count(rule, puzzle_status_dict, start_time, current_time, poin
                 return 0
             return get_multi_use_count(rule.interval, puzzle_status_dict, start_time, current_time, points)
             
+        case LimitedTimeInterval():
+            return min(get_multi_use_count(rule.interval, puzzle_status_dict, start_time, current_time, points), int(rule.limit))
+            
         case _:
             # Single use rules
             return 1 if check_rule(rule, puzzle_status_dict, time_elapsed, points) else 0
@@ -337,7 +343,7 @@ def process_config_rules(rules, puzzle_statuses, start_time, current_time):
         changed = False
         for rule in rules:
             # Calculate rule value once
-            if isinstance(rule.rule, (TimeInterval, TimeIntervalAfter, ConditionalTimeInterval)):
+            if isinstance(rule.rule, (TimeInterval, TimeIntervalAfter, ConditionalTimeInterval, LimitedTimeInterval)):
                 rule_value = get_multi_use_count(rule.rule, puzzle_status_dict, start_time, current_time, points)
                 rule_applies = rule_value > 0
             else:

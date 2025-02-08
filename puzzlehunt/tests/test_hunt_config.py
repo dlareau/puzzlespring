@@ -672,3 +672,88 @@ def test_process_config_rules_looping(hunt_with_puzzles):
     assert len(unlocked) == 2  # Both puzzles should be unlocked
     assert sorted([p.id for p in unlocked]) == ["1", "2"]
     assert team.points == 9  # Should have all points
+
+def test_limited_time_intervals(hunt_with_puzzles):
+    """Test that limited time intervals work correctly"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    # Initial puzzle unlocks with points
+    P1 <= 0 POINTS
+    # Get hints every hour, but only up to 3 times
+    1 HINT <= EVERY 1 HOUR LIMIT 3
+    # Get P1 hints every 30 minutes if P1 is unlocked, but only up to 2 times
+    1 P1 HINT <= EVERY 30 MINUTES IF P1 UNLOCK LIMIT 2
+    # Get points every hour after solving P1, but only up to 2 times
+    5 POINTS <= EVERY 1 HOUR AFTER P1 SOLVE LIMIT 2
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    current_time = timezone.now()
+    
+    # Initial state - just P1 unlocked, no hints yet
+    team.process_unlocks()
+    p1_status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    assert team.num_available_hints == 0
+    assert p1_status.num_available_hints == 0
+
+    # After 30 minutes: should get first P1 hint (since P1 is unlocked from start)
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(minutes=30)):
+        team.process_unlocks()
+        p1_status.refresh_from_db()
+        assert team.num_available_hints == 0  # No general hints yet
+        assert p1_status.num_available_hints == 1  # First P1 hint
+
+    # After 1 hour: should get first general hint and second P1 hint
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=1)):
+        team.process_unlocks()
+        p1_status.refresh_from_db()
+        assert team.num_available_hints == 1  # First general hint
+        assert p1_status.num_available_hints == 2  # Second P1 hint (limit reached)
+
+    # After 2 hours: should get second general hint, P1 hints at limit
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=2)):
+        team.process_unlocks()
+        p1_status.refresh_from_db()
+        assert team.num_available_hints == 2
+        assert p1_status.num_available_hints == 2  # Still at limit
+
+    # After 4 hours: should have 3 general hints (limit reached)
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=4)):
+        team.process_unlocks()
+        p1_status.refresh_from_db()
+        assert team.num_available_hints == 3  # Limited to 3
+        assert p1_status.num_available_hints == 2  # Still at limit
+
+        # Solve P1 to trigger the points rule - using the same mocked time
+        p1_status.mark_solved()
+        team.process_unlocks()
+        assert team.points == 0  # No immediate points from solving
+
+    # 1 hour after solving: should get first 5 points
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=5)):
+        team.process_unlocks()
+        p1_status.refresh_from_db()
+        assert team.num_available_hints == 3  # Still at limit
+        assert p1_status.num_available_hints == 2  # Still at limit
+        assert team.points == 5  # First points reward
+
+    # 2 hours after solving: should get second 5 points
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=6)):
+        team.process_unlocks()
+        p1_status.refresh_from_db()
+        assert team.num_available_hints == 3  # Still at limit
+        assert p1_status.num_available_hints == 2  # Still at limit
+        assert team.points == 10  # Second points reward
+
+    # 3 hours after solving: should be at limits for everything
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=7)):
+        team.process_unlocks()
+        p1_status.refresh_from_db()
+        assert team.num_available_hints == 3  # Limited to 3
+        assert p1_status.num_available_hints == 2  # Limited to 2
+        assert team.points == 10  # Limited to 2 rewards of 5 points
+
+    

@@ -6,7 +6,7 @@ var oop = require("../lib/oop");
 var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
 var PhcmuConfigHighlightRules = function () {
-    var keywords = ("AND|OR|OF|POINTS|POINT|HINTS|HINT|EVERY|MINUTES|MINUTE|HOURS|HOUR|SOLVE|UNLOCK|AFTER|IF");
+    var keywords = ("AND|OR|OF|POINTS|POINT|HINTS|HINT|EVERY|MINUTES|MINUTE|HOURS|HOUR|SOLVE|UNLOCK|AFTER|IF|LIMIT");
     var keywordMapper = this.createKeywordMapper({"keyword": keywords}, "identifier", true);
     this.$rules = {
         "start": [{

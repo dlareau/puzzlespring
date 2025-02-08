@@ -120,10 +120,14 @@ These rules can trigger multiple times based on intervals:
 
 # Conditional intervals
 2 HINTS <= EVERY 30 MINUTES IF 10 POINTS
+
+# Limited intervals
+2 HINTS <= EVERY 30 MINUTES LIMIT 3
+5 POINTS <= EVERY 1 HOUR AFTER +1:00 LIMIT 2
 ```
 
 {: .note }
-When using both `AFTER` and `IF` in a multi-use rule, the `IF` condition must come after the `AFTER` clause. For example: `2 HINTS <= EVERY 30 MINUTES AFTER P1 SOLVE IF 10 POINTS` is valid, but `2 HINTS <= EVERY 30 MINUTES IF 10 POINTS AFTER P1 SOLVE` is not.
+When using multiple clauses in a multi-use rule, they must appear in this order: `AFTER` (optional), `IF` (optional), `LIMIT` (optional). For example: `2 HINTS <= EVERY 30 MINUTES AFTER P1 SOLVE IF 10 POINTS LIMIT 3` is valid, but `2 HINTS <= EVERY 30 MINUTES IF 10 POINTS AFTER P1 SOLVE` is invalid because `IF` appears before `AFTER`.
 
 ## Formal Grammar
 
