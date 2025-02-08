@@ -12,7 +12,7 @@ from django.core.files import File
 from django.core.paginator import Paginator
 from django.forms import ValidationError
 from django.views.decorators.http import require_GET, require_POST
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import redirect, render, get_object_or_404
 from django.db.models import F, Max, Count, Subquery, OuterRef, PositiveIntegerField, Min
 from django.http import HttpResponse
 from django.utils import timezone
@@ -27,6 +27,11 @@ from .utils import create_media_files, get_media_file_model, get_media_file_pare
 from .hunt_views import protected_static
 from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile
 from .tasks import import_hunt_background
+
+
+@staff_member_required
+def staff_base(request):
+    return redirect('puzzlehunt:staff:hunts', hunt="current")
 
 
 @staff_member_required

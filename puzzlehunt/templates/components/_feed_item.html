@@ -6,7 +6,7 @@
   compact: Boolean indicating if the item should be displayed in compact mode
 {% endcomment %}
 
-<div id=event-{{ item.pk }} class="box" :class="compact ? 'p-1 mb-1' : 'p-2 mb-2'" style="border-left: 10px solid {{ item.color }};">
+<div id="event-{{ item.pk }}" class="box" :class="compact ? 'p-1 mb-1' : 'p-2 mb-2'" style="border-left: 10px solid {{ item.color }};">
   <div class="media" :class="!compact && 'mb-1'">
     <div class="media-left">
       <span class="icon" style="color: {{ item.color }};">

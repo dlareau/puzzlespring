@@ -95,7 +95,7 @@ class AnswerForm(Form):
         else:
             view = 'puzzlehunt:puzzle_submit'
         url = reverse(view, kwargs={'pk': self.puzzle.pk})
-        self.helper.attrs = {'hx-post': url}
+        self.helper.attrs = {'hx-post': url, 'hx-swap': 'outerHTML'}
         self.helper.form_action = url
         if disable_form:
             # noinspection PyTypeChecker

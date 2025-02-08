@@ -2,11 +2,12 @@ from django.urls import path, register_converter
 from django.conf.urls import include
 from puzzlehunt import info_views, hunt_views, staff_views
 from django_eventstream.views import events
-from puzzlehunt.utils import HuntConverter
+from puzzlehunt.utils import HuntConverter, FallbackHuntConverter
 
 app_name = 'puzzlehunt'
 
 register_converter(HuntConverter, 'hunt')
+register_converter(FallbackHuntConverter, 'hunt-fallback')
 
 
 urlpatterns = [
@@ -60,6 +61,7 @@ urlpatterns = [
 
     # Staff Pages
     path('staff/', include(([
+        path("", staff_views.staff_base, name="staff_base"),
 
         # Are based on hint pks, don't need a hunt prefix
         path('hint/<int:pk>/claim/', staff_views.hints_claim, name='hints_claim'),
@@ -69,20 +71,20 @@ urlpatterns = [
         path('hint/<int:pk>/get_modal/', staff_views.get_modal, name='get_modal'),
 
         # These already take a hunt argument
-        path('hunt/<hunt:hunt>/search/', staff_views.search, name='search'),
-        path('hunt/<hunt:hunt>/hunts/', staff_views.view_hunts, name='hunts'),
-        path('hunt/<hunt:hunt>/feed/', staff_views.feed, name='feed'),
-        path('hunt/<hunt:hunt>/progress/', staff_views.progress, name='progress'),
-        path('hunt/<hunt:hunt>/progress_data/', staff_views.progress_data, name='progress_data'),
-        path('hunt/<hunt:hunt>/hints/', staff_views.hints_view, name='hints_view'),
-        path('hunt/<hunt:hunt>/charts/', staff_views.charts, name='charts'),
-        path('hunt/<hunt:hunt>/template/', staff_views.hunt_template, name='hunt_template'),
-        path('hunt/<hunt:hunt>/template/preview/', staff_views.preview_template, name='preview_template'),
-        path('hunt/<hunt:hunt>/config/', staff_views.hunt_config, name='hunt_config'),
-        path('hunt/<hunt:hunt>/puzzles/', staff_views.hunt_puzzles, name='hunt_puzzles'),
-        path('hunt/<hunt:hunt>/set_current/', staff_views.hunt_set_current, name='hunt_set_current'),
-        path('hunt/<hunt:hunt>/export/', staff_views.export_hunt, name='hunt_export'),
-        path('hunt/<hunt:hunt>/import/', staff_views.import_hunt, name='hunt_import'),
+        path('hunt/<hunt-fallback:hunt>/search/', staff_views.search, name='search'),
+        path('hunt/<hunt-fallback:hunt>/hunts/', staff_views.view_hunts, name='hunts'),
+        path('hunt/<hunt-fallback:hunt>/feed/', staff_views.feed, name='feed'),
+        path('hunt/<hunt-fallback:hunt>/progress/', staff_views.progress, name='progress'),
+        path('hunt/<hunt-fallback:hunt>/progress_data/', staff_views.progress_data, name='progress_data'),
+        path('hunt/<hunt-fallback:hunt>/hints/', staff_views.hints_view, name='hints_view'),
+        path('hunt/<hunt-fallback:hunt>/charts/', staff_views.charts, name='charts'),
+        path('hunt/<hunt-fallback:hunt>/template/', staff_views.hunt_template, name='hunt_template'),
+        path('hunt/<hunt-fallback:hunt>/template/preview/', staff_views.preview_template, name='preview_template'),
+        path('hunt/<hunt-fallback:hunt>/config/', staff_views.hunt_config, name='hunt_config'),
+        path('hunt/<hunt-fallback:hunt>/puzzles/', staff_views.hunt_puzzles, name='hunt_puzzles'),
+        path('hunt/<hunt-fallback:hunt>/set_current/', staff_views.hunt_set_current, name='hunt_set_current'),
+        path('hunt/<hunt-fallback:hunt>/export/', staff_views.export_hunt, name='hunt_export'),
+        path('hunt/<hunt-fallback:hunt>/import/', staff_views.import_hunt, name='hunt_import'),
 
         path('<str:parent_type>/file/<str:pk>/delete/', staff_views.file_delete, name='file_delete'),
         path('<str:parent_type>/file/<str:pk>/replace/', staff_views.file_replace, name='file_replace'),

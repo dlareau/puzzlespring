@@ -107,8 +107,8 @@
          hx-trigger="sse:events"
          hx-get=""
          hx-select="#feed_items"
-         hx-swap="outerHTML"
-         hx-disinherit="*"
+         hx-swap="outerHTML settle:0"
+         hx-disinherit="hx-swap hx-trigger hx-get hx-select hx-include"
     >
       {% for item in feed_items %}
         {% include "components/_feed_item.html" %}

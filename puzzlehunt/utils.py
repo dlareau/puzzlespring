@@ -105,7 +105,13 @@ class HuntConverter:
             return "current"
         else:
             return '%d' % value
-
+        
+class FallbackHuntConverter(HuntConverter):
+    def to_python(self, value):
+        try:
+            return super().to_python(value)
+        except Http404:
+            return Hunt.objects.get(is_current_hunt=True)
 
 def create_hunt_export_zip(hunt, zip_path, include_activity=False):
     """
