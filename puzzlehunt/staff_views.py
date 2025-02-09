@@ -888,4 +888,10 @@ def import_hunt(request, hunt):
             temp_dir.rmdir()
         messages.error(request, f"Error importing hunt: {str(e)}")
 
-    return render(request, "staff_hunts.html", {'hunt': hunt, 'hunts': Hunt.objects.order_by('-is_current_hunt', '-display_start_date').all()})
+    return view_hunts(request, hunt)
+
+@require_POST
+@staff_member_required
+def hunt_reset(request, hunt):
+    hunt.reset()
+    return view_hunts(request, hunt)

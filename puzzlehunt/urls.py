@@ -85,6 +85,7 @@ urlpatterns = [
         path('hunt/<hunt-fallback:hunt>/set_current/', staff_views.hunt_set_current, name='hunt_set_current'),
         path('hunt/<hunt-fallback:hunt>/export/', staff_views.export_hunt, name='hunt_export'),
         path('hunt/<hunt-fallback:hunt>/import/', staff_views.import_hunt, name='hunt_import'),
+        path('hunt/<hunt-fallback:hunt>/reset/', staff_views.hunt_reset, name='hunt_reset'),
 
         path('<str:parent_type>/file/<str:pk>/delete/', staff_views.file_delete, name='file_delete'),
         path('<str:parent_type>/file/<str:pk>/replace/', staff_views.file_replace, name='file_replace'),

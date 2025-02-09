@@ -158,6 +158,14 @@
                 </div>
               </div>
             </div>
+            <button class="button has-tooltip-arrow has-tooltip-top ml-1"
+                    data-tooltip="Reset Hunt Progress"
+                    @click="$dispatch('open-modal', { huntId: {{ hunt.pk }}, huntName: '{{ hunt.name }}' })"
+            >
+              <span class="icon is-small has-text-danger">
+                <i class="fa fa-lg fa-exclamation-triangle"></i>
+              </span>
+            </button>
           </div>
           <div>
             {% if hunt.is_current_hunt %}
@@ -188,4 +196,61 @@
     {% endif %}
     {% endfor %}
   </div></div>
+
+  <!-- Shared Reset Hunt Modal -->
+  <div class="modal" 
+       x-data="{ 
+         isOpen: false, 
+         confirmText: '', 
+         expectedText: 'RESET HUNT',
+         currentHuntId: null,
+         currentHuntName: '',
+         resetModal() {
+           this.isOpen = false;
+           this.confirmText = '';
+         }
+       }"
+       @open-modal.window="
+         isOpen = true;
+         currentHuntId = $event.detail.huntId;
+         currentHuntName = $event.detail.huntName;
+       "
+       @keydown.escape.window="resetModal()"
+       :class="{ 'is-active': isOpen }">
+    <div class="modal-background" @click="resetModal()"></div>
+    <div class="modal-card">
+      <header class="modal-card-head">
+        <p class="modal-card-title has-text-danger">Reset Hunt Progress</p>
+        <button class="delete" aria-label="close" @click="resetModal()"></button>
+      </header>
+      <section class="modal-card-body">
+        <p class="has-text-weight-bold mb-3">⚠️ Warning: This action cannot be undone!</p>
+        <p>This will reset all progress for <strong x-text="currentHuntName"></strong>:</p>
+        <ul class="ml-5 mb-3">
+          <li>Delete all team progress</li>
+          <li>Remove all submissions</li>
+          <li>Clear all hint requests</li>
+        </ul>
+        <p class="mb-2">To confirm, please type <strong>RESET HUNT</strong> in the box below:</p>
+        <input class="input" type="text" x-model="confirmText" placeholder="Type RESET HUNT here">
+      </section>
+      <footer class="modal-card-foot">
+        <button class="button is-danger" 
+                :disabled="confirmText !== expectedText"
+                @click="
+                  if (confirmText === expectedText) {
+                    htmx.ajax('POST', `/staff/hunt/${currentHuntId}/reset/`, {
+                      target: '#staff-content-container',
+                      select: '#staff-content-container',
+                      swap: 'outerHTML'
+                    });
+                    resetModal();
+                  }
+                ">
+          Reset Hunt Progress
+        </button>
+        <button class="button" @click="resetModal()">Cancel</button>
+      </footer>
+    </div>
+  </div>
 {% endblock %}

@@ -380,6 +380,13 @@ class Hunt(models.Model):
 
     def natural_key(self):
         return (self.name, self.start_date)
+    
+    def reset(self):
+        PuzzleStatus.objects.filter(team__hunt=self).delete()
+        Submission.objects.filter(puzzle__hunt=self).delete()
+        Hint.objects.filter(puzzle__hunt=self).delete()
+        self.update_set.all().delete()
+        self.event_set.all().delete()
 
 # endregion
 
