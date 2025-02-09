@@ -115,6 +115,22 @@ class ResponseInline(admin.TabularInline):
     extra = 1
 
 
+class CannedHintInlineForm(forms.ModelForm):
+    class Meta:
+        model = CannedHint
+        fields = '__all__'
+        widgets = {
+            'text': forms.Textarea(attrs={'rows': 3, 'style': 'width: 80%;'}),
+        }
+
+
+class CannedHintInline(admin.TabularInline):
+    model = CannedHint
+    form = CannedHintInlineForm
+    extra = 1
+    fields = ('order', 'text')
+
+
 @admin.register(Puzzle)
 class PuzzleAdmin(admin.ModelAdmin):
     form = PuzzleAdminForm
@@ -124,7 +140,7 @@ class PuzzleAdmin(admin.ModelAdmin):
     list_display = ['id',  'name', 'hunt', 'type']
     list_display_links = ['id', 'name']
     ordering = ['-hunt', 'order_number']
-    inlines = (ResponseInline,)
+    inlines = (ResponseInline, CannedHintInline)
     fieldsets = (
         ('Basic Information', {
             'fields': ('id', 'hunt', 'name', 'type', 'order_number')
