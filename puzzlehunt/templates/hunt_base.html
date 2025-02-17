@@ -34,18 +34,39 @@
 {% endblock base_includes %}
 
 {% block bulma_includes %}
+  {% comment %} TODO: this is very duplicative with base.html {% endcomment %}
   <link rel="stylesheet" type="text/css" href="{% static "hunt_bulma.css" %}">
   <link rel="stylesheet" type="text/css" href="{% static "bulma-tooltip.min.css" %}">
   <link rel="stylesheet" type="text/css" href="{% static "animate.min.css" %}"/>
   <script src="{% static "bulma-js/bulma-toast.min.js" %}"></script>
   <script>
     bulmaToast.setDefaults({
-      duration: 3000,
+      duration: 5000,
       position: 'top-center',
       dismissible: true, 
       animate: { in: 'fadeIn', out: 'fadeOut' },
     });
   </script>
+  {% block live_updates %}
+    {% if team %}
+      <div
+        hx-ext="sse" 
+        sse-connect="{% url 'puzzlehunt:team_events' team.pk %}"
+      >
+        {% comment %} TODO: Uncomment this to enable full page hunt updates {% endcomment %}
+        {% comment %} <div
+          {% if team.pk and request.resolver_match.url_name == 'hunt_view' %}
+            hx-trigger="sse:huntUpdate"
+            hx-get="{{ request.path }}"
+            hx-select="#huntContent"
+            hx-swap="outerHTML"
+            hx-target="#huntContent"
+          {% endif %}
+        ></div> {% endcomment %}
+        <div sse-swap="notification"></div>
+      </div>
+    {% endif %}
+  {% endblock live_updates %}
 {% endblock bulma_includes %}
 
 {% block includes %}
@@ -56,16 +77,7 @@
 {% endblock includes %}
 
 {% block content_wrapper %}
-  <div id="huntContent" 
-    {% if team.pk and request.resolver_match.url_name == 'hunt_view' %}
-       hx-ext="sse" 
-       sse-connect="{% url 'puzzlehunt:team_events' team.pk %}"
-       hx-trigger="sse:huntUpdate"
-       hx-get="{{ request.path }}"
-       hx-select="#huntContent"
-       hx-swap="outerHTML"
-    {% endif %}
-  >
+  <div id="huntContent">
     {% block content %} {% endblock content %}
   </div>
 {% endblock content_wrapper %}

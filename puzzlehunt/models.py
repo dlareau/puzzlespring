@@ -31,6 +31,11 @@ time_zone = tz.gettz(settings.TIME_ZONE)
 # TODO: source from settings
 ORGANIZATION_SHORT_NAME = "CMU"  # constant used to make names generic
 
+def send_notification(text, team):
+    toast_data = f"{{message: '{text}', position: 'bottom-right', appendTo: document.getElementById('outer-message-container')}}"
+    sse_notification_string = f"<script> bulmaToast.toast({toast_data});</script>"
+    send_event(f"team-{team.pk}", f"notification", sse_notification_string, json_encode=False)
+
 # region User Model
 class CustomUserManager(BaseUserManager):
     """
@@ -974,9 +979,13 @@ class PuzzleStatus(models.Model):
         return f"{self.team.short_name} => {self.puzzle.name}"
     
     def save(self, *args, **kwargs):
+        is_new = not bool(self.pk)
         super().save(*args, **kwargs)
-        if not bool(self.pk):
-            send_event(f"team-{self.team.pk}", f"huntUpdate", "unlock")
+        if is_new:
+            # This is to ensure that the event is sent after the view has completed the transaction
+            # It has no effect if the caller is not in a transaction
+            transaction.on_commit(lambda: send_event(f"team-{self.team.pk}", f"huntUpdate", "unlock"))
+            transaction.on_commit(lambda: send_notification(f"You have unlocked {self.puzzle.name}", self.team))
             Event.objects.create_event(Event.EventType.PUZZLE_UNLOCK, self, user=None)
 
     def mark_solved(self):
@@ -987,8 +996,10 @@ class PuzzleStatus(models.Model):
         self.solve_time = timezone.now()
         self.save()
         self.team.process_unlocks()
-        # TODO: maybe put this in the transaction.on_commit lambda?
-        send_event(f"team-{self.team.pk}", f"huntUpdate", "solve")
+        # This is to ensure that the event is sent after the view has completed the transaction
+        # It has no effect if the caller is not in a transaction
+        transaction.on_commit(lambda: send_event(f"team-{self.team.pk}", f"huntUpdate", "solve"))
+        transaction.on_commit(lambda: send_notification(f"You have solved {self.puzzle.name}", self.team))
         Event.objects.create_event(Event.EventType.PUZZLE_SOLVE, self, user=None)
         if self.puzzle.type == Puzzle.PuzzleType.FINAL_PUZZLE:
             Event.objects.create_event(Event.EventType.FINISH_HUNT, self, user=None)
@@ -1093,6 +1104,8 @@ class Hint(models.Model):
     def send_hint_sse(self, data, send_team_msg=False):
         send_event("staff", "hints", data)
         if send_team_msg:
+            if data == "response":
+                send_notification(f"You have received a response to your hint\nrequest for {self.puzzle.name}", self.team)
             send_event(f"team-{self.team.pk}", "hints", data)
 
     def save(self, *args, **kwargs):
@@ -1416,7 +1429,7 @@ class EventManager(models.Manager):
         )
 
         from .notifications import send_event_notifications
-        send_event_notifications(event.pk)
+        transaction.on_commit(lambda: send_event_notifications(event.pk))
 
         return event
 
