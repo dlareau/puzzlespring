@@ -54,10 +54,10 @@ REDIS_ENABLED = os.getenv("USE_REDIS_CACHE", str(not DEBUG)).lower() == "true"
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
-    } if REDIS_ENABLED else {
         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
         'LOCATION': 'redis://redis:6379/1',
+    } if REDIS_ENABLED else {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
     }
 }
 
@@ -268,6 +268,11 @@ IMPERSONATE = {
 GRIP_URL = 'http://pushpin:5561'
 EVENTSTREAM_STORAGE_CLASS = 'django_eventstream.storage.DjangoModelStorage'
 EVENTSTREAM_CHANNELMANAGER_CLASS = 'puzzlehunt.utils.PuzzlehuntChannelManager'
+EVENTSTREAM_REDIS = {
+    'host': 'redis',
+    'port': 6379,
+    'db': 0,
+}
 
 # Huey (Task Queue)
 HUEY = {
@@ -304,7 +309,7 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console'],
-            'level': 'WARNING',
+            'level': 'INFO',
             'propagate': True,
         },
         'puzzlehunt': {

@@ -1,7 +1,11 @@
 {$DOMAIN} {
     # Handle SSE endpoints through pushpin
     handle /sse/* {
-        reverse_proxy pushpin:7999
+        reverse_proxy pushpin:7999 {
+            transport http {
+                versions 1.1
+            }
+        }
     }
 
     # Static files with caching
