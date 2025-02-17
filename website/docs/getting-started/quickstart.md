@@ -16,10 +16,16 @@ This guide will help you get PuzzleSpring up and running quickly to see the app 
 2. Clone the repository:
 
     ```bash
-    git clone https://github.com/puzzlespring/puzzlespring.git
+    git clone https://github.com/dlareau/puzzlespring.git
     ```
 
-3. Setup your environment file:
+3. Navigate to the project directory:
+
+    ```bash
+    cd puzzlespring
+    ```
+
+4. Setup your environment file:
 
     ```bash
     cp sample.env .env
@@ -27,16 +33,21 @@ This guide will help you get PuzzleSpring up and running quickly to see the app 
 
     You can then edit the `.env` file to set your environment variables.
 
-4. Run the development server:
+5. Run the development server:
 
     ```bash
     docker compose up -d
     ```
 
-5. Run the initial setup command:
+6. Run the initial setup command:
 
     ```bash
     docker compose exec app python manage.py initial_setup
     ```
 
-6. Open your browser and navigate to `http://localhost:8000`.
+7. Open your browser and navigate to `https://localhost:8443`.
+
+{: .note }
+> You may see an invalid certificate warning while developing locally. It is safe to click through it.
+
+
