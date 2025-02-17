@@ -31,7 +31,7 @@ This guide provides detailed instructions for installing and configuring PuzzleS
 3. Configure your environment variables in `.env`. At minimum, you need to set:
    - `DJANGO_SECRET_KEY`: A secure random string
    - `DB_PASSWORD`: Password for the PostgreSQL database
-   - `DOMAIN`: Your domain name (use `localhost:80` for development)
+   - `DOMAIN`: Your domain name (use `localhost` for development)
 
 {: .note }
 > To generate a secure Django secret key, you can use Python:
