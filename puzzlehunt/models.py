@@ -21,15 +21,11 @@ from django.db.models.functions import Lower
 from django.db.models.signals import m2m_changed
 from django.utils import timezone
 from django_eventstream import send_event
-from datetime import timedelta
 from .config_parser import parse_config, process_config_rules
 
 logger = logging.getLogger(__name__)
 
 time_zone = tz.gettz(settings.TIME_ZONE)
-
-# TODO: source from settings
-ORGANIZATION_SHORT_NAME = "CMU"  # constant used to make names generic
 
 def send_notification(text, team):
     toast_data = f"{{message: '{text}', position: 'bottom-right', appendTo: document.getElementById('outer-message-container')}}"
@@ -605,10 +601,11 @@ class Team(models.Model):
     members = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         help_text="Members of this team")
-    is_local = models.BooleanField(
-        verbose_name=f"{ORGANIZATION_SHORT_NAME} Team",
-        default=False,
-        help_text=f"Is this team a majority {ORGANIZATION_SHORT_NAME} users?")
+    custom_data = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text=f"A field for custom registration data"
+    )
     join_code = models.CharField(
         max_length=8,
         default=team_key_gen,

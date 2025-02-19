@@ -72,7 +72,9 @@ MIDDLEWARE = [m for m in MIDDLEWARE if 'csrf' not in m.lower()]
 # Disable rate limiting in tests
 RATELIMIT_ENABLE = False 
 
+# Simplify eventstream settings for tests
 GRIP_URL = ''
+del EVENTSTREAM_REDIS
 
 STATIC_ROOT = "/tmp/test_static"
 MEDIA_ROOT = "/tmp/test_media"

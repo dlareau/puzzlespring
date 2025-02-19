@@ -251,14 +251,14 @@ class PuzzleStatusInline(admin.StackedInline):
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
     search_fields = ['name']
-    list_display = [short_team_name, 'hunt', 'playtester', 'is_local']
+    list_display = [short_team_name, 'hunt', 'playtester']
     list_filter = ['hunt']
     filter_horizontal = ['members']
     readonly_fields = ('num_total_hints_earned', 'points')
     fieldsets = (
         ("Basic Info",
          {
-            'fields': ['name', 'hunt', 'members', 'is_local', 'join_code'],
+            'fields': ['name', 'hunt', 'members', 'custom_data', 'join_code'],
          }),
         ("Playtesting",
          {

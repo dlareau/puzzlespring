@@ -10,6 +10,7 @@ from django.forms import (
 )
 from django.contrib.auth.forms import ValidationError
 from django.urls import reverse
+from constance import config
 
 from .models import Team, User, NotificationSubscription, Event
 from .notifications import NotificationHandler
@@ -17,7 +18,7 @@ from .notifications import NotificationHandler
 class TeamForm(ModelForm):
     class Meta:
         model = Team
-        fields = ['name', 'is_local']
+        fields = ['name', 'custom_data']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -31,14 +32,29 @@ class TeamForm(ModelForm):
             button_text = "Register"
         self.helper.form_class = 'block'
         self.helper.form_action = url
-        self.helper.layout = Layout(
-            'name',
+
+        # Hide custom_data field if no name is set
+        if not config.TEAM_CUSTOM_DATA_NAME:
+            self.fields['custom_data'].widget = TextInput(attrs={'style': 'display: none;'})
+            layout_fields = ['name']
+        else:
+            self.fields['custom_data'].label = config.TEAM_CUSTOM_DATA_NAME
+            self.fields['custom_data'].help_text = config.TEAM_CUSTOM_DATA_DESCRIPTION
+            layout_fields = [
+                'name',
+                Div(
+                    Div(Field('custom_data'), css_class="level-left"),
+                    css_class="level"
+                ),
+            ]
+
+        layout_fields.append(
             Div(
-                Div(Field('is_local', template="components/_bulma_rounded_checkbox.html"), css_class="level-left"),
                 Div(Submit(button_text, button_text, css_class="is-primary"), css_class="level-right"),
                 css_class="level"
-            ),
+            )
         )
+        self.helper.layout = Layout(*layout_fields)
 
     def clean_name(self):
         instance = getattr(self, 'instance', None)

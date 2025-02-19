@@ -274,7 +274,7 @@ _URL Patterns:_
 _Description:_ No description available.
 
 _URL Patterns:_
-- `staff/hunt/<hunt:hunt>/charts/`
+- `staff/hunt/<hunt-fallback:hunt>/charts/`
 
 _Parameters:_
 - `hunt`: any
@@ -284,7 +284,7 @@ _Parameters:_
 _Description:_ No description available.
 
 _URL Patterns:_
-- `staff/hunt/<hunt:hunt>/export/`
+- `staff/hunt/<hunt-fallback:hunt>/export/`
 
 _Parameters:_
 - `hunt`: any
@@ -294,7 +294,7 @@ _Parameters:_
 _Description:_ No description available.
 
 _URL Patterns:_
-- `staff/hunt/<hunt:hunt>/feed/`
+- `staff/hunt/<hunt-fallback:hunt>/feed/`
 
 _Parameters:_
 - `hunt`: any
@@ -488,7 +488,7 @@ This view fetches hints based on optional filters provided via GET parameters.
 The hints are paginated and rendered in the 'staff_hints.html' template.
 
 _URL Patterns:_
-- `staff/hunt/<hunt:hunt>/hints/`
+- `staff/hunt/<hunt-fallback:hunt>/hints/`
 
 _Parameters:_
 - `hunt`: any
@@ -498,7 +498,7 @@ _Parameters:_
 _Description:_ Render or update the hunt configuration page.
 
 _URL Patterns:_
-- `staff/hunt/<hunt:hunt>/config/`
+- `staff/hunt/<hunt-fallback:hunt>/config/`
 
 _Parameters:_
 - `hunt`: any
@@ -514,7 +514,17 @@ Args:
     hunt (Hunt): The hunt instance for which to display puzzles
 
 _URL Patterns:_
-- `staff/hunt/<hunt:hunt>/puzzles/`
+- `staff/hunt/<hunt-fallback:hunt>/puzzles/`
+
+_Parameters:_
+- `hunt`: any
+
+### <u>hunt_reset</u>
+
+_Description:_ No description available.
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/reset/`
 
 _Parameters:_
 - `hunt`: any
@@ -530,7 +540,7 @@ Args:
     hunt (Hunt): The hunt to be set as the current hunt.
 
 _URL Patterns:_
-- `staff/hunt/<hunt:hunt>/set_current/`
+- `staff/hunt/<hunt-fallback:hunt>/set_current/`
 
 _Parameters:_
 - `hunt`: any
@@ -540,7 +550,7 @@ _Parameters:_
 _Description:_ No description available.
 
 _URL Patterns:_
-- `staff/hunt/<hunt:hunt>/template/`
+- `staff/hunt/<hunt-fallback:hunt>/template/`
 
 _Parameters:_
 - `hunt`: any
@@ -553,7 +563,7 @@ This view accepts a zip file upload and queues it for background processing.
 The zip file should have been created by the export_hunt view.
 
 _URL Patterns:_
-- `staff/hunt/<hunt:hunt>/import/`
+- `staff/hunt/<hunt-fallback:hunt>/import/`
 
 _Parameters:_
 - `hunt`: any
@@ -563,7 +573,7 @@ _Parameters:_
 _Description:_ No description available.
 
 _URL Patterns:_
-- `staff/hunt/<hunt:hunt>/template/preview/`
+- `staff/hunt/<hunt-fallback:hunt>/template/preview/`
 
 _Parameters:_
 - `hunt`: any
@@ -576,7 +586,7 @@ Args:
     request (HttpRequest): The HTTP request object.
 
 _URL Patterns:_
-- `staff/hunt/<hunt:hunt>/progress/`
+- `staff/hunt/<hunt-fallback:hunt>/progress/`
 
 _Parameters:_
 - `hunt`: any
@@ -586,7 +596,7 @@ _Parameters:_
 _Description:_ API endpoint to return progress data for DataTables consumption.
 
 _URL Patterns:_
-- `staff/hunt/<hunt:hunt>/progress_data/`
+- `staff/hunt/<hunt-fallback:hunt>/progress_data/`
 
 _Parameters:_
 - `hunt`: any
@@ -599,10 +609,17 @@ This view allows staff members to search for users and teams by name/email.
 Results are returned via HTMX for dynamic updates.
 
 _URL Patterns:_
-- `staff/hunt/<hunt:hunt>/search/`
+- `staff/hunt/<hunt-fallback:hunt>/search/`
 
 _Parameters:_
 - `hunt`: any
+
+### <u>staff_base</u>
+
+_Description:_ No description available.
+
+_URL Patterns:_
+- `staff/`
 
 ### <u>view_hunts</u>
 
@@ -612,7 +629,7 @@ This view function retrieves all hunts ordered by start date with the current hu
 The hunts are then rendered in the 'staff_hunts.html' template.
 
 _URL Patterns:_
-- `staff/hunt/<hunt:hunt>/hunts/`
+- `staff/hunt/<hunt-fallback:hunt>/hunts/`
 
 _Parameters:_
 - `hunt`: any

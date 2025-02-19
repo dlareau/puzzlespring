@@ -11,13 +11,12 @@ def test_team_create_view_success(client, basic_hunt, basic_user):
     
     response = client.post(url, {
         'name': 'View Test Team',
-        'is_local': True
+        'custom_data': ''
     })
     assert response.status_code == 302  # Redirect after success
     
     team = Team.objects.first()
     assert team.name == 'View Test Team'
-    assert team.is_local is True
     assert team.hunt == basic_hunt
     assert team.members.first() == basic_user
 
@@ -33,7 +32,7 @@ def test_team_create_view_duplicate_name(client, basic_hunt, basic_user):
     
     response = client.post(url, {
         'name': 'Existing Team',
-        'is_local': True
+        'custom_data': ''
     })
     assert response.status_code == 200  # Returns to form with errors
     assert Team.objects.count() == 1  # No new team created
@@ -46,7 +45,7 @@ def test_team_create_view_invalid_name(client, basic_hunt, basic_user):
     
     response = client.post(url, {
         'name': '!@#$%',
-        'is_local': True
+        'custom_data': ''
     })
     assert response.status_code == 200  # Returns to form with errors
     assert Team.objects.count() == 0
@@ -65,13 +64,12 @@ def test_team_update_view_success(client, basic_hunt, basic_user):
     
     response = client.post(url, {
         'name': 'Updated Via View',
-        'is_local': True
+        'custom_data': ''
     }, HTTP_HX_REQUEST='true')
     
     assert response.status_code == 200
     team.refresh_from_db()
     assert team.name == 'Updated Via View'
-    assert team.is_local is True
     assert team.hunt == basic_hunt  # Hunt remains unchanged
 
 def test_team_update_view_duplicate_name(client, basic_hunt, basic_user):
@@ -91,7 +89,7 @@ def test_team_update_view_duplicate_name(client, basic_hunt, basic_user):
     
     response = client.post(url, {
         'name': 'Existing Team',
-        'is_local': True
+        'custom_data': ''
     }, HTTP_HX_REQUEST='true')
     
     assert response.status_code == 200
@@ -116,7 +114,7 @@ def test_team_update_view_unauthorized(client, basic_hunt, basic_user):
     
     response = client.post(url, {
         'name': 'Should Not Update',
-        'is_local': True
+        'custom_data': ''
     })
     
     assert response.status_code == 403
@@ -360,7 +358,7 @@ def test_team_update_view_invalid_non_htmx(client, basic_hunt, basic_user):
     
     response = client.post(url, {
         'name': '!@#$%',  # Invalid name
-        'is_local': True
+        'custom_data': ''
     })
     
     # The view redirects even with invalid data - this appears to be a bug in the view
@@ -382,13 +380,12 @@ def test_team_update_view_success_non_htmx(client, basic_hunt, basic_user):
     
     response = client.post(url, {
         'name': 'Updated Via View',
-        'is_local': True
+        'custom_data': ''
     })
     
     assert response.status_code == 302  # Redirect after success
     team.refresh_from_db()
     assert team.name == 'Updated Via View'
-    assert team.is_local is True
 
 def test_team_create_view_already_has_team(client, basic_hunt, basic_user):
     """Test team creation fails when user already has a team"""
@@ -404,7 +401,7 @@ def test_team_create_view_already_has_team(client, basic_hunt, basic_user):
     
     response = client.post(url, {
         'name': 'New Team',
-        'is_local': True
+        'custom_data': ''
     })
     assert response.status_code == 302  # Redirects to existing team
     assert Team.objects.count() == 1  # No new team created

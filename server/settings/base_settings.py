@@ -219,6 +219,8 @@ TEMPLATES = [
 CONSTANCE_CONFIG = {
     # Site Settings
     'SITE_TITLE': ('PuzzleSpring', 'The title of the site'),
+    'TEAM_CUSTOM_DATA_NAME': ('', 'The name of the team custom data field'),
+    'TEAM_CUSTOM_DATA_DESCRIPTION': ('', 'The description of the team custom data field'),
     
     # Hunt Display Settings
     'SINGLE_HUNT_MODE': (False, 'If enabled, only one hunt will be visible and accessible'), # Not yet implemented

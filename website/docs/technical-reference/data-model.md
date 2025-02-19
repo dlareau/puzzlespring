@@ -242,7 +242,7 @@ Fields:
 - `id` (AutoField): No description available
 - `name` (CharField): The team name as it will be shown to hunt participants
 - `hunt` (ForeignKey): The hunt that the team is a part of
-- `is_local` (BooleanField): Is this team a majority CMU users?
+- `custom_data` (CharField): A field for custom registration data
 - `join_code` (CharField): The 8 character random alphanumeric password needed for a user to join a team
 - `playtester` (BooleanField): A boolean to indicate if the team is a playtest team and will get early access
 - `playtest_start_date` (DateTimeField): The date/time at which a hunt will become available to the playtesters

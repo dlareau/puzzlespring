@@ -767,7 +767,6 @@ _Description:_ Displays Django messages as Bulma toast notifications.
 _Context Variables:_
 
 - `messages`: List of Django message objects to display
-- `DEFAULT_MESSAGE_LEVELS`: Django's message level constants
 
 
 
