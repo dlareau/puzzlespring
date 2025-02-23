@@ -30,19 +30,21 @@ To access and modify these settings:
 
 ### Team Settings
 
-- `NO_TEAMS_MODE`: If enabled, each user will be their own team
+- `TEAM_CUSTOM_DATA_NAME`: The name of the team custom data field
 
-    *Default: False • Type: Boolean*
+    *Default: "" • Type: String*
 
-- `TEAM_MEMBERS_CAN_SEE_NAMES`: If enabled, team members will be able to see users names on the team page
+- `TEAM_CUSTOM_DATA_DESCRIPTION`: The description of the team custom data field
 
-    *Default: True • Type: Boolean*
+    *Default: "" • Type: String*
 
 ### Hunt Display Settings
 
 - `SINGLE_HUNT_MODE`: If enabled, only one hunt will be visible and accessible
 
     *Default: False • Type: Boolean*
+
+    Note: This feature is not yet implemented.
 
 ### Puzzle Display Settings
 
@@ -81,5 +83,9 @@ To access and modify these settings:
     *Default: "" • Type: Image Field*
 
 - `EMBED_IMAGE`: The image displayed in embeds
+
+    *Default: "" • Type: Image Field*
+
+- `FAVICON`: The image displayed in the browser tab
 
     *Default: "" • Type: Image Field*

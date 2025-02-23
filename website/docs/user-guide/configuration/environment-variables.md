@@ -30,6 +30,10 @@ Environment variables can be set in multiple ways, including directly in your sy
 
     *Required: Yes • Type: String • Example: "my_password"*
 
+- `DATABASE_URL`: The database connection URL. If not set, it will be constructed using the DB_PASSWORD
+
+    *Required: No • Type: String • Example: "postgres://puzzlehunt:password@db/puzzlehunt"*
+
 ### Security Settings
 
 - `DJANGO_SECRET_KEY`: Django's secret key used for cryptographic signing
@@ -40,6 +44,14 @@ Environment variables can be set in multiple ways, including directly in your sy
 
     *Required: No • Default: False • Type: Boolean*
 
+- `ENABLE_DEBUG_TOOLBAR`: Enables Django Debug Toolbar for development
+
+    *Required: No • Default: False • Type: Boolean*
+
+- `ENFORCE_SSL`: Forces HTTPS connections when enabled
+
+    *Required: No • Default: False • Type: Boolean*
+
 {: .warning }
 > Never enable debug mode in production
 
@@ -47,18 +59,28 @@ Environment variables can be set in multiple ways, including directly in your sy
 
 - `DOMAIN`: The domain name where the application will be hosted
 
-    *Required: Yes • Type: String • Example: "localhost:80"*
+    *Required: Yes • Type: String • Example: "localhost"*
 
 - `HTTP_PORT`: The port number for HTTP traffic
 
-    *Required: Yes • Type: Integer • Example: 8000*
+    *Required: No • Default: 80 • Type: Integer • Example: 8000*
 
-- `HTTPS_PORT`: The port number for HTTPS traffic (optional)
+- `HTTPS_PORT`: The port number for HTTPS traffic
 
-    *Required: No • Type: Integer • Example: 443*
+    *Required: No • Default: 443 • Type: Integer • Example: 8443*
+
+### Performance and Caching
+
+- `ENABLE_REDIS_CACHE`: Enables Redis caching functionality
+
+    *Required: No • Default: True • Type: Boolean*
+
+- `ENABLE_MIGRATION_MANAGEMENT`: Controls whether database migrations are managed automatically
+
+    *Required: No • Default: True • Type: Boolean*
 
 ### Monitoring
 
-- `SENTRY_DSN`: The Data Source Name for Sentry error tracking (optional)
+- `SENTRY_DSN`: The Data Source Name for Sentry error tracking
 
     *Required: No • Type: String • Example: "https://some_long_hex_string@sentry.io/some_number"*

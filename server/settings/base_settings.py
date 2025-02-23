@@ -50,7 +50,7 @@ if os.environ.get('DOMAIN'):
 # CACHING
 # ====================
 
-REDIS_ENABLED = os.getenv("USE_REDIS_CACHE", str(not DEBUG)).lower() == "true"
+REDIS_ENABLED = os.getenv("ENABLE_REDIS_CACHE", str(not DEBUG)).lower() == "true"
 
 CACHES = {
     'default': {
