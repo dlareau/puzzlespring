@@ -12,7 +12,7 @@ This guide is a work in progress and is not yet complete.
 
 PuzzleSpring is designed with flexibility in mind, allowing you to host puzzle hunts without having to modify the source code. That isn't to say you can't, you're welcome to hack away at and turn PuzzleSpring into exactly what you need, but it is the goal of this platform that you won't have to. This is achieved through a flexible customization system that includes:
 
-- Uploaded files for puzzle content and styling
+- Uploading files for puzzle content and styling
 - The ability to provide your own templates that can layer on top of PuzzleSpring's base templates
 - Extensive configuration options in the admin interface
 
@@ -49,7 +49,7 @@ A Hunt object requires several key settings:
 - **Current Hunt**: Whether this is the active hunt
 
 {: .important }
-PuzzleSpring supports multiple hunts in order to allow organizations to archive past hunts and allow them to still be played, but only one can be the active "current hunt" at a time.
+PuzzleSpring supports multiple hunts in order to allow organizations to archive past hunts and allow them to still be played, but only one hunt can be the active "current hunt" at a time.
 
 Don't worry about the other settings for now, we'll cover them in a later section. You can go ahead and save the hunt and move on to the next step.
 
@@ -57,9 +57,12 @@ Don't worry about the other settings for now, we'll cover them in a later sectio
 
 After setting up your hunt, the next step is to create the puzzles. Each puzzle is created through the Django admin interface and requires several key pieces of information.
 
+{: .note }
+At this stage, focus on creating the basic puzzle structure. You'll add puzzle content and files in a later step.
+
 ### Basic Puzzle Information
 
-- **ID**: A unique 3-8 character hex string identifier.
+- **ID**: A unique 3-8 character hex string identifier used in URLs and configurations.
 - **Name**: The puzzle name shown to participants
 - **Order Number**: Position in the hunt (for sorting)
 - **Type**: One of:
@@ -83,66 +86,27 @@ Each puzzle has configurable answer validation settings:
 {: .warning }
 Make sure your answer validation settings match your answer format. For example, if your answer contains spaces, you must enable the "Allow Spaces" setting. Don't worry though, the admin interface will validate this for you.
 
-{: .note }
-At this stage, focus on creating the basic puzzle structure. You'll add puzzle content and files in a later step.
-
-## Customizing Puzzle Responses
-
-Each puzzle in PuzzleSpring can be configured with custom response settings to provide specific feedback for different answer submissions. This is particularly useful for giving hints or custom messages for common wrong answers.
-
-### Custom Response Messages
-
-You can set up custom responses for specific wrong answers using Python-style regex patterns:
-
-1. In the puzzle's admin page, find the "Auto Responses" section
-2. Add a new response with:
-   - **Regex**: A Python-style regex pattern to match against submissions
-   - **Text**: The response message to show when the pattern matches
-
-For example:
-```python
-# Match "hello"
-Regex: ^hello$
-Text: Almost there! Think about saying goodbye instead.
-
-# Match any answer containing "world"
-Regex: .*world.*
-Text: You're thinking globally, but this puzzle is more personal.
-```
-
-The system checks submissions against these patterns in order. If no pattern matches:
-- Correct answers receive the response "Correct"
-- Wrong answers receive the response "Wrong Answer."
-
-## Puzzle Files and Templates
+## Files and Templates
 
 PuzzleSpring supports multiple file types and templating options for both puzzles and solutions.
 
-### File Types
+### File Management Interface
 
-1. **HTML Files**: Full HTML pages to allow for custom styling and scripts
+Access the file management interface through:
+1. Staff Hunt Overview page → Files button (folder icon)
+2. Staff Puzzle Overview page → Files button (folder icon with "P")
+3. Staff Puzzle Overview page → Solution Files button (folder icon with "S")
 
-2. **PDF Files**: Embedded directly in the puzzle page
-
-3. **Template Files** (use custom file extension `.tmpl`): Fully custom django template with access to puzzle context
-
-### File Organization
-
-Each puzzle can have two sets of files:
-
-1. **Puzzle Files**:
-   - Main puzzle content (HTML, PDF, or template)
-   - Supporting files (images, stylesheets, scripts)
-   - Accessible while solving the puzzle
-
-2. **Solution Files**:
-   - Solution content (HTML, PDF, or template)
-   - Supporting files for the solution
-   - Only accessible after solving the puzzle
+For each file, you can:
+- Upload new files
+- Replace existing files
+- Set as main/CSS file (toggle switch)
+- Download files
+- Preview files (eye icon)
 
 {: .note }
-PuzzleSpring automatically protects puzzle files from being accessed before the related puzzle is unlocked.
-
+When linking to files from HTML or templates, use relative paths. For puzzle files, use the `puzzle_static` template tag.
+// TODO: consolidate on whether we should use the template tag or not
 
 ### Hunt-wide Templates
 
@@ -176,29 +140,31 @@ When using template files, you have access to:
    solved: List of solved puzzles
    ```
 
-### File Management Interface
+### File Types
 
-Access the file management interface through:
-1. Staff Hunt Overview page → Files button (folder icon)
-2. Staff Puzzle Overview page → Files button (folder icon with "P")
-3. Staff Puzzle Overview page → Solution Files button (folder icon with "S")
+1. **HTML Files**: Full HTML pages to allow for custom styling and scripts
 
-For each file, you can:
-- Upload new files
-- Replace existing files
-- Set as main/CSS file (toggle switch)
-- Download files
-- Preview files (eye icon)
+2. **PDF Files**: Embedded directly in the puzzle page
+
+3. **Template Files** (use custom file extension `.tmpl`): Fully custom django template with access to puzzle context
+
+### File Organization
+
+Each puzzle can have two sets of files:
+
+1. **Puzzle Files**:
+   - Main puzzle content (HTML, PDF, or template)
+   - Supporting files (images, stylesheets, scripts)
+   - Accessible while solving the puzzle
+
+2. **Solution Files**:
+   - Solution content (HTML, PDF, or template)
+   - Supporting files for the solution
+   - Only accessible after solving the puzzle
 
 {: .note }
-When linking to files from HTML or templates, use relative paths. For puzzle files, use the `puzzle_static` template tag.
-// TODO: consolidate on whether we should use the template tag or not
+PuzzleSpring automatically protects puzzle files from being accessed before the related puzzle is unlocked.
 
-Below the template and CSS file section, there is an option to upload an Info Page file. This file, which can be a Django template, serves as the hunt's general information page. It typically contains details such as an FAQ and other relevant information. This page is generally accessible before the hunt begins.
-
-At the bottom of the Hunt page, there is a section for Team Ranking Rules. This determines the leaderboard order and is also used in various places throughout the site to visualize team standings. You can choose an ordering method and specify whether each ranking statistic should be visible on the leaderboard.
-
-Beyond setting up your hunt, you can also configure general site settings. The most notable site-wide configuration is the addition of Info Pages. These are extra informational pages, such as resources or FAQs, that appear in the top navigation bar. You can create them through the Django admin in the Info Page section. Here, you can define the URL, title, and content of each page. The content can be a Django template, allowing for dynamic rendering.
 
 ## Pre-Puzzles
 
@@ -253,6 +219,34 @@ PuzzleSpring uses a powerful domain-specific language to configure puzzle unlock
    - Consider multiple paths to progress
    - Balance point requirements
    - Test unlocking sequences thoroughly
+
+## Customizing Puzzle Responses
+
+Each puzzle in PuzzleSpring can be configured with custom response settings to provide specific feedback for different answer submissions. This is particularly useful for giving hints or custom messages for common wrong answers.
+
+### Custom Response Messages
+
+You can set up custom responses for specific wrong answers using Python-style regex patterns:
+
+1. In the puzzle's admin page, find the "Auto Responses" section
+2. Add a new response with:
+   - **Regex**: A Python-style regex pattern to match against submissions
+   - **Text**: The response message to show when the pattern matches
+
+For example:
+```python
+# Match "hello"
+Regex: ^hello$
+Text: Almost there! Think about saying goodbye instead.
+
+# Match any answer containing "world"
+Regex: .*world.*
+Text: You're thinking globally, but this puzzle is more personal.
+```
+
+The system checks submissions against these patterns in order. If no pattern matches:
+- Correct answers receive the response "Correct"
+- Wrong answers receive the response "Wrong Answer."
 
 
 ## Hints and Hint Management
@@ -322,3 +316,9 @@ When using both pools, configure how hints are allocated:
 2. **Hint Type Split**:
    - Canned hints use puzzle pool
    - Custom hints use global pool
+
+Below the template and CSS file section, there is an option to upload an Info Page file. This file, which can be a Django template, serves as the hunt's general information page. It typically contains details such as an FAQ and other relevant information. This page is generally accessible before the hunt begins.
+
+At the bottom of the Hunt page, there is a section for Team Ranking Rules. This determines the leaderboard order and is also used in various places throughout the site to visualize team standings. You can choose an ordering method and specify whether each ranking statistic should be visible on the leaderboard.
+
+Beyond setting up your hunt, you can also configure general site settings. The most notable site-wide configuration is the addition of Info Pages. These are extra informational pages, such as resources or FAQs, that appear in the top navigation bar. You can create them through the Django admin in the Info Page section. Here, you can define the URL, title, and content of each page. The content can be a Django template, allowing for dynamic rendering.

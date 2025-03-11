@@ -47,6 +47,16 @@ class PuzzlehuntUserAdmin(admin.ModelAdmin):
     add_fieldsets = (
         (None, {"classes": ("wide",), "fields": ("display_name", "password1", "password2")}),
     )
+    
+    def save_model(self, request, obj, form, change):
+        """
+        Save the user model and correctly handle password changes.
+        """
+        # Handle password change for both new users and existing users
+        if ('password' in form.changed_data or not change) and 'password' in form.cleaned_data:
+            obj.set_password(form.cleaned_data["password"])
+        
+        super().save_model(request, obj, form, change)
 
 
 class TeamRankingRuleInline(admin.TabularInline):
@@ -359,7 +369,7 @@ class FlatPageProxyAdmin(FlatPageAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(FlatPageAdmin, self).get_form(request, obj, **kwargs)
-        form.base_fields['sites'].initial = Site.objects.get(pk=1)
+        form.base_fields['sites'].initial = Site.objects.filter(pk=1)
         form.base_fields['content'].widget = AceEditorWidget(attrs={
             'style': 'width:90%;',
         })
