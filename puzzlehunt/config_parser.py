@@ -126,21 +126,31 @@ def parse_config(config_str, puzzle_ids):
     try:
         config = parse(config_str.upper(), ConfigFile, comment=comment_sh)
     except SyntaxError as e:
-        error_msg = str(e)
-        # Extract line number from error message
-        line_num = None
-        if "(line " in error_msg:
+        lines = config_str.split('\n')
+        bad_line = None
+        for line_num, line in enumerate(lines):
             try:
-                line_num = int(error_msg.split("(line ")[1].split(")")[0])
-            except:
-                pass
+                config_test = parse(line.upper(), ConfigFile, comment=comment_sh)
+            except SyntaxError as e:
+                error_msg = str(e)
+                bad_line = line_num + 1
+                break
+
+        if bad_line is None:
+            error_msg = str(e)
+            # Extract line number from error message
+            if "(line " in error_msg:
+                try:
+                    bad_line = int(error_msg.split("(line ")[1].split(")")[0])
+                except:
+                    pass
 
         # If we have a line number, show the problematic line
         context = ""
-        if line_num is not None:
+        if bad_line is not None:
             lines = config_str.split('\n')
-            if 0 <= line_num - 1 < len(lines):
-                context = f"on line {line_num}:\n{lines[line_num-1]}"
+            if 0 <= bad_line - 1 < len(lines):
+                context = f"on line {bad_line}:\n{lines[bad_line-1]}"
 
         # The error message will now use the friendly names from __str__ methods
         error_msg = f"Syntax error in configuration {context}"
