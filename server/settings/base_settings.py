@@ -263,7 +263,8 @@ CRISPY_FAIL_SILENTLY = not DEBUG
 
 # Impersonation
 IMPERSONATE = {
-    'REQUIRE_SUPERUSER': True
+    'REQUIRE_SUPERUSER': True,
+    'ADMIN_DELETE_PERMISSION': True,
 }
 
 # Eventstream
