@@ -8,7 +8,7 @@
 
 [![codecov](https://codecov.io/gh/dlareau/puzzlespring/branch/main/graph/badge.svg?token=SR3OTINTUO)](https://codecov.io/gh/dlareau/puzzlespring)
 [![GitHub License](https://img.shields.io/github/license/dlareau/puzzlespring)
-](https://github.com/puzzlespring/puzzlespring/blob/main/LICENSE)
+](https://github.com/dlareau/puzzlespring/blob/main/LICENSE)
 
   <p>
     <a href="https://www.puzzlespring.com/docs">Documentation</a> |
