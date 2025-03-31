@@ -320,9 +320,9 @@ def hunt_leaderboard(request, hunt):
 
 def hunt_updates(request, hunt):
     updates = hunt.update_set
-    if not config.SHOW_UPDATE_FOR_LOCKED_PUZZLES:
-        team = hunt.team_from_user(request.user)
-        updates = updates.filter(puzzle__in=team.unlocked_puzzles().all()) | updates.filter(puzzle__isnull=True)
+#    if not config.SHOW_UPDATE_FOR_LOCKED_PUZZLES:
+#        team = hunt.team_from_user(request.user)
+#        updates = updates.filter(puzzle__in=team.unlocked_puzzles().all()) | updates.filter(puzzle__isnull=True)
 
     updates = updates.all().order_by('time')
     return render(request, "updates.html", {"updates": updates})
