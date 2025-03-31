@@ -83,7 +83,7 @@ exit
 
 ```bash
 # Clone the repository
-git clone https://github.com/puzzlespring/puzzlespring.git
+git clone https://github.com/dlareau/puzzlespring.git
 cd puzzlespring
 
 # Configure environment variables

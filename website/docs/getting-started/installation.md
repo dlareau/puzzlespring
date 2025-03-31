@@ -19,7 +19,7 @@ This guide provides detailed instructions for installing and configuring PuzzleS
 
 1. Clone the repository:
    ``` bash
-   git clone https://github.com/puzzlespring/puzzlespring.git
+   git clone https://github.com/dlareau/puzzlespring.git
    cd puzzlespring
    ```
 

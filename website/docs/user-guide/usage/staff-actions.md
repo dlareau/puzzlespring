@@ -2,7 +2,6 @@
 layout: default
 title: Staff Actions
 parent: Usage
-grand_parent: Usage
 nav_order: 2
 ---
 
