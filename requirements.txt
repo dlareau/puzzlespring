@@ -20,6 +20,6 @@ gunicorn
 psycopg2==2.9.*
 redis>=4.0.0
 huey>=2.4.0
-django-anymail
+django-anymail[amazon-ses]
 python3-openid
 sentry-sdk
