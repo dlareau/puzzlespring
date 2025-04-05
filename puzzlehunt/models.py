@@ -103,6 +103,15 @@ class OverwriteStorage(FileSystemStorage):
 
     def url(self, name):
         return settings.PROTECTED_URL + name
+    
+    def _save(self, name, content):
+        result = super(OverwriteStorage, self)._save(name, content)
+        if name.endswith('.tmpl') or name.endswith('.html'):
+            from puzzlehunt.utils import invalidate_template_cache
+            template_path = name.removeprefix("trusted/")
+            invalidate_template_cache(template_path)
+        return result
+        
 
 
 def get_media_file_path(instance, filename):
@@ -149,9 +158,6 @@ class MediaFile(models.Model):
     @property
     def extension(self):
         return self.file.name.split(".")[-1]
-
-    # TODO: Delete file on deletion
-    # TODO: Maybe make unique based on filepath with overwrite behavior?
 
     def __str__(self):
         return self.file.name.removeprefix("trusted/")
