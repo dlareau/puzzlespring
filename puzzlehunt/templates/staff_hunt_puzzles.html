@@ -49,27 +49,40 @@
         </div>
         <div class="column is-narrow">
           <div>
-            <button class="button mr-1" @click="openFiles = !openFiles; openStats = false; openSolFiles = false;" :class="openFiles && 'is-primary'">
+            <button class="button mr-1 has-tooltip-arrow has-tooltip-top"
+                    data-tooltip="Manage Puzzle Files"
+                    @click="openFiles = !openFiles; openStats = false; openSolFiles = false;"
+                    :class="openFiles && 'is-primary'">
               <span class="icon is-small">
                 <i class="fa fa-lg fa-folder-open">P</i>
               </span>
             </button>
-            <button class="button mr-1" @click="openSolFiles = !openSolFiles; openStats = false; openFiles = false;" :class="openSolFiles && 'is-primary'">
+            <button class="button mr-1 has-tooltip-arrow has-tooltip-top"
+                    data-tooltip="Manage Solution Files"
+                    @click="openSolFiles = !openSolFiles; openStats = false; openFiles = false;"
+                    :class="openSolFiles && 'is-primary'">
               <span class="icon is-small">
                 <i class="fa fa-lg fa-folder-open">S</i>
               </span>
             </button>
-            <button class="button mr-1" @click="openStats = !openStats; openFiles = false; openSolFiles = false;" :class="openStats && 'is-primary'">
+            <button class="button mr-1 has-tooltip-arrow has-tooltip-top"
+                    data-tooltip="View Puzzle Statistics"
+                    @click="openStats = !openStats; openFiles = false; openSolFiles = false;"
+                    :class="openStats && 'is-primary'">
               <span class="icon is-small">
                 <i class="fa fa-lg fa-bar-chart-o"></i>
               </span>
             </button>
-            <a href="{% url 'admin:puzzlehunt_puzzle_change' puzzle.id %}" class="button mr-1">
+            <a href="{% url 'admin:puzzlehunt_puzzle_change' puzzle.id %}"
+               class="button mr-1 has-tooltip-arrow has-tooltip-top"
+               data-tooltip="Edit Puzzle">
               <span class="icon is-small">
                 <i class="fa fa-lg fa-pencil"></i>
               </span>
             </a>
-            <a href="{% url 'puzzlehunt:puzzle_view' puzzle.pk %}" class="button">
+            <a href="{% url 'puzzlehunt:puzzle_view' puzzle.pk %}"
+               class="button has-tooltip-arrow has-tooltip-top"
+               data-tooltip="Preview Puzzle">
               <span class="icon is-small">
                 <i class="fa fa-lg fa-eye"></i>
               </span>

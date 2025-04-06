@@ -12,7 +12,7 @@
   <div class="panel-block" style="justify-content: space-between">
     <div> {{ parent_type|capfirst }} File name</div>
     <div>
-      <span style="margin-right: 85px">{% if parent_type == "hunt" %} CSS {% else %} Main {% endif %}</span>
+      <span style="margin-right: 85px">{% if parent_type == "hunt" %} Main CSS {% else %} Main {% endif %}</span>
       <span style="margin-right: 40px">Actions</span>
     </div>
   </div>
@@ -43,7 +43,9 @@
                hx-post="{% url 'puzzlehunt:staff:file_replace' parent_type file.id %}"
                hx-encoding="multipart/form-data"
         >
-        <label class="button is-small ml-1" for="replaceFile-{{ parent_type }}-{{ file.id }}"
+        <label class="button is-small ml-1 has-tooltip-arrow has-tooltip-top" 
+               data-tooltip="Replace File"
+               for="replaceFile-{{ parent_type }}-{{ file.id }}"
              {% if swapped_pk == file.pk %}
                x-data="{ success: true }" x-init="setTimeout(() => success = false, 3000)"
                :class="success && 'is-success'"
@@ -54,11 +56,14 @@
           <i class="fa fa-lg" :class="success ? 'fa-check-circle-o' : 'fa-refresh'" aria-hidden="true"></i>
         </label>
 
-        <a class="button is-small ml-1" href="{% url 'puzzlehunt:staff:file_download' parent_type file.id %}" download>
+        <a class="button is-small ml-1 has-tooltip-arrow has-tooltip-top" 
+           data-tooltip="Download File"
+           href="{% url 'puzzlehunt:staff:file_download' parent_type file.id %}" download>
           <i class="fa fa-lg fa-download" aria-hidden="true"></i>
         </a>
 
-        <button class="button is-small ml-1 is-danger is-outlined"
+        <button class="button is-small ml-1 is-danger is-outlined has-tooltip-arrow has-tooltip-top"
+                data-tooltip="Delete File"
                 hx-post="{% url 'puzzlehunt:staff:file_delete' parent_type file.id %}"
                 hx-confirm="Are you sure?"
         >
