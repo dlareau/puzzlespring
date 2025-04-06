@@ -69,6 +69,7 @@ def create_media_files(parent_object, file, is_solution_file=False):
     if file is None:
         return "No file!"
     media_file_model = get_media_file_model_from_object(parent_object, is_solution_file)
+    created_files = []
 
     file_type = file.content_type
     if file_type == "application/zip" or file_type == "application/x-zip-compressed":
@@ -77,8 +78,8 @@ def create_media_files(parent_object, file, is_solution_file=False):
             for file_name in files:
                 if file_name.startswith("__MACOSX/") or zipfile.Path(root=zip_ref, at=file_name).is_dir():
                     continue
-                current_file = media_file_model.objects.filter(
-                    file=f"{media_file_model.save_path}/{parent_object.id}/files/{file_name}").all()
+                file_path = f"trusted/{media_file_model.save_path}/{parent_object.id}/files/{file_name}"
+                current_file = media_file_model.objects.filter(file=file_path).all()
                 current_file.delete()
 
                 with zip_ref.open(file_name) as new_file:
@@ -86,9 +87,21 @@ def create_media_files(parent_object, file, is_solution_file=False):
                         buf.write(new_file.read())
                         buf.seek(0)
                         django_file = File(buf, file_name)
-                        media_file_model.objects.create(file=django_file, parent=parent_object)
+                        created_files.append(media_file_model.objects.create(file=django_file, parent=parent_object))
     else:
-        media_file_model.objects.create(file=file, parent=parent_object)
+        # For single file uploads, check if a file with the same name already exists
+        file_name = file.name
+        file_path = f"trusted/{media_file_model.save_path}/{parent_object.id}/files/{file_name}"
+        existing_file = media_file_model.objects.filter(file=file_path).first()
+        
+        if existing_file:
+            # Delete the existing file to avoid unique constraint violation
+            existing_file.delete()
+        
+        # Create a new file with the updated content
+        created_files.append(media_file_model.objects.create(file=file, parent=parent_object))
+
+    return created_files
 
 
 class HuntConverter:
@@ -489,3 +502,37 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                     new_hunt.prepuzzle.save()
 
             return new_hunt
+
+# Template cache utilities
+def invalidate_template_cache(template_name):
+    """
+    Invalidate the template cache for a specific template.
+    This is done by incrementing the template version in Redis.
+    
+    Args:
+        template_name: The name of the template to invalidate
+    
+    Returns:
+        bool: True if the invalidation was successful (RedisVersionedLoader was used),
+              False otherwise.
+    """
+    from django.template import engines
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.debug(f"Attempting to invalidate template cache for: '{template_name}'")
+    
+    # Check if we're using our RedisVersionedLoader
+    engine = engines['django']
+    for loader in engine.engine.template_loaders:
+        # Find our custom loader
+        if hasattr(loader, 'increment_template_version'):
+            loader.increment_template_version(template_name)
+            return True
+    
+    # If we didn't find our RedisVersionedLoader, log a warning and return False
+    logger.warning(
+        "Template cache invalidation was requested but RedisVersionedLoader is not configured. "
+        "Cannot invalidate templates across all workers."
+    )
+    return False

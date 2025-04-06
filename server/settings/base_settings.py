@@ -181,8 +181,11 @@ develop_loaders = [
     "django.template.loaders.app_directories.Loader",
 ]
 production_loaders = [
-    # TODO: We many want to write a custom loader that allows invalidation of template caches
-    ("django.template.loaders.cached.Loader", [
+    # A custom loader that allows invalidation of template caches via Redis
+    ("puzzlehunt.template_loaders.RedisVersionedLoader", [
+        "django.template.loaders.filesystem.Loader",
+        "django.template.loaders.app_directories.Loader",
+    ]) if REDIS_ENABLED else ("django.template.loaders.cached.Loader", [
         "django.template.loaders.filesystem.Loader",
         "django.template.loaders.app_directories.Loader",
     ])
@@ -263,7 +266,8 @@ CRISPY_FAIL_SILENTLY = not DEBUG
 
 # Impersonation
 IMPERSONATE = {
-    'REQUIRE_SUPERUSER': True
+    'REQUIRE_SUPERUSER': True,
+    'ADMIN_DELETE_PERMISSION': True,
 }
 
 # Eventstream

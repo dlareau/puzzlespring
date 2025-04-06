@@ -58,7 +58,7 @@ If your domain's DNS is already managed by DigitalOcean:
 
 ### Option B: Domain Managed by Another Provider
 
-If your domain is managed by another provider (like Namecheap, GoDaddy, Google Domains, etc.):
+If your domain is managed by another provider (like Namecheap, Cloudflare, Google Domains, etc.):
 
 1. Log in to your domain registrar's website
 2. Navigate to the DNS management section
@@ -91,7 +91,7 @@ Once connected to your droplet, follow these steps to deploy PuzzleSpring:
 1. Clone the PuzzleSpring repository:
 
 ```bash
-git clone https://github.com/puzzlespring/puzzlespring.git
+git clone https://github.com/dlareau/puzzlespring.git
 cd puzzlespring
 ```
 
@@ -192,5 +192,5 @@ This operation requires a brief downtime while the droplet restarts.
 If you encounter issues not covered in this guide:
 
 - Check the [PuzzleSpring documentation](https://www.puzzlespring.com/docs)
-- Look for similar issues in the [GitHub repository](https://github.com/puzzlespring/puzzlespring/issues)
+- Look for similar issues in the [GitHub repository](https://github.com/dlareau/puzzlespring/issues)
 

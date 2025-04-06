@@ -28,7 +28,7 @@ class ConversionContext:
             input_media_directory=os.path.join(old_data_dir, "media"),
             output_data_directory=output_dir,
             output_media_directory=os.path.join(output_dir, "media"),
-            models_file=os.path.join(old_data_dir, 'db_09_2023.json'),
+            models_file=os.path.join(old_data_dir, 'db.json'),
             output_file=os.path.join(output_dir, "converted_data.json")
         )
 
@@ -36,7 +36,36 @@ def rewrite_models(ctx: ConversionContext):
     """Main conversion function using shared context"""
     with open(ctx.models_file) as f:
         data = json.load(f)
-
+    
+    # Define the order for processing models
+    model_order = [
+        "auth.user",
+        "sites.site",
+        "flatpages.flatpage",
+        "huntserver.hunt",
+        "huntserver.puzzle",
+        "huntserver.prepuzzle",
+        "huntserver.team",
+        "huntserver.person",
+        "huntserver.submission",
+        "huntserver.solve",
+        "huntserver.unlock",
+        "huntserver.message",
+        "huntserver.response",
+        "huntserver.hint",
+        "huntserver.hintunlockplan",
+        "huntserver.huntassetfile",
+        "admin.logentry"
+    ]
+    
+    # Create a mapping of model types to their positions in the order
+    model_position = {model: i for i, model in enumerate(model_order)}
+    
+    # Sort the data array based on the model order
+    # Items not in the order list will go at the end
+    data.sort(key=lambda x: model_position.get(x.get('model', ''), float('inf')))
+    
+    # Continue with the original function
     output = []
     submissions = {}
     users = {}
@@ -46,6 +75,7 @@ def rewrite_models(ctx: ConversionContext):
     hunt_ids = []
     solves = {}
     emails = []
+    email_map = {}
     team_members = defaultdict(list)
     reverse_pk_mapping = {}  # puzzle_id -> old pk
     
@@ -112,7 +142,7 @@ def rewrite_models(ctx: ConversionContext):
             model_instance['model'] = "puzzlehunt.hint"
             model_instance['fields']['puzzle'] = ctx.puzzle_pk_mapping[model_instance['fields']['puzzle']]
             if model_instance['fields']['responder'] is not None:
-                username = people[model_instance['fields']['responder']]['fields']['user'][0]
+                username = people[model_instance['fields']['responder']]['fields']['user']
                 model_instance['fields']['responder'] = users[username]['pk']
         elif model == "huntserver.submission":
             model_instance['model'] = "puzzlehunt.submission"
@@ -140,7 +170,7 @@ def rewrite_models(ctx: ConversionContext):
             # Models that aren't carried over but still need data extracted
             if model == "huntserver.person":
                 for t in model_instance['fields']['teams']:
-                    team_members[t].append(users[model_instance['fields']['user'][0]]['pk'])
+                    team_members[t].append(users[model_instance['fields']['user']]['pk'])
                 people[model_instance['pk']] = model_instance
             elif model == "huntserver.solve":
                 solves[(model_instance['fields']['team'], model_instance['fields']['puzzle'])] = \
@@ -154,12 +184,13 @@ def rewrite_models(ctx: ConversionContext):
                         model_instance['fields']['email'] = str(random.randint(0, 1000))
                     else:
                         model_instance['fields']['email'] = f"{email.split('@')[0]}+{str(random.randint(0, 10000))}@{email.split('@')[1]}"
-                    print(f"Duplicate email: {email}. New email: {model_instance['fields']['email']}")
-                emails.append(email)
+                    print(f"Duplicate email: {email} for display name {model_instance['fields']['username']} Original: {email_map[email]}. New email: {model_instance['fields']['email']}")
+                emails.append(model_instance['fields']['email'])
+                email_map[model_instance['fields']['email']] = model_instance['fields']['username']
 
                 model_instance['fields']['display_name'] = model_instance['fields']['username']
                 del model_instance['fields']['username']
-                users[model_instance['fields']['display_name']] = model_instance
+                users[model_instance['pk']] = model_instance
             elif model == "huntserver.hintunlockplan":
                 pass
             continue  # Don't carry over these models
@@ -347,7 +378,8 @@ def rewrite_team(model_instance: Dict):
         'unlockables',
         'location',
         'num_waiting_messages',
-        'num_unlock_points'
+        'num_unlock_points',
+        'is_local'
     ]
     for field in fields_to_remove:
         model_instance['fields'].pop(field, None)
@@ -374,6 +406,7 @@ def rewrite_prepuzzle(model_instance: Dict, ctx: ConversionContext):
     os.makedirs(os.path.dirname(template_filename), exist_ok=True)
     with open(template_filename, 'w') as f:
         f.write(template_contents)
+    print(f"Adding media file with pk {len(ctx.media_files) + 1}")
 
     # Create media file entry
     new_media_file = {

@@ -4,6 +4,8 @@
 @context:
   parent: The parent object (Puzzle or Hunt) owning the files
   parent_type: String indicating the type of parent ('puzzle', 'solution', or 'hunt')
+  swapped_pk: Optional - The primary key of a file that was just replaced
+  uploaded_pks: Optional - The primary keys of files that were just uploaded
 {% endcomment %}
 
 <nav id="file-nav-{{ parent_type }}-{{ parent.pk }}" class="panel is-primary" hx-target="#file-nav-{{ parent_type }}-{{ parent.pk }}" hx-swap="outerHTML">
@@ -20,7 +22,14 @@
         <span class="panel-icon">
           <i class="fa fa-book" aria-hidden="true"></i>
         </span>
-        {{ file.relative_name }}
+        {% if uploaded_pks and file.pk in uploaded_pks %}
+        <span x-data="{ fresh: true }" x-init="setTimeout(() => fresh = false, 3000)" :class="fresh ? 'has-text-success' : ''">
+          {{ file.relative_name }}
+          <i x-show="fresh" class="fa fa-check ml-1" aria-hidden="true"></i>
+        </span>
+        {% else %}
+          {{ file.relative_name }}
+        {% endif %}
       </div>
       <div>
         <input id="main-toggle-{{ parent_type }}-{{parent.id}}-{{ forloop.counter }}" class="switch"

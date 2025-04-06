@@ -755,6 +755,12 @@ def file_replace(request, parent_type, pk):
         for chunk in uploaded_file.chunks():
             existing_file.write(chunk)
     file.save()
+    
+    # Manually invalidate template cache if it's a template file
+    if file.file.name.endswith('.tmpl'):
+        from puzzlehunt.utils import invalidate_template_cache
+        template_path = file.file.name.removeprefix("trusted/")
+        invalidate_template_cache(template_path)
 
     context = {'parent': file.parent, 'swapped_pk': file.pk, 'parent_type': parent_type}
     return render(request, "partials/_staff_file_list.html", context)
@@ -815,8 +821,8 @@ def file_upload(request, parent_type, pk):
     model = get_media_file_parent_model(parent_type)
     parent = get_object_or_404(model, pk=pk)
 
-    create_media_files(parent, request.FILES.get('uploadFile', None), parent_type == "solution")
-    context = {'parent': parent, 'parent_type': parent_type}
+    created_files = create_media_files(parent, request.FILES.get('uploadFile', None), parent_type == "solution")
+    context = {'parent': parent, 'parent_type': parent_type, 'uploaded_pks': [f.pk for f in created_files]}
     return render(request, "partials/_staff_file_list.html", context)
 
 
