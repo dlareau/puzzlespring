@@ -1,4 +1,4 @@
-{$DOMAIN} {
+{$DOMAIN}, puzzlehunt.club.cc.cmu.edu, www.puzzlehunt.club {
     # Handle SSE endpoints through pushpin
     handle /sse/* {
         reverse_proxy pushpin:7999 {
