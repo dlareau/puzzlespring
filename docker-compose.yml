@@ -1,6 +1,6 @@
 x-environment: &base_env
   - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
-  - DJANGO_SETTINGS_MODULE=server.settings.base_settings
+  - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-server.settings.base_settings}
   - DATABASE_URL=${DATABASE_URL:-postgres://puzzlehunt:${DB_PASSWORD}@db/puzzlehunt}
   - DJANGO_ENABLE_DEBUG=${DJANGO_ENABLE_DEBUG:-}
   - DOMAIN=${DOMAIN:-}
