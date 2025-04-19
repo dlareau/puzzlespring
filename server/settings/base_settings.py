@@ -210,7 +210,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
             ],
-            'loaders': develop_loaders if DEBUG else production_loaders,
+            'loaders': production_loaders, #develop_loaders if DEBUG else production_loaders,
         },
     },
 ]

@@ -538,9 +538,11 @@ def hunt_template(request, hunt):
 @staff_member_required
 def preview_template(request, hunt):
     template_text = request.POST.get("template_text", "")
-    solved = [int(x) for x in request.POST.get("solved", "").split(",")]
+    solved_arg = request.POST.get("solved", "")
+    solved = [] if solved_arg == "" else [int(x) for x in solved_arg.split(",")]
 
-    unlocked = [int(x) for x in request.POST.get("unlocked", "").split(",")]
+    unlocked_arg = request.POST.get("unlocked", "")
+    unlocked = [] if unlocked_arg == "" else [int(x) for x in unlocked_arg.split(",")]
     puzzle_list = hunt.puzzle_set.filter(order_number__in=unlocked)
     puzzles = sorted(puzzle_list, key=lambda p: p.order_number)
 

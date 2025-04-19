@@ -102,7 +102,10 @@ def puzzle_solution(request, pk):
         response = render(request, puzzle.main_solution_file.file.name.removeprefix("trusted/"), context)
         response['X-Robots-Tag'] = 'noindex'
         return response
+<<<<<<< HEAD
 
+=======
+>>>>>>> live-fixes
 
 @require_POST
 @transaction.atomic
@@ -278,10 +281,7 @@ def hunt_view(request, hunt):
     # Hunt has not yet started
     elif hunt.is_locked:
         # TODO: This is rather prescriptive behavior, consider changing
-        if hunt.is_day_of_hunt:
-            return render(request, 'access_error.html', {'reason': "hunt"})
-        else:
-            return hunt_prepuzzle(request, hunt)
+        return hunt_prepuzzle(request, hunt)
 
     # Hunt has started
     elif hunt.is_open:
