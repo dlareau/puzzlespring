@@ -95,10 +95,13 @@ def puzzle_solution(request, pk):
         return render(request, 'access_error.html', {'reason': "puzzle"})
     context = {"puzzle": puzzle}
     if puzzle.main_solution_file is None or not puzzle.main_solution_file.extension == "tmpl":
-        return render(request, "puzzle_solution.html", context)
+        response = render(request, "puzzle_solution.html", context)
+        response['X-Robots-Tag'] = 'noindex'
+        return response
     else:
-        return render(request, puzzle.main_solution_file.file.name.removeprefix("trusted/"), context)
-
+        response = render(request, puzzle.main_solution_file.file.name.removeprefix("trusted/"), context)
+        response['X-Robots-Tag'] = 'noindex'
+        return response
 
 @require_POST
 @transaction.atomic
@@ -274,10 +277,7 @@ def hunt_view(request, hunt):
     # Hunt has not yet started
     elif hunt.is_locked:
         # TODO: This is rather prescriptive behavior, consider changing
-        if hunt.is_day_of_hunt:
-            return render(request, 'access_error.html', {'reason': "hunt"})
-        else:
-            return hunt_prepuzzle(request, hunt)
+        return hunt_prepuzzle(request, hunt)
 
     # Hunt has started
     elif hunt.is_open:
@@ -320,9 +320,14 @@ def hunt_leaderboard(request, hunt):
 
 def hunt_updates(request, hunt):
     updates = hunt.update_set
-#    if not config.SHOW_UPDATE_FOR_LOCKED_PUZZLES:
-#        team = hunt.team_from_user(request.user)
-#        updates = updates.filter(puzzle__in=team.unlocked_puzzles().all()) | updates.filter(puzzle__isnull=True)
+    if config.SHOW_UPDATE_FOR_LOCKED_PUZZLES or request.user.is_staff or hunt.is_public:
+        pass
+    else:
+        team = hunt.team_from_user(request.user)
+        if team is not None:
+            updates = updates.filter(puzzle__in=team.unlocked_puzzles().all()) | updates.filter(puzzle__isnull=True)
+        else:
+            updates = Update.objects.none()
 
     updates = updates.all().order_by('time')
     return render(request, "updates.html", {"updates": updates})
