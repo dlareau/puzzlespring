@@ -17,7 +17,7 @@
    href="{% url 'puzzlehunt:team_view' team.pk %}"
 >
   <span style="display: inline-block">{{ team.short_name }}</span>
-  <span style="display: inline-block">[ {{ team.hunt.name }} ]</span>
+  <span class="is-size-7" style="display: inline-block">[ {{ team.hunt.name }} ]</span>
 </a>
 
 {% crispy form %}

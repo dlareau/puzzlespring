@@ -225,6 +225,7 @@ CONSTANCE_CONFIG = {
     'SITE_TITLE': ('PuzzleSpring', 'The title of the site'),
     'TEAM_CUSTOM_DATA_NAME': ('', 'The name of the team custom data field'),
     'TEAM_CUSTOM_DATA_DESCRIPTION': ('', 'The description of the team custom data field'),
+    'TEAM_CUSTOM_DATA_TYPE': ('text', 'The type of the team custom data field', 'team_data_type'),
     
     # Hunt Display Settings
     'SINGLE_HUNT_MODE': (False, 'If enabled, only one hunt will be visible and accessible'), # Not yet implemented
@@ -254,7 +255,11 @@ CONSTANCE_ADDITIONAL_FIELDS = {
     }],
     'image_field': ['django.forms.ImageField', {
         'widget': 'puzzlehunt.widgets.ImageWidget',
-    }]
+    }],
+    'team_data_type': ['django.forms.fields.ChoiceField', {
+        'widget': 'django.forms.Select',
+        'choices': (('text', 'Text Input'), ('boolean', 'Checkbox')),
+    }],
 }
 CONSTANCE_BACKEND = 'constance.backends.database.DatabaseBackend'
 CONSTANCE_DATABASE_CACHE_BACKEND = 'default'

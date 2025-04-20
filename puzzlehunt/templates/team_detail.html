@@ -28,7 +28,8 @@
                     href="{% url 'puzzlehunt:team_view' current_team.pk %}"
                     id="team-menu-link-{{ current_team.pk }}"
                 >
-                  {{ current_team.name }}
+                  <span style="display: inline-block">{{ current_team.short_name }}</span>
+                  <span class="is-size-7" style="display: inline-block">[ {{ current_team.hunt.name }} ]</span>
                 </a>
               {% else %}
                 <a {% if current_team == team %} class="is-active" {% endif %}

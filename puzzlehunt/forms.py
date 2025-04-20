@@ -1,12 +1,13 @@
 import re
 
-from crispy_bulma.layout import Submit, FormGroup
+from crispy_bulma.layout import Submit, FormGroup, Field as BulmaField
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, Div
 from django.conf import settings
 from django.forms import (
     ModelForm, Form, CharField, FileField, 
-    TextInput, MultipleChoiceField, CheckboxSelectMultiple
+    TextInput, MultipleChoiceField, CheckboxSelectMultiple,
+    BooleanField, CheckboxInput
 )
 from django.contrib.auth.forms import ValidationError
 from django.urls import reverse
@@ -40,13 +41,40 @@ class TeamForm(ModelForm):
         else:
             self.fields['custom_data'].label = config.TEAM_CUSTOM_DATA_NAME
             self.fields['custom_data'].help_text = config.TEAM_CUSTOM_DATA_DESCRIPTION
-            layout_fields = [
-                'name',
-                Div(
-                    Div(Field('custom_data'), css_class="level-left"),
-                    css_class="level"
-                ),
-            ]
+            
+            # Handle different field types
+            if config.TEAM_CUSTOM_DATA_TYPE == 'boolean':
+                # Convert the field to a BooleanField
+                self.fields['custom_data'] = BooleanField(
+                    required=False,
+                    label=config.TEAM_CUSTOM_DATA_NAME,
+                    help_text=config.TEAM_CUSTOM_DATA_DESCRIPTION
+                )
+                # Convert stored string value to boolean if it exists
+                if self.instance.custom_data:
+                    self.initial['custom_data'] = self.instance.custom_data.lower() == 'true'
+                
+                # Create a custom template for the switch
+                switch_field = BulmaField(
+                    'custom_data',
+                    template='components/_bulma_switch_field.html',
+                    wrapper_class='field'
+                )
+                layout_fields = [
+                    'name',
+                    Div(
+                        Div(switch_field, css_class="level-left"),
+                        css_class="level"
+                    ),
+                ]
+            else:
+                layout_fields = [
+                    'name',
+                    Div(
+                        Div(Field('custom_data'), css_class="level-left"),
+                        css_class="level"
+                    ),
+                ]
 
         layout_fields.append(
             Div(
@@ -71,6 +99,13 @@ class TeamForm(ModelForm):
             raise ValidationError('A team name must contain at least one alphanumeric character.')
 
         return name
+
+    def clean_custom_data(self):
+        data = self.cleaned_data['custom_data']
+        # Convert boolean values to string for storage
+        if config.TEAM_CUSTOM_DATA_TYPE == 'boolean':
+            return str(data)
+        return data
 
 
 class UserEditForm(ModelForm):
