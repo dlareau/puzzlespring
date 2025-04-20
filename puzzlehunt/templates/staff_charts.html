@@ -16,6 +16,10 @@
 {% endcomment %}
 
 
+{% block title_meta_elements %}
+  {% with title="Staff Charts" %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
+
 {% block extra_head %}
     <script src="https://www.gstatic.com/charts/loader.js"></script>
 {% endblock %}

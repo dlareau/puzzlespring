@@ -16,6 +16,10 @@
   feed_items: Paginated list of feed events
 {% endcomment %}
 
+{% block title_meta_elements %}
+  {% with title="Staff Feed" %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
+
 {% block staff_content %}
   <div x-data="{compact: $persist(false)}" hx-ext="sse" sse-connect="{% url 'puzzlehunt:staff_events' %}">
     <div class="mb-4" hx-include=".feed-parameter, #team-puzzle-select"

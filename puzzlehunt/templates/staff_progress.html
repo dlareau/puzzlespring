@@ -17,6 +17,10 @@
 {% load static %}
 {% load humanize %}
 
+{% block title_meta_elements %}
+  {% with title="Staff Progress" %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
+
 {% block includes %}
   {{ block.super }}
   <link rel="preconnect" href="https://fonts.googleapis.com">

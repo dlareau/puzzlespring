@@ -12,6 +12,10 @@
 
 {% load crispy_forms_tags %}
 
+{% block title_meta_elements %}
+  {% with title="Staff Search" %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
+
 {% block staff_content %}
 <div class="content">
   <h1 class="title">Search</h1>

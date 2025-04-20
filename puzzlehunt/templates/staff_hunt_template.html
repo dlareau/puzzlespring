@@ -13,6 +13,10 @@
   puzzle_numbers: List of puzzle numbers for preview functionality
 {% endcomment %}
 
+{% block title_meta_elements %}
+  {% with title="Staff Hunt Template" %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
+
 {% block staff_content %}
   <div x-data="{ modal:false, templateText:''}">
   <div class="columns is-multiline">

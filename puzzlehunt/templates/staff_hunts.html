@@ -10,6 +10,10 @@
   hunts: List of all Hunt objects
 {% endcomment %}
 
+{% block title_meta_elements %}
+  {% with title="Staff Hunt List" %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
+
 {% block staff_content %}
   <div class="columns"><div class="column is-12 is-12-desktop is-10-widescreen is-offset-1-widescreen is-8-fullhd is-offset-2-fullhd">
     <div class="box p-4" x-data="{ showImport: false }">
