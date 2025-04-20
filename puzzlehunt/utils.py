@@ -14,6 +14,7 @@ from django.core.files import File
 from django_eventstream.channelmanager import DefaultChannelManager
 from .models import PuzzleFile, SolutionFile, HuntFile, PrepuzzleFile, Puzzle, Hunt, Prepuzzle, Team, TeamRankingRule, \
     CannedHint, Response, Hint, Update, PuzzleStatus, Submission, User
+from django.core.files.storage import default_storage
 
 
 class PuzzlehuntChannelManager(DefaultChannelManager):
@@ -78,7 +79,9 @@ def create_media_files(parent_object, file, is_solution_file=False):
             for file_name in files:
                 if file_name.startswith("__MACOSX/") or zipfile.Path(root=zip_ref, at=file_name).is_dir():
                     continue
-                file_path = f"trusted/{media_file_model.save_path}/{parent_object.id}/files/{file_name}"
+                # Normalize the filename using Django's storage backend
+                normalized_name = default_storage.get_valid_name(file_name)
+                file_path = f"trusted/{media_file_model.save_path}/{parent_object.id}/files/{normalized_name}"
                 current_file = media_file_model.objects.filter(file=file_path).all()
                 current_file.delete()
 
@@ -90,8 +93,8 @@ def create_media_files(parent_object, file, is_solution_file=False):
                         created_files.append(media_file_model.objects.create(file=django_file, parent=parent_object))
     else:
         # For single file uploads, check if a file with the same name already exists
-        file_name = file.name
-        file_path = f"trusted/{media_file_model.save_path}/{parent_object.id}/files/{file_name}"
+        normalized_name = default_storage.get_valid_name(file.name)
+        file_path = f"trusted/{media_file_model.save_path}/{parent_object.id}/files/{normalized_name}"
         existing_file = media_file_model.objects.filter(file=file_path).first()
         
         if existing_file:

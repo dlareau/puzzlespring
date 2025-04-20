@@ -79,7 +79,7 @@
     >
       Delete All Files
     </button>
-    <input type="file" name="uploadFile" id="uploadFile-{{ parent_type }}-{{ parent.id }}" hidden
+    <input type="file" name="uploadFile" id="uploadFile-{{ parent_type }}-{{ parent.id }}" hidden multiple
            hx-post="{% url 'puzzlehunt:staff:file_upload' parent_type parent.id %}"
            hx-encoding="multipart/form-data"
     >

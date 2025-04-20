@@ -812,19 +812,25 @@ def file_delete_all(request, parent_type, pk):
 @staff_member_required
 def file_upload(request, parent_type, pk):
     """
-    Upload a new file.
+    Upload one or more new files.
 
-    This view function uploads a new file and associates it with a parent object.
+    This view function uploads one or more files and associates them with a parent object.
+    It can handle both single file uploads and multiple file uploads.
 
     Args:
         parent_type (str): The type of the parent (e.g., 'solution', 'hunt').
-        pk (int): The primary key of the parent object to which the file will be associated.
+        pk (int): The primary key of the parent object to which the files will be associated.
     """
     model = get_media_file_parent_model(parent_type)
     parent = get_object_or_404(model, pk=pk)
 
-    created_files = create_media_files(parent, request.FILES.get('uploadFile', None), parent_type == "solution")
-    context = {'parent': parent, 'parent_type': parent_type, 'uploaded_pks': [f.pk for f in created_files]}
+    all_created_files = []
+    for uploaded_file in request.FILES.getlist('uploadFile'):
+        created_files = create_media_files(parent, uploaded_file, parent_type == "solution")
+        if isinstance(created_files, list):
+            all_created_files.extend(created_files)
+
+    context = {'parent': parent, 'parent_type': parent_type, 'uploaded_pks': [f.pk for f in all_created_files]}
     return render(request, "partials/_staff_file_list.html", context)
 
 
