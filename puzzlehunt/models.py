@@ -489,23 +489,23 @@ class Puzzle(models.Model):
     def annotate_query(cls, query, annotation_type):
         match annotation_type:
             case 'num_hints':
-                sq = Hint.objects.filter(puzzle__pk=OuterRef('pk')).order_by()
+                sq = Hint.objects.filter(puzzle__pk=OuterRef('pk'), team__playtester=False).order_by()
                 sq = sq.values('puzzle').annotate(c=Count('*')).values('c')
                 return query.annotate(num_hints=Subquery(sq, output_field=PositiveIntegerField()))
             case 'num_unlocks':
-                sq = PuzzleStatus.objects.filter(puzzle__pk=OuterRef('pk'), unlock_time__isnull=False).order_by()
+                sq = PuzzleStatus.objects.filter(puzzle__pk=OuterRef('pk'), unlock_time__isnull=False, team__playtester=False).order_by()
                 sq = sq.values('puzzle').annotate(c=Count('*')).values('c')
                 return query.annotate(num_unlocks=Subquery(sq, output_field=PositiveIntegerField()))
             case 'num_solves':
-                sq = PuzzleStatus.objects.filter(puzzle__pk=OuterRef('pk'), solve_time__isnull=False).order_by()
+                sq = PuzzleStatus.objects.filter(puzzle__pk=OuterRef('pk'), solve_time__isnull=False, team__playtester=False).order_by()
                 sq = sq.values('puzzle').annotate(c=Count('*')).values('c')
                 return query.annotate(num_solves=Subquery(sq, output_field=PositiveIntegerField()))
             case 'num_submissions':
-                sq = Submission.objects.filter(puzzle__pk=OuterRef('pk')).order_by()
+                sq = Submission.objects.filter(puzzle__pk=OuterRef('pk'), team__playtester=False).order_by()
                 sq = sq.values('puzzle').annotate(c=Count('*')).values('c')
                 return query.annotate(num_submissions=Subquery(sq, output_field=PositiveIntegerField()))
             case 'avg_solve_time':
-                sq = PuzzleStatus.objects.filter(puzzle__pk=OuterRef('pk'), solve_time__isnull=False).order_by()
+                sq = PuzzleStatus.objects.filter(puzzle__pk=OuterRef('pk'), solve_time__isnull=False, team__playtester=False).order_by()
                 sq = sq.values('puzzle').annotate(avg_time=Avg(F('solve_time') - F('unlock_time'))).values('avg_time')
                 return query.annotate(avg_solve_time=Subquery(sq, output_field=DurationField()))
 

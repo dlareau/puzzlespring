@@ -102,10 +102,7 @@ def puzzle_solution(request, pk):
         response = render(request, puzzle.main_solution_file.file.name.removeprefix("trusted/"), context)
         response['X-Robots-Tag'] = 'noindex'
         return response
-<<<<<<< HEAD
 
-=======
->>>>>>> live-fixes
 
 @require_POST
 @transaction.atomic
