@@ -255,6 +255,7 @@ CONSTANCE_ADDITIONAL_FIELDS = {
     }],
     'image_field': ['django.forms.ImageField', {
         'widget': 'puzzlehunt.widgets.ImageWidget',
+        'required': False,
     }],
     'team_data_type': ['django.forms.fields.ChoiceField', {
         'widget': 'django.forms.Select',
