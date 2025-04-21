@@ -88,6 +88,11 @@
                 <i class="fa fl-lg fa-wrench"></i>
               </span>
             </a>
+            <a class="navbar-item is-hoverable" href="{% url "admin:index" %}">
+              <span class="icon is-medium">
+                <i class="fa fl-lg fa-database"></i>
+              </span>
+            </a>
           {% endif %}
           <div class="navbar-item has-dropdown is-hoverable">
             <div class="navbar-link {% if request.user.is_impersonate %} has-text-danger {% endif %}">

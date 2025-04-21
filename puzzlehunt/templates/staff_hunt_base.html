@@ -43,17 +43,6 @@
             </span>
           </div>
           <aside class="menu">
-            <p class="menu-label">
-              General
-            </p>
-            <ul class="menu-list">
-              <li><a href="/admin">Django Admin</a></li>
-              <li><a class="{% active_page request "hunts" %}"
-                      href="{% url 'puzzlehunt:staff:hunts' hunt.id %}">
-                Hunts
-              </a></li>
-            </ul>
-            <hr class="has-background-grey">
             <div x-data="{ isActive: false, selectedHunt: '{{ hunt.name }}' }" class="dropdown mb-3" :class="{ 'is-active': isActive }">
               <div class="dropdown-trigger">
                 <button class="button" style="max-width: 170px; white-space: normal; height: auto; min-height: 2.5em" 
@@ -79,6 +68,12 @@
                 </div>
               </div>
             </div>
+            <ul class="menu-list">
+              <li><a class="{% active_page request "hunts" %}"
+                      href="{% url 'puzzlehunt:staff:hunts' hunt.id %}">
+                Hunts
+              </a></li>
+            </ul>
             <p class="menu-label">
               Hunt Running
             </p>

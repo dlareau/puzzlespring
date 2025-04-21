@@ -196,6 +196,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
+            os.path.join(BASE_DIR, 'templates/'),  # Server templates
             '/app/custom_templates/',  # Custom templates take precedence
             '/app/media/trusted/',
         ],
@@ -362,6 +363,7 @@ if os.environ.get("ENABLE_DEBUG_TOOLBAR"):
         'debug_toolbar.panels.profiling.ProfilingPanel',
         'debug_toolbar.panels.cache.CachePanel',
         'debug_toolbar.panels.sql.SQLPanel',
+        'debug_toolbar.panels.templates.TemplatesPanel',
     )
     INSTALLED_APPS = INSTALLED_APPS + ['debug_toolbar',]
     MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware',] + MIDDLEWARE

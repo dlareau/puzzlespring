@@ -1,0 +1,23 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+{% block header %}
+<div class="bulma">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="{% static "hunt_bulma.css" %}">
+    {% include "components/_navbar.html" %}
+    <style>
+        body {
+            padding-top: 3.25rem;
+        }
+        .admin-interface.list-filter-sticky .module.filtered #changelist-filter {
+            top: 90px !important;
+        }
+        .admin-interface #main.shifted > #nav-sidebar {
+            top: 3.25rem !important;
+        }
+        .admin-interface #main.shifted > #toggle-nav-sidebar {
+            top: 3.25rem !important;
+        }
+    </style>
+  </div>
+{% endblock %}
