@@ -1,0 +1,120 @@
+{% extends 'staff_hunt_base.html' %}
+
+{% comment %}
+@template: staff_participant_info.html
+@description: Staff interface for viewing participant information.
+@extends: staff_hunt_base.html
+@blocks:
+  staff_content: Displays participant information interface
+@context:
+  hunt: The current Hunt object
+{% endcomment %}
+
+{% block title_meta_elements %}
+  {% with title="Staff Participant Info" %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
+
+{% block staff_content %}
+<div class="content">
+  <h1 class="title">Participant Information</h1>
+
+  <!-- Statistics Overview -->
+  <div class="box mb-5">
+    <div class="columns is-flex">
+      <div class="column">
+        <div class="notification is-primary has-text-centered" style="padding: 1.25rem; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+          <p class="heading">Total Participants</p>
+          <p class="title">{{ stats.total_participants }}</p>
+        </div>
+      </div>
+      <div class="column">
+        <div class="notification is-primary has-text-centered" style="padding: 1.25rem; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+          <p class="heading">Total Teams</p>
+          <p class="title">{{ stats.total_teams }}</p>
+        </div>
+      </div>
+      <div class="column">
+        <div class="notification is-primary has-text-centered" style="padding: 1.25rem; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+          <p class="heading">Regular Teams</p>
+          <p class="title">{{ stats.regular_teams }}</p>
+        </div>
+      </div>
+      <div class="column">
+        <div class="notification is-primary has-text-centered" style="padding: 1.25rem; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+          <p class="heading">Playtest Teams</p>
+          <p class="title">{{ stats.playtest_teams }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email Collection -->
+  <div class="box mb-5">
+    <h2 class="subtitle">Participant Data Export</h2>
+    <p class="mb-3">Get data for <strong>{{ stats.regular_participants }}</strong> participants from <strong>{{ stats.regular_teams }}</strong> regular teams (excludes playtesters)</p>
+    
+    <div class="field is-grouped">
+      <div class="control">
+        <a href="{% url 'puzzlehunt:staff:download_emails' hunt.id %}" class="button is-primary">
+          <span class="icon">
+            <i class="fa fa-download"></i>
+          </span>
+          <span>Download Participant CSV</span>
+        </a>
+      </div>
+      
+      <div class="control">
+        <button x-data="{ 
+          copied: false, 
+          copyToClipboard() {
+            const emailsText = document.getElementById('emails-text');
+            emailsText.classList.remove('is-hidden');
+            emailsText.select();
+            document.execCommand('copy');
+            emailsText.classList.add('is-hidden');
+            this.copied = true;
+            setTimeout(() => this.copied = false, 2000);
+          }
+        }" 
+        @click="copyToClipboard()"
+        :class="copied ? 'button is-success' : 'button is-info'">
+          <span class="icon">
+            <i x-bind:class="copied ? 'fa fa-check' : 'fa fa-clipboard'"></i>
+          </span>
+          <span x-text="copied ? 'Copied!' : 'Copy Emails to Clipboard'"></span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Hidden element containing emails for copy -->
+    <textarea id="emails-text" class="is-hidden">{{ emails_string }}</textarea>
+  </div>
+  
+  <!-- Search Section -->
+  <div class="box mb-5">
+    <h2 class="subtitle">Search Participants</h2>
+    <div class="field">
+      <div class="control has-icons-left">
+        <input class="input" 
+               type="text" 
+               placeholder="Search by name, email, or team" 
+               hx-get="{% url 'puzzlehunt:staff:search' hunt.id %}" 
+               hx-target="#search-results" 
+               hx-trigger="keyup changed delay:300ms, search"
+               name="q"
+               aria-label="Search participants">
+        <span class="icon is-small is-left">
+          <i class="fa fa-search"></i>
+        </span>
+      </div>
+      <p class="help">Type to search for participants or teams</p>
+    </div>
+    
+    <div id="search-results" class="mt-4">
+      <!-- Search results will be populated here via HTMX -->
+      <p class="has-text-grey">Enter search terms to find participants or teams</p>
+    </div>
+  </div>
+</div>
+
+{% endblock %} 

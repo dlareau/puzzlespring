@@ -4,6 +4,7 @@ import json
 import shutil
 from pathlib import Path
 from zipfile import ZipFile
+import csv
 
 from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
@@ -195,6 +196,65 @@ def progress_data(request, hunt):
     response_data["metadata"]["calculation_time_ms"] = (end_time - start_time).total_seconds() * 1000
 
     return JsonResponse(response_data)
+
+
+@staff_member_required
+def participant_info(request, hunt):
+    """
+    View function to display participant information for the current hunt.
+    """
+    # Get regular (non-playtester) teams and their participants
+    regular_teams = hunt.team_set.filter(playtester=False)
+    regular_participants = User.objects.filter(team__in=regular_teams).distinct()
+    
+    # Calculate statistics
+    stats = {
+        'total_participants': User.objects.filter(team__hunt=hunt).distinct().count(),
+        'total_teams': hunt.team_set.count(),
+        'regular_teams': regular_teams.count(),
+        'regular_participants': regular_participants.count(),
+        'playtest_teams': hunt.team_set.filter(playtester=True).count()
+    }
+    
+    # Generate email string for clipboard
+    emails_string = ', '.join([user.email for user in regular_participants])
+    
+    context = {
+        'hunt': hunt,
+        'stats': stats,
+        'emails_string': emails_string
+    }
+    return render(request, "staff_participant_info.html", context)
+
+
+@staff_member_required
+def download_emails(request, hunt):
+    """
+    Generate and download a CSV file with participant emails from non-playtester teams.
+    """
+    # Get all non-playtester teams with their members
+    teams = hunt.team_set.filter(playtester=False).prefetch_related('members')
+    
+    # Create HTTP response with CSV file
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="hunt_{hunt.id}_participants.csv"'
+    
+    # Create CSV writer and write header
+    writer = csv.writer(response)
+    writer.writerow(['Email', 'Display Name', 'First Name', 'Last Name', 'Team'])
+    
+    # Write all participants directly from the teams loop
+    for team in teams:
+        for user in team.members.all():
+            writer.writerow([
+                user.email,
+                user.display_name,
+                user.first_name,
+                user.last_name,
+                team.name
+            ])
+    
+    return response
 
 
 @require_GET
@@ -446,12 +506,13 @@ def search(request, hunt):
     }
     
     if query:
-        # Search for users by email, display name, or full name
+        # Search for users by email, display name, or full name, but only those in the selected hunt
         users = User.objects.filter(
             Q(email__icontains=query) |
             Q(display_name__icontains=query) |
             Q(first_name__icontains=query) |
-            Q(last_name__icontains=query)
+            Q(last_name__icontains=query),
+            team__hunt=hunt  # Only include users with a team in this hunt
         ).prefetch_related(
             Prefetch(
                 'team_set',
@@ -462,12 +523,16 @@ def search(request, hunt):
         
         # Search for teams by name
         teams = Team.objects.filter(
+            hunt=hunt,
             name__icontains=query
         ).select_related('hunt').prefetch_related(
             'members',
             Prefetch(
                 'puzzle_statuses',
-                queryset=Puzzle.objects.filter(puzzlestatus__solve_time__isnull=False),
+                queryset=Puzzle.objects.filter(
+                    puzzlestatus__team__hunt=hunt, 
+                    puzzlestatus__solve_time__isnull=False
+                ).distinct(),
                 to_attr='solved_puzzles_list'
             )
         ).order_by('-hunt__display_start_date')[:10]
@@ -477,10 +542,7 @@ def search(request, hunt):
             'teams': teams,
         })
     
-    if request.htmx:
-        return render(request, "partials/_search_results.html", context)
-        
-    return render(request, "staff_search.html", context)
+    return render(request, "partials/_search_results.html", context)
 
 
 def get_hunt_template_errors(template_text, hunt, request):

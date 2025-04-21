@@ -17,7 +17,7 @@
             <th>Display Name</th>
             <th>Full Name</th>
             <th>Email</th>
-            <th>Current Team</th>
+            <th>Team</th>
           </tr>
         </thead>
         <tbody>
@@ -27,13 +27,6 @@
                 <a href="{% url 'admin:puzzlehunt_user_change' user.id %}">
                   {{ user.display_string }}
                 </a>
-                {% if not user.is_superuser %}
-                  <a href="{% url 'impersonate-start' user.id %}" class="button is-small is-light ml-2" title="Impersonate this user">
-                    <span class="icon is-small">
-                      <i class="fa fa-user-secret"></i>
-                    </span>
-                  </a>
-                {% endif %}
               </td>
               <td>{{ user.full_name }}</td>
               <td>{{ user.email }}</td>
@@ -62,7 +55,7 @@
         <thead>
           <tr>
             <th>Name</th>
-            <th>Hunt</th>
+            <th>Status</th>
             <th>Members</th>
             <th>Puzzles Solved</th>
           </tr>
@@ -70,14 +63,37 @@
         <tbody>
           {% for team in teams %}
             <tr>
-              <td>
+              <td style="max-width: 300px;">
                 <a href="{% url 'admin:puzzlehunt_team_change' team.id %}">
                   {{ team.name }}
                 </a>
               </td>
-              <td>{{ team.hunt.name }}</td>
-              <td>{{ team.members.count }}</td>
-              <td>{{ team.solved_puzzles_list|length }}</td>
+              <td>
+                {% if team.playtester %}
+                  <span class="tag is-warning">Playtester</span>
+                {% else %}
+                  <span class="tag is-primary">Regular</span>
+                {% endif %}
+              </td>
+              <td>
+                <div>
+                  <strong>{{ team.members.count }} members:</strong>
+                  <div class="mt-2">
+                    {% for member in team.members.all %}
+                      <div>
+                        <a href="{% url 'admin:puzzlehunt_user_change' member.id %}">
+                          {{ member.display_string }}
+                        </a>
+                      </div>
+                    {% empty %}
+                      <em>No members</em>
+                    {% endfor %}
+                  </div>
+                </div>
+              </td>
+              <td>
+                {{ team.solved_puzzles_list|length }}
+              </td>
             </tr>
           {% endfor %}
         </tbody>

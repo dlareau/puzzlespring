@@ -52,10 +52,6 @@
                       href="{% url 'puzzlehunt:staff:hunts' hunt.id %}">
                 Hunts
               </a></li>
-              <li><a class="{% active_page request "search" %}" 
-                     href="{% url 'puzzlehunt:staff:search' hunt.id %}">
-                Search
-              </a></li>
             </ul>
             <hr class="has-background-grey">
             <div x-data="{ isActive: false, selectedHunt: '{{ hunt.name }}' }" class="dropdown mb-3" :class="{ 'is-active': isActive }">
@@ -102,6 +98,10 @@
               <li><a class="{% active_page request "charts" %}"
                      href="{% url 'puzzlehunt:staff:charts' hunt.id %}">
                 Charts
+              </a></li>
+              <li><a class="{% active_page request "participant_info" %}"
+                     href="{% url 'puzzlehunt:staff:participant_info' hunt.id %}">
+                Participant Info
               </a></li>
             </ul>
             <p class="menu-label">
