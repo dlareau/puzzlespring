@@ -83,7 +83,7 @@
       {% block right-header %}
         {% if request.user.is_authenticated %}
           {% if request.user.is_staff %}
-            <a class="navbar-item is-hoverable" href="{% url "puzzlehunt:staff:hunts" 'current' %}">
+            <a class="navbar-item is-hoverable" href="{% url "puzzlehunt:staff:index" %}">
               <span class="icon is-medium">
                 <i class="fa fl-lg fa-wrench"></i>
               </span>

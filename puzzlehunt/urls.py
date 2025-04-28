@@ -61,7 +61,7 @@ urlpatterns = [
 
     # Staff Pages
     path('staff/', include(([
-        path("", staff_views.staff_base, name="staff_base"),
+        path("", staff_views.staff_base, name="index"),
 
         # Are based on hint pks, don't need a hunt prefix
         path('hint/<int:pk>/claim/', staff_views.hints_claim, name='hints_claim'),

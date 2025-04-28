@@ -1,0 +1,189 @@
+{% extends 'staff_hunt_base.html' %}
+
+{% comment %}
+@template: staff_index.html
+@description: Dashboard/home page for staff members showing hunt status and quick links.
+@extends: staff_hunt_base.html
+@blocks:
+  staff_content: Main content area with hunt status and quick links
+@context:
+  hunt: The current Hunt object being managed
+  team_count: Number of teams registered for the current hunt
+{% endcomment %}
+
+{% load static %}
+
+{% block staff_content %}
+  <div class="container">
+    <!-- Hunt Status Section -->
+    <div class="card mb-5">
+      <header class="card-header">
+        <p class="card-header-title">
+          <span class="icon mr-2">
+            <i class="fa fa-flag-checkered"></i>
+          </span>
+          Active Hunt Status
+        </p>
+      </header>
+      <div class="card-content">
+        <div class="columns">
+          <div class="column">
+            <div class="field">
+              <label class="label">Hunt Name</label>
+              <p>{{ hunt.name }}
+                {% if hunt.is_current %}
+                  <span class="tag is-success ml-2">Active</span>
+                {% endif %}
+              </p>
+            </div>
+          </div>
+          <div class="column">
+            <div class="field">
+              <label class="label">Start Date</label>
+              <p>{{ hunt.start_date|default:"Not set" }}</p>
+            </div>
+          </div>
+          <div class="column">
+            <div class="field">
+              <label class="label">End Date</label>
+              <p>{{ hunt.end_date|default:"Not set" }}</p>
+            </div>
+          </div>
+          <div class="column">
+            <div class="field">
+              <label class="label">Teams</label>
+              <p>{{ team_count }} registered</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="field" id="hunt-status">
+          <label class="label">Hunt Phase</label>
+          <p>
+            {% if hunt.start_date and hunt.start_date > now %}
+              <span class="tag is-warning">Pre-Hunt</span>
+              <span class="ml-2">Hunt starts in 
+                <span id="countdown" data-countdown-to="{{ hunt.start_date|date:'c' }}">
+                  {{ hunt.start_date|timeuntil }}
+                </span>
+              </span>
+            {% elif hunt.end_date and hunt.end_date < now %}
+              <span class="tag is-info">Post-Hunt</span>
+              <span class="ml-2">Hunt ended {{ hunt.end_date|timesince }} ago</span>
+            {% elif hunt.start_date %}
+              <span class="tag is-success">Active</span>
+              <span class="ml-2">
+                Hunt ends in 
+                <span id="countdown" data-countdown-to="{{ hunt.end_date|date:'c' }}">{{ hunt.end_date|timeuntil }}</span>
+              </span>
+            {% else %}
+              <span class="tag is-light">Not Configured</span>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Access Links Section -->
+    <h3 class="title is-4 mb-4">Quick Access</h3>
+    
+    <!-- Django Admin Quick Links Card -->
+    <div class="card mb-5">
+      <header class="card-header">
+        <p class="card-header-title">
+          <span class="icon mr-2">
+            <i class="fa fa-wrench"></i>
+          </span>
+          Django Admin Quick Links
+        </p>
+      </header>
+      <div class="card-content">
+        <p class="mb-3 has-text-grey">Links to Django admin model pages for direct object management.</p>
+        <div class="buttons">
+          <a href="{% url 'admin:puzzlehunt_hint_changelist' %}" class="button is-light">
+            <span class="icon">
+              <i class="fa fa-lightbulb-o"></i>
+            </span>
+            <span>Hints</span>
+          </a>
+          <a href="{% url 'admin:puzzlehunt_hunt_changelist' %}" class="button is-light">
+            <span class="icon">
+              <i class="fa fa-flag"></i>
+            </span>
+            <span>Hunts</span>
+          </a>
+          <a href="{% url 'admin:puzzlehunt_prepuzzle_changelist' %}" class="button is-light">
+            <span class="icon">
+              <i class="fa fa-clock-o"></i>
+            </span>
+            <span>Prepuzzles</span>
+          </a>
+          <a href="{% url 'admin:puzzlehunt_puzzlestatus_changelist' %}" class="button is-light">
+            <span class="icon">
+              <i class="fa fa-tasks"></i>
+            </span>
+            <span>Puzzle Statuses</span>
+          </a>
+          <a href="{% url 'admin:puzzlehunt_puzzle_changelist' %}" class="button is-light">
+            <span class="icon">
+              <i class="fa fa-puzzle-piece"></i>
+            </span>
+            <span>Puzzles</span>
+          </a>
+          <a href="{% url 'admin:puzzlehunt_submission_changelist' %}" class="button is-light">
+            <span class="icon">
+              <i class="fa fa-check-square-o"></i>
+            </span>
+            <span>Submissions</span>
+          </a>
+          <a href="{% url 'admin:puzzlehunt_team_changelist' %}" class="button is-light">
+            <span class="icon">
+              <i class="fa fa-users"></i>
+            </span>
+            <span>Teams</span>
+          </a>
+          <a href="{% url 'admin:puzzlehunt_update_changelist' %}" class="button is-light">
+            <span class="icon">
+              <i class="fa fa-bullhorn"></i>
+            </span>
+            <span>Updates</span>
+          </a>
+          <a href="{% url 'admin:puzzlehunt_user_changelist' %}" class="button is-light">
+            <span class="icon">
+              <i class="fa fa-user"></i>
+            </span>
+            <span>Users</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Countdown script to update the countdown text in real time
+    document.addEventListener('DOMContentLoaded', function() {
+      const countdownElement = document.getElementById('countdown');
+      if (countdownElement) {
+        const targetTimeStr = countdownElement.getAttribute('data-countdown-to');
+        if (targetTimeStr) {
+          const targetTime = new Date(targetTimeStr);
+          function updateCountdown() {
+            const now = new Date();
+            let diff = Math.floor((targetTime - now) / 60000); // Convert ms to minutes
+            if (diff < 0) diff = 0;
+            const days = Math.floor(diff / (60 * 24));
+            const hours = Math.floor((diff % (60 * 24)) / 60);
+            const minutes = diff % 60;
+            let parts = [];
+            if (days > 0) parts.push(days + (days === 1 ? ' day' : ' days'));
+            if (hours > 0 || days > 0) parts.push(hours + (hours === 1 ? ' hour' : ' hours'));
+            parts.push(minutes.toString().padStart(2, '0') + (minutes === 1 ? ' minute' : ' minutes'));
+            countdownElement.textContent = parts.join(' ');
+          }
+          updateCountdown();
+          setInterval(updateCountdown, 60000); // update every minute
+        }
+      }
+    });
+  </script>
+{% endblock %} 

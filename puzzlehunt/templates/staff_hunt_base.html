@@ -61,7 +61,12 @@
                   {% for hunt in tmpl_all_hunts %}
                     <a class="dropdown-item" 
                        @click="selectedHunt = `{{ hunt.name }}`; isActive = false"
-                       href="{% url 'puzzlehunt:staff:'|add:request.resolver_match.url_name hunt.id %}">
+                       {% if request.resolver_match.url_name == "index" %}
+                       href="{% url 'puzzlehunt:staff:'|add:request.resolver_match.url_name %}"
+                       {% else %}
+                       href="{% url 'puzzlehunt:staff:'|add:request.resolver_match.url_name hunt.id %}"
+                       {% endif %}
+                    >
                       {{ hunt.name }}
                     </a>
                   {% endfor %}
@@ -69,6 +74,10 @@
               </div>
             </div>
             <ul class="menu-list">
+              <li><a class="{% active_page request "index" %}"
+                     href="{% url 'puzzlehunt:staff:index' %}">
+                Dashboard
+              </a></li>
               <li><a class="{% active_page request "hunts" %}"
                       href="{% url 'puzzlehunt:staff:hunts' hunt.id %}">
                 Hunts

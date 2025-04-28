@@ -32,7 +32,24 @@ from .tasks import import_hunt_background
 
 @staff_member_required
 def staff_base(request):
-    return redirect('puzzlehunt:staff:hunts', hunt="current")
+    """
+    View function for the staff dashboard/index page.
+    """
+    hunt = get_object_or_404(Hunt, is_current_hunt=True)
+    
+    # Get team count for the current hunt
+    team_count = Team.objects.filter(hunt=hunt).count()
+    
+    # Pass current time for template to use in time calculations
+    now = timezone.now()
+    
+    context = {
+        "hunt": hunt,
+        "team_count": team_count,
+        "now": now,
+    }
+    
+    return render(request, "staff_index.html", context)
 
 
 @staff_member_required
