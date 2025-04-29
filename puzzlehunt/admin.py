@@ -81,15 +81,15 @@ class HuntAdminForm(forms.ModelForm):
 @admin.register(Hunt)
 class HuntAdmin(admin.ModelAdmin):
     form = HuntAdminForm
+    list_display = ['name', 'team_size_limit', 'start_date', 'is_current_hunt']
     inlines = (TeamRankingRuleInline,)
     fieldsets = (
         ('Basic Info', {'fields': ('name', 'is_current_hunt', 'team_size_limit', 'location',
                         ('start_date', 'display_start_date'), ('end_date', 'display_end_date'))}),
         ('Hint Behaviour', {'fields': ('hint_lockout', 'hint_pool_type', 'canned_hint_policy', 'hint_pool_allocation')}),
         ('Template', {'fields': ('template_file', 'css_file', 'info_page_file')}),
+        ('Rate Limit', {'fields': ('ratelimit_override',)}),
     )
-
-    list_display = ['name', 'team_size_limit', 'start_date', 'is_current_hunt']
 
 
 class PuzzleAdminForm(forms.ModelForm):
@@ -147,7 +147,7 @@ class PuzzleAdmin(admin.ModelAdmin):
 
     list_filter = ('hunt',)
     search_fields = ['id', 'name']
-    list_display = ['id',  'name', 'hunt', 'type']
+    list_display = ['id', 'name', 'hunt', 'type']
     list_display_links = ['id', 'name']
     ordering = ['-hunt', 'order_number']
     inlines = (ResponseInline, CannedHintInline)
@@ -156,7 +156,7 @@ class PuzzleAdmin(admin.ModelAdmin):
             'fields': ('id', 'hunt', 'name', 'type', 'order_number')
         }),
         ('Answer Settings', {
-            'fields': ('answer', 'allow_spaces', 'case_sensitive', 'allow_non_alphanumeric')
+            'fields': ('answer', 'allow_spaces', 'case_sensitive', 'allow_non_alphanumeric', 'ratelimit_override')
         }),
         ('Puzzle Files', {
             'fields': ('main_file', 'puzzle_source_file', 'main_solution_file', 'solution_source_file')

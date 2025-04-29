@@ -119,8 +119,15 @@ def puzzle_submit(request, pk):
         if team is None:
             raise SuspiciousOperation
 
+        # Determine rate limit to use - puzzle override > hunt override > default
+        rate_limit = "3/5m"  # Default rate limit
+        if puzzle.ratelimit_override:
+            rate_limit = puzzle.ratelimit_override
+        elif puzzle.hunt.ratelimit_override:
+            rate_limit = puzzle.hunt.ratelimit_override
+
         usage = get_usage(request, fn=puzzle_submit, key=lambda _, r: str(pk) + str(team.pk),
-                          rate='3/5m', method='POST', increment=True)
+                          rate=rate_limit, method='POST', increment=True)
         if usage and usage['should_limit']:
             form = AnswerForm(puzzle=puzzle)
             err_message = f"You have been rate limited. You can submit answers again in {usage['time_left']} seconds."

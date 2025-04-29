@@ -263,6 +263,12 @@ class Hunt(models.Model):
         blank=True,
         help_text="Configuration for puzzle, point and hint unlocking rules"
     )
+    ratelimit_override = models.CharField(
+        max_length=20,
+        help_text="Override default answer submission rate limit (format: X/YZ, e.g. 3/5m)",
+        blank=True,
+        default=""
+    )
 
     # This is set automatically by the config parser
     class HintPoolType(models.TextChoices):
@@ -457,6 +463,12 @@ class Puzzle(models.Model):
         on_delete=models.SET_NULL,
         blank=True,
         null=True
+    )
+    ratelimit_override = models.CharField(
+        max_length=20,
+        help_text="Override hunt's rate limit (format: X/YZ, e.g. 3/5m)",
+        blank=True,
+        default=""
     )
 
     @property
