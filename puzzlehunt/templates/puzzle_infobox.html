@@ -40,8 +40,8 @@
       </div>
     
       {# Stats and other buttons area #}
-      {% hints_open team puzzle as show_hint_link %}
-      {% if config.SHOW_SOLVE_COUNT_ON_PUZZLE or puzzle.hunt.is_public or show_hint_link %}
+      {% show_hints_link team puzzle as show_hints_link %}
+      {% if config.SHOW_SOLVE_COUNT_ON_PUZZLE or puzzle.hunt.is_public or show_hints_link %}
         <div class="column is-narrow">
           {% if config.SHOW_SOLVE_COUNT_ON_PUZZLE %}
             <button class="button is-fullwidth is-static block has-tooltip-arrow has-tooltip-bottom"
@@ -66,9 +66,13 @@
             </a>
           {% endif %}
           {# TODO: rather than not show the button, consider greying it out #}
-          {% if show_hint_link %}
+          {% if show_hints_link %}
             <a class="button is-fullwidth block" href="{% url 'puzzlehunt:puzzle_hints_view' puzzle.pk %}">
-              View/Request Hints
+              {% if puzzle.hunt.is_public %}
+                View Hints
+              {% else %}
+                View/Request Hints
+              {% endif %}
             </a>
           {% endif %}
         </div>

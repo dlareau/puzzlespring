@@ -19,7 +19,13 @@
 {% endblock title_meta_elements %}
 
 {% block content_wrapper %}
-<div id="huntContent" class="bulma" hx-ext="sse" sse-connect="{% url 'puzzlehunt:team_events' team.pk %}">
+<div id="huntContent" 
+     class="bulma" 
+     hx-ext="sse" 
+     {% if team.is_staff %}
+       sse-connect="{% url 'puzzlehunt:team_events' team.pk %}"
+     {% endif %}
+>
   <section class="section">
     <div class="container">
       <div class="columns is-centered is-multiline">
@@ -38,81 +44,119 @@
 
           {# Canned Hint Section #}
           {% if canned_hint_pairs|length > 0 %}
-          {# Title #}
-          <h2 class="mb-2 is-size-4">
-            <b>
-              {% if puzzle.hunt.canned_hint_policy == 'ONLY' or puzzle.hunt.hint_pool_allocation == 'SPLIT' and puzzle.hunt.hint_pool_type == 'PUZZ' %}
-                Hints
-              {% else %}
-                Canned hints
-              {% endif %}
-            </b>
-          </h2>
+            {# Title #}
+            <h2 class="mb-2 is-size-4">
+              <b>
+                {% if puzzle.hunt.canned_hint_policy == 'ONLY' or puzzle.hunt.hint_pool_allocation == 'SPLIT' and puzzle.hunt.hint_pool_type == 'PUZZ' %}
+                  Hints
+                {% else %}
+                  Canned hints
+                {% endif %}
+              </b>
+            </h2>
 
-          <div id="canned-hint-rows-outer"
-               class="box"
-               hx-trigger="sse:hints"
-               hx-get="{{ request.get_full_path }}"
-               hx-select="#canned-hint-rows-outer"
-               hx-swap="outerHTML swap:200ms"
-               hx-disinherit="*">
-              {# Hint Counts #}
-            <p class="mb-2">
-              {% if puzzle.hunt.hint_pool_type == 'BOTH' and puzzle.hunt.hint_pool_allocation == 'PUZZ' %}
-                {{ team.num_available_hints }} global hint request{{ team.num_available_hints|pluralize }} available
-                <br>{{ status.num_available_hints }} puzzle-specific hint request{{ status.num_available_hints|pluralize }} available
-              {% elif puzzle.hunt.hint_pool_allocation == 'SPLIT' %}
-              {% else %}
-                {{ status.num_canned_hint_requests_available }} hint request{{ status.num_canned_hint_requests_available|pluralize }} available
-              {% endif %}
-            </p>
-
-            {# Hint Rows #}
-            {% for canned_hint, used_hint in canned_hint_pairs %}
-              {% if used_hint %}
-                {% with hint=used_hint %}
-                  {% include "partials/_hint_row.html" with staff=False %}
-                {% endwith %}
-              {% else %}
-                {# Show locked hint with unlock button #}
-                <div class="box {% if not forloop.counter0 == status.num_canned_hints_used %}has-background-grey-lighter{% endif %}">
-                  <div class="level is-mobile">
-                    <div class="level-left">
-                      <div class="level-item">
-                        <span class="icon">
-                          <i class="fa fa-lg fa-lock"></i>
-                        </span>
-                        <span class="ml-2">Canned Hint #{{ canned_hint.order }}</span>
+            {% if puzzle.hunt.is_public %}
+              <div id="canned-hint-rows-outer" class="box">
+                {% for canned_hint, used_hint in canned_hint_pairs %}
+                  <div class="box" x-data="{ revealed: {% if used_hint %}true{% else %}false{% endif %} }">
+                    <div class="level is-mobile" style="margin-bottom: 0;">
+                      <div class="level-left">
+                        <div class="level-item">
+                          <span class="icon" x-show="!revealed">
+                            <i class="fa fa-lg fa-lock"></i>
+                          </span>
+                          <span class="icon" x-show="revealed">
+                            <i class="fa fa-lg fa-unlock"></i>
+                          </span>
+                          <span class="ml-2">Canned Hint #{{ canned_hint.order }}</span>
+                        </div>
+                      </div>
+                      <div class="level-right">
+                        <div class="level-item">
+                          <button class="button is-primary" @click="revealed = true" x-show="!revealed">
+                            Reveal Hint
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    <div class="level-right">
-                      <div class="level-item">
-                        <form method="post"
-                              action="{% url 'puzzlehunt:puzzle_hints_use_canned' puzzle.pk %}"
-                              onsubmit="return confirm('Are you sure you want to use this canned hint?')"
-                              class="has-text-centered">
-                          {% csrf_token %}
-                          <button class="button is-primary" 
-                                  {% if not forloop.counter0 == status.num_canned_hints_used or not status.num_canned_hint_requests_available %}
-                                    disabled
-                                  {% endif %}>
-                            Unlock Hint
-                          </button>
-                        </form>
-                      </div>
+                    <div x-show="revealed" x-transition>
+                      <hr>
+                      <p>{{ canned_hint.text|linebreaksbr }}</p>
                     </div>
                   </div>
-                </div>
-              {% endif %}
-            {% endfor %}
-          </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div id="canned-hint-rows-outer"
+                  class="box"
+                  hx-trigger="sse:hints"
+                  hx-get="{{ request.get_full_path }}"
+                  hx-select="#canned-hint-rows-outer"
+                  hx-swap="outerHTML swap:200ms"
+                  hx-disinherit="*">
+                  {# Hint Counts #}
+                <p class="mb-2">
+                  {% if puzzle.hunt.hint_pool_type == 'BOTH' and puzzle.hunt.hint_pool_allocation == 'PUZZ' %}
+                    {{ team.num_available_hints }} global hint request{{ team.num_available_hints|pluralize }} available
+                    <br>{{ status.num_available_hints }} puzzle-specific hint request{{ status.num_available_hints|pluralize }} available
+                  {% elif puzzle.hunt.hint_pool_allocation == 'SPLIT' %}
+                  {% else %}
+                    {{ status.num_canned_hint_requests_available }} hint request{{ status.num_canned_hint_requests_available|pluralize }} available
+                  {% endif %}
+                </p>
+
+                {# Hint Rows #}
+                {% for canned_hint, used_hint in canned_hint_pairs %}
+                  {% if used_hint %}
+                    {% with hint=used_hint %}
+                      {% include "partials/_hint_row.html" with staff=False %}
+                    {% endwith %}
+                  {% else %}
+                    {# Show locked hint with unlock button #}
+                    <div class="box {% if not forloop.counter0 == status.num_canned_hints_used %}has-background-grey-lighter{% endif %}">
+                      <div class="level is-mobile">
+                        <div class="level-left">
+                          <div class="level-item">
+                            <span class="icon">
+                              <i class="fa fa-lg fa-lock"></i>
+                            </span>
+                            <span class="ml-2">Canned Hint #{{ canned_hint.order }}</span>
+                          </div>
+                        </div>
+                        <div class="level-right">
+                          <div class="level-item">
+                            <form method="post"
+                                  action="{% url 'puzzlehunt:puzzle_hints_use_canned' puzzle.pk %}"
+                                  onsubmit="return confirm('Are you sure you want to use this canned hint?')"
+                                  class="has-text-centered">
+                              {% csrf_token %}
+                              <button class="button is-primary" 
+                                      {% if not forloop.counter0 == status.num_canned_hints_used or not status.num_canned_hint_requests_available %}
+                                        disabled
+                                      {% endif %}>
+                                Unlock Hint
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endif %}
           {% endif %}
 
           {# Regular Hint Request Form #}
           {# TODO: At the moment, this won't load in on SSE if it wasn't there before #}
           {% if status.num_custom_hint_requests_available > 0 or custom_hints|length > 0 %}
-            <h2 class="mb-2 is-size-4"><b>Submit a new hint request</b></h2>
+            {% if puzzle.hunt.is_public %}
+              <h2 class="mb-2 is-size-4"><b>Previous Custom Hints</b></h2>
+            {% else %}
+              <h2 class="mb-2 is-size-4"><b>Submit a new hint request</b></h2>
+            {% endif %}
             <div class="box">
+              {% if not puzzle.hunt.is_public %}
               <p class="mb-2">
                 {% if puzzle.hunt.hint_pool_type == 'BOTH' and puzzle.hunt.hint_pool_allocation == 'PUZZ' %}
                   {{ team.num_available_hints }} global hint request{{ team.num_available_hints|pluralize }} available
@@ -158,6 +202,7 @@
                   Previous Custom Hints
                 {% endif %}
               </b></h3>
+              {% endif %}
               <div id="custom-hint-rows-outer"
                    hx-trigger="sse:hints"
                    hx-get="{{ request.get_full_path }}"

@@ -166,6 +166,18 @@ def puzzle_submit(request, pk):
 def puzzle_hints_view(request, pk):
     puzzle = get_object_or_404(Puzzle, pk=pk)
     team = puzzle.hunt.team_from_user(request.user)
+    if team is None:
+        if not puzzle.hunt.is_public:
+            return render(request, 'access_error.html', {'reason': "hint"})
+        else:
+            context = {
+                "puzzle": puzzle,
+                "team": team,
+                "custom_hints": [],
+                "canned_hint_pairs": [(c, None) for c in puzzle.cannedhint_set.all()],
+                "status": None,
+            }
+            return render(request, "puzzle_hints.html", context)
     if not team.hints_open_for_puzzle(puzzle):
         return render(request, 'access_error.html', {'reason': "hint"})
     

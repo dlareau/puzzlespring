@@ -707,10 +707,7 @@ class Team(models.Model):
         return Puzzle.objects.filter(puzzlestatus__team=self, puzzlestatus__solve_time__isnull=False, type=Puzzle.PuzzleType.META_PUZZLE)
 
     def hints_open_for_puzzle(self, puzzle):
-        """ Takes a puzzle and returns whether the team is allowed to view the hints page for that puzzle """
-        if self.hunt.is_public:
-            return False
-        
+        """ Takes a puzzle and returns whether the team is allowed to view the hints page for that puzzle """    
         try:
             status = PuzzleStatus.objects.get(team=self, puzzle=puzzle)
         except PuzzleStatus.DoesNotExist:

@@ -95,10 +95,22 @@ class HuntFromContextEventNode(template.Node):
 
 
 @register.simple_tag()
-def hints_open(team, puzzle):
-    if team is None or puzzle is None:
+def show_hints_link(team, puzzle):
+    """
+    Returns True if the hunt is public and the puzzle has any canned hints,
+    OR if the team is allowed to view/request hints for the puzzle (normal logic).
+    """
+    if puzzle is None:
         return False
-    return team.hints_open_for_puzzle(puzzle)
+    # First, check if hunt is public and puzzle has canned hints (works even if team is None)
+    if puzzle.hunt.is_public and puzzle.cannedhint_set.exists():
+        return True
+    # Normal logic, requires a team
+    if team is None:
+        return False
+    if team.hints_open_for_puzzle(puzzle):
+        return True
+    return False
 
 
 @register.simple_tag()
