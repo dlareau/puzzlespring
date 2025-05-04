@@ -60,7 +60,7 @@
               </span>
             </button>
           {% endif %}
-          {% if puzzle.hunt.is_public %}
+          {% if puzzle.hunt.is_public and puzzle.main_solution_file %}
             <a class="button is-fullwidth block" href="{% url 'puzzlehunt:puzzle_solution' puzzle.pk %}">
               View Solution
             </a>
