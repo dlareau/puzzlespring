@@ -2,4 +2,5 @@ coverage
 pytest
 pytest-django
 pytest-cov
-libsass 
+libsass
+beautifulsoup4 
