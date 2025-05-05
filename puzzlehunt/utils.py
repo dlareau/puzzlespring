@@ -120,7 +120,10 @@ class HuntConverter:
         if value == "current":
             return "current"
         else:
-            return '%d' % value
+            if isinstance(value, Hunt):
+                return '%d' % value.id
+            else:
+                return '%d' % value
         
 class FallbackHuntConverter(HuntConverter):
     def to_python(self, value):

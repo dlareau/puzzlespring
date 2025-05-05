@@ -3,6 +3,7 @@ from django.conf.urls import include
 from puzzlehunt import info_views, hunt_views, staff_views
 from django_eventstream.views import events
 from puzzlehunt.utils import HuntConverter, FallbackHuntConverter
+from django.views.generic.base import RedirectView
 
 app_name = 'puzzlehunt'
 
@@ -28,6 +29,7 @@ urlpatterns = [
     path('team/create/', info_views.team_create, name='team_create'),
 
     # Puzzles
+    path('puzzle/<str:pk>/', RedirectView.as_view(pattern_name='puzzlehunt:puzzle_view', permanent=True), name='puzzle_view_redirect'),
     path('puzzle/<str:pk>/view/', hunt_views.puzzle_view, name='puzzle_view'),
     path('puzzle/<str:pk>/view/<path:file_path>', hunt_views.protected_static,
          {"base": "puzzle", "add_prefix": True}, name='protected_static_puzzle'),
@@ -40,6 +42,7 @@ urlpatterns = [
     path('puzzle/<str:pk>/hints/canned/', hunt_views.puzzle_hints_use_canned, name='puzzle_hints_use_canned'),
 
     # Hunts
+    path('hunt/<hunt:hunt>/', RedirectView.as_view(pattern_name='puzzlehunt:hunt_view', permanent=True), name='hunt_view_redirect'),
     path('hunt/<hunt:hunt>/view/', hunt_views.hunt_view, name='hunt_view'),
     path('hunt/<str:pk>/view/<path:file_path>', hunt_views.protected_static,
          {"base": "hunt", "add_prefix": True}, name='protected_static_hunt'),
