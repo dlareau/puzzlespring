@@ -45,7 +45,7 @@
     </tr>
     {% for team in team_data %}
     <tr>
-      <td>{{forloop.counter}}</td>
+      <td>{{ team.computed_rank }}</td>
       <td class="team_name" style="word-break: break-word;">{{team.name}}</td>
       {% for rule in ruleset %}
         {% if rule.visible %}

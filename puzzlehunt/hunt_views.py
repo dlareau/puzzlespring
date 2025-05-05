@@ -333,9 +333,46 @@ def hunt_leaderboard(request, hunt):
     for rule in ruleset:
         teams = rule.annotate_query(teams)
 
-    teams = teams.order_by(*[rule.ordering_parameter for rule in ruleset]).all()
+    # Sort teams based on the ruleset
+    teams_sorted = teams.order_by(*[rule.ordering_parameter for rule in ruleset]).all()
 
-    return render(request, 'leaderboard.html', {'team_data': teams, 'ruleset': ruleset, 'hunt': hunt})
+    processed_teams = []
+    last_team_values = None
+    current_rank = 0
+    teams_processed_count = 0
+
+    # First pass: Calculate ranks with ties
+    for team in teams_sorted:
+        teams_processed_count += 1
+        current_team_values = tuple(getattr(team, rule.rule_type, None) for rule in ruleset)
+
+        if current_team_values != last_team_values:
+            current_rank = teams_processed_count
+            last_team_values = current_team_values
+
+        team.computed_rank = current_rank  # Temporarily store numeric rank
+        processed_teams.append(team)
+
+    # Determine the last rank value
+    last_rank_value = current_rank if processed_teams else 0
+
+    # Count how many teams share the last rank
+    last_rank_count = 0
+    if last_rank_value > 0:
+        last_rank_count = sum(1 for team in processed_teams if team.computed_rank == last_rank_value)
+
+    # Second pass: Relabel last tied rank if necessary
+    if last_rank_count > 1:
+        for team in processed_teams:
+            if team.computed_rank == last_rank_value:
+                team.computed_rank = "-"
+
+    context = {
+        'team_data': processed_teams,
+        'ruleset': ruleset,
+        'hunt': hunt,
+    }
+    return render(request, 'leaderboard.html', context)
 
 
 def hunt_updates(request, hunt):
