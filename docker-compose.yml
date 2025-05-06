@@ -19,12 +19,14 @@ services:
       - POSTGRES_DB=puzzlehunt
       - POSTGRES_USER=puzzlehunt
       - POSTGRES_PASSWORD=${DB_PASSWORD}
+    restart: unless-stopped
 
   # Redis cache
   redis:
     image: redis:latest
     volumes:
       - redis_data:/data
+    restart: unless-stopped
 
   # Main Django application
   app:
@@ -44,6 +46,7 @@ services:
     depends_on:
       - db
       - redis
+    restart: unless-stopped
 
   # Huey async task queue
   huey:
@@ -58,6 +61,7 @@ services:
     depends_on:
       - db
       - redis
+    restart: unless-stopped
 
   # Pushpin async communication service
   pushpin:
@@ -66,6 +70,7 @@ services:
       - ./config/pushpin:/etc/pushpin
     depends_on:
       - app
+    restart: unless-stopped
 
   # Caddy reverse proxy
   caddy:
@@ -84,6 +89,7 @@ services:
     depends_on:
       - app
       - pushpin
+    restart: unless-stopped
 
 volumes:
   postgres_data:
