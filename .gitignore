@@ -24,6 +24,7 @@ debug.log
 /docker/volumes/logs/
 .env
 /website/docs/_site/
+/feature_planning/
 
 #temp
 filebrowser.db

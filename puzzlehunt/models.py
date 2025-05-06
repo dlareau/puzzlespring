@@ -267,6 +267,7 @@ class Hunt(models.Model):
         max_length=20,
         help_text="Override default answer submission rate limit (format: X/YZ, e.g. 3/5m)",
         blank=True,
+        null=True,
         default=""
     )
 
@@ -468,6 +469,7 @@ class Puzzle(models.Model):
         max_length=20,
         help_text="Override hunt's rate limit (format: X/YZ, e.g. 3/5m)",
         blank=True,
+        null=True,
         default=""
     )
 
