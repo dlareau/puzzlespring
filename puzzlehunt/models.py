@@ -713,7 +713,10 @@ class Team(models.Model):
         try:
             status = PuzzleStatus.objects.get(team=self, puzzle=puzzle)
         except PuzzleStatus.DoesNotExist:
-            return False
+            if self.hunt.is_public and puzzle.cannedhint_set.count() > 0:
+                return True
+            else:
+                return False
 
         custom_open = self.num_custom_hint_requests_available(status) > 0
         canned_open = self.num_canned_hint_requests_available(status) > 0
@@ -1047,10 +1050,17 @@ class PuzzleStatus(models.Model):
         return self.team.hint_uses_puzzle_pool(self, is_canned_hint)
 
 
+class ResponseManager(models.Manager):
+    def get_by_natural_key(self, puzzle_id, regex):
+        return self.get(puzzle_id=puzzle_id, regex=regex)
+
 class Response(models.Model):
     """ A class to represent an automated response regex """
     class Meta:
         verbose_name_plural = "Auto Responses"
+        unique_together = [('puzzle', 'regex')]
+
+    objects = ResponseManager()
 
     puzzle = models.ForeignKey(
         Puzzle,
@@ -1064,7 +1074,10 @@ class Response(models.Model):
         help_text="The text to use in the submission response if the regex matched")
 
     def __str__(self):
-        return self.regex + " => " + self.text
+        return f"{self.puzzle}: {self.regex} -> {self.text}"
+
+    def natural_key(self):
+        return (self.puzzle_id, self.regex)
 
 
 class Hint(models.Model):
@@ -1238,6 +1251,11 @@ class CannedHint(models.Model):
         return (self.puzzle.id, self.order)
 
 
+class TeamRankingRuleManager(models.Manager):
+    def get_by_natural_key(self, hunt_name, hunt_start_date, rule_order):
+        hunt = Hunt.objects.get_by_natural_key(hunt_name, hunt_start_date)
+        return self.get(hunt=hunt, rule_order=rule_order)
+
 class TeamRankingRule(models.Model):
     """ A class to represent the rules used to rank teams """
     class RuleType(models.TextChoices):
@@ -1252,6 +1270,8 @@ class TeamRankingRule(models.Model):
 
     class Meta:
         unique_together = ('hunt', 'rule_order')
+
+    objects = TeamRankingRuleManager()
 
     hunt = models.ForeignKey(
         Hunt,
@@ -1346,6 +1366,9 @@ class TeamRankingRule(models.Model):
                 return query.annotate(**{self.rule_type: F("points")})
             case self.RuleType.NUM_HINTS_LEFT:
                 return query.annotate(**{self.rule_type: F("num_available_hints")})
+
+    def natural_key(self):
+        return self.hunt.natural_key() + (self.rule_order,)
 
 
 class Update(models.Model):

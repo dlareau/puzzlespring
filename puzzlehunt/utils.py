@@ -5,6 +5,8 @@ from pathlib import Path
 from django.core import serializers
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.db import connection
 
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -507,7 +509,21 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                     new_hunt.prepuzzle.main_file = prepuzzle_main_file
                     new_hunt.prepuzzle.save()
 
-            return new_hunt
+
+        # After the transaction is committed, reset sequences
+        try:
+            sql = call_command('sqlsequencereset', 'puzzlehunt', no_color=True, interactive=False)
+            
+            # Execute the SQL
+            with connection.cursor() as cursor:
+                for statement in sql.split('\\n'):
+                    if statement.strip(): # Avoid executing empty statements
+                        cursor.execute(statement)
+            print("Successfully reset database sequences for the puzzlehunt app.")
+        except Exception as e:
+            print(f"Warning: Failed to reset database sequences after import: {e}")
+
+        return new_hunt
 
 # Template cache utilities
 def invalidate_template_cache(template_name):
