@@ -8,6 +8,7 @@ puzzle_id = re.compile(r"[a-fA-F0-9X]+")
 time_unit = re.compile(r"MINUTES?|HOURS?")
 point_unit = re.compile(r"POINTS?")
 hint_unit = re.compile(r"HINTS?")
+badge_unit = re.compile(r"BADGE")
 
 # Object grammar classes
 class PuzzleID:
@@ -34,14 +35,17 @@ class NumHints:
 class NumPuzzleHints:
     grammar = attr("hints", number), attr("puzzle", PuzzleID), attr("unit", hint_unit)
 
+class Badge:
+    grammar = '"', attr("text", re.compile(r'[^"]*')), '"', attr("unit", badge_unit)
+
 PointInTime = [TimeSinceStart, PuzzleSolve, PuzzleUnlock]
 
 
 # Unlockables
 class UnlockableList(List):
-    grammar = "[", csl([PuzzleID, NumPoints, NumHints]), "]"
+    grammar = "[", csl([PuzzleID, NumPoints, NumHints, Badge]), "]"
 
-Unlockable = [UnlockableList, PuzzleID, NumPoints, NumHints, NumPuzzleHints]
+Unlockable = [UnlockableList, PuzzleID, NumPoints, NumHints, NumPuzzleHints, Badge]
 
 
 # Single-use rules
@@ -335,6 +339,7 @@ def process_config_rules(rules, puzzle_statuses, start_time, current_time):
     unlocked_puzzles = set()
     processed_rules = set()
     puzzle_hints = {}  # Maps puzzle IDs to number of hints
+    earned_badges = []  # Track earned badges
     
     def process_reward(rule, rule_value, item_type, value, puzzle_id=None):
         rule_id = (str(rule.rule), item_type, value, puzzle_id)
@@ -382,5 +387,10 @@ def process_config_rules(rules, puzzle_statuses, start_time, current_time):
                                 puzzle_hints[item.puzzle.id] = 0
                             puzzle_hints[item.puzzle.id] += reward
                             changed = changed or was_changed
+                        case Badge():
+                            badge_text = item.text
+                            if badge_text not in earned_badges:
+                                earned_badges.append(badge_text)
+                                changed = True
 
-    return unlocked_puzzles, points, hints, puzzle_hints
+    return unlocked_puzzles, points, hints, puzzle_hints, earned_badges

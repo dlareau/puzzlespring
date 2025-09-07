@@ -653,6 +653,7 @@ class Team(models.Model):
         default=0,
         help_text="The total number of points this team has earned through config rules"
     )
+    badges = models.JSONField(default=list, help_text="List of badge texts earned by this team")
 
     @property
     def is_playtester_team(self):
@@ -770,7 +771,7 @@ class Team(models.Model):
 
     def process_unlocks(self, parsed_config=None):
         """
-        Calculate what puzzles, points, and hints this team has unlocked based on the hunt config.
+        Calculate what puzzles, points, hints, and badges this team has unlocked based on the hunt config.
         
         Returns:
             tuple: (set of unlocked puzzle IDs, total points, total hints)
@@ -799,7 +800,7 @@ class Team(models.Model):
                 return
             
         puzzle_statuses = self.puzzlestatus_set.all()
-        unlocked_puzzles, points, hints, puzzle_hints = process_config_rules(
+        unlocked_puzzles, points, hints, puzzle_hints, earned_badges = process_config_rules(
             config_rules,
             puzzle_statuses,
             start_time,
@@ -831,18 +832,23 @@ class Team(models.Model):
         updated = False
         # Update points
         if points != self.points:
+            Team.objects.filter(pk=self.pk).update(points=points)
             updated = True
-            self.points = points
-            self.save(update_fields=["points"])
-
         # Update hints
         if hints > self.num_total_hints_earned:
             updated = True
-            # Team earned new hints - perform atomic update
             Team.objects.filter(pk=self.pk).update(
                 num_available_hints=F('num_available_hints') + hints - F('num_total_hints_earned'),
                 num_total_hints_earned=hints
             )
+
+        # Process badges (need to check current state)
+        current_badges = self.badges
+        new_badges = earned_badges
+        if current_badges != new_badges:
+            Team.objects.filter(pk=self.pk).update(badges=new_badges)
+            updated = True
+
         if updated:
             self.refresh_from_db()
 

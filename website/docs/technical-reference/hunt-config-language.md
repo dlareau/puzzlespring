@@ -80,6 +80,12 @@ P1 <= <condition>  # Unlock puzzle 1
 3 P1 HINTS <= <condition>  # Award 3 hints for puzzle 1
 ```
 
+### Badges
+```
+"🏆" BADGE <= <condition> # Award a trophy badge
+"FINISHER!" BADGE <= <condition> # Award a badge that says "FINISHER!"
+```
+
 ## Rule Conditions
 
 ### Single-Use Rules
@@ -136,12 +142,13 @@ The language follows this simplified grammar:
 ```
 rule := unlockable "<=" condition
 
-unlockable := puzzle_id | point_reward | hint_reward | "[" unlockable_list "]"
+unlockable := puzzle_id | point_reward | hint_reward | badge | "[" unlockable_list "]"
 unlockable_list := unlockable ("," unlockable)*
 
 puzzle_id := "P" hex_number
 point_reward := number "POINTS"
 hint_reward := number ["puzzle_id"] "HINTS"
+badge := "\"" string "\""
 
 condition := single_use_condition | multi_use_condition
 

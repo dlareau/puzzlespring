@@ -264,7 +264,7 @@ class TeamAdmin(admin.ModelAdmin):
     list_display = [short_team_name, 'hunt', 'playtester']
     list_filter = ['hunt']
     filter_horizontal = ['members']
-    readonly_fields = ('num_total_hints_earned', 'points')
+    readonly_fields = ('num_total_hints_earned', 'points', 'display_badges')
     fieldsets = (
         ("Basic Info",
          {
@@ -276,9 +276,15 @@ class TeamAdmin(admin.ModelAdmin):
          }),
         ("Team progress",
          {
-             'fields': ['num_available_hints', 'num_total_hints_earned', 'points'],
+             'fields': ['num_available_hints', 'num_total_hints_earned', 'points', 'display_badges'],
          })
     )
+    
+    @admin.display(description="Badges")
+    def display_badges(self, obj):
+        if obj.badges:
+            return ' '.join(obj.badges)
+        return '-'
 
     # TODO: find a way to slim down this inline in order to bring it back.
     # inlines = [PuzzleStatusInline]

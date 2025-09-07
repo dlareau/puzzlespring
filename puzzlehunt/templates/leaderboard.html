@@ -25,6 +25,12 @@
 {% endblock %}
 
 {% block content %}
+<style>
+  .badge-tag {
+    background: #d3d3d3 !important;
+  }
+</style>
+
 <div class="content px-5">
   <h1 style="text-align: center;"> Leaderboard - {{hunt.name}}</h1>
   <br>
@@ -46,7 +52,14 @@
     {% for team in team_data %}
     <tr>
       <td>{{ team.computed_rank }}</td>
-      <td class="team_name" style="word-break: break-word;">{{team.name}}</td>
+      <td class="team_name" style="word-break: break-word;">
+        {% if team.badges %}
+          {% for badge in team.badges %}
+            <span class="tag badge-tag mr-1 mb-1">{{ badge }}</span>
+          {% endfor %}
+        {% endif %}
+        {{team.name}}
+      </td>
       {% for rule in ruleset %}
         {% if rule.visible %}
           {% get_attribute team rule.rule_type as val %}
