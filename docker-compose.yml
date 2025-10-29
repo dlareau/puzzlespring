@@ -65,7 +65,7 @@ services:
 
   # Pushpin async communication service
   pushpin:
-    image: fanout/pushpin
+    image: fanout/pushpin:1.40.0
     volumes:
       - ./config/pushpin:/etc/pushpin
     depends_on:
