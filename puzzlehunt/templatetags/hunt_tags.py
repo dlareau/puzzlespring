@@ -1,8 +1,11 @@
 from django import template
 from django.conf import settings
 from django.template import Template, Context
+from django.urls import reverse
 from puzzlehunt.models import Hunt, Prepuzzle
 from constance import config
+from urllib.parse import urlparse
+
 register = template.Library()
 
 
@@ -194,3 +197,26 @@ def order_number_exists(value, number):
 def email_backend_configured():
     """Check if an email backend is configured in settings."""
     return bool(settings.EMAIL_CONFIGURED)
+
+
+@register.simple_tag(takes_context=True)
+def hunt_back_url(context, hunt_pk):
+    """
+    Returns the back URL for a hunt page, using HTTP_REFERER if it's a valid hunt_view URL
+    for the specified hunt, otherwise returns the default hunt_view URL.
+    """
+    request = context.get('request')
+    if not request:
+        return reverse('puzzlehunt:hunt_view', args=[hunt_pk])
+    
+    referer = request.META.get('HTTP_REFERER')
+    if not referer:
+        return reverse('puzzlehunt:hunt_view', args=[hunt_pk])
+    
+    # Check if referer is a hunt_view URL for the correct hunt
+    parsed = urlparse(referer)
+    expected_path = f'/hunt/{hunt_pk}/view/'
+    if parsed.path.startswith(expected_path):
+        return referer
+    
+    return reverse('puzzlehunt:hunt_view', args=[hunt_pk])

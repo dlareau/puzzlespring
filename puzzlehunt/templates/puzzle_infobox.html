@@ -9,13 +9,14 @@
 {% endcomment %}
 
 {% load crispy_forms_tags %}
+{% load hunt_tags %}
 <div id="puzzle-infobox" 
      class="columns is-centered is-multiline" 
      hx-ext="sse" 
      {% if team %} sse-connect="{% url 'puzzlehunt:team_events' team.pk %}" {% endif %}>
   <div id="content-box" class="column has-background-light is-12-tablet is-11-desktop is-10-widescreen">
     <div class="has-text-centered mb-2 is-relative">
-      <a href="{% url 'puzzlehunt:hunt_view' puzzle.hunt.pk %}" 
+      <a href="{% hunt_back_url puzzle.hunt.pk %}" 
          class="button is-light" 
          style="position: absolute; left: 1rem; top: 0.5rem;">
         <span class="icon">
