@@ -95,45 +95,62 @@ class ConfigFile(List):
 
 def preprocess_config(config_str, puzzle_ids):
     """
-    Preprocess a config string to expand PX patterns into individual lines.
-    
+    Preprocess a config string to expand PX patterns and list patterns into individual lines.
+
     Args:
         config_str: The configuration string to preprocess
         puzzle_ids: Set of valid puzzle IDs to expand PX with
-    
+
     Returns:
         The preprocessed configuration string
     """
     lines = config_str.split('\n')
     expanded_lines = []
-    
+
+    # Regex to match <= [P1, P2, ...] pattern on right side of rule
+    list_pattern = re.compile(r'^(.+)<=\s*\[(P[A-Fa-f0-9]+(?:\s*,\s*P[A-Fa-f0-9]+)*)\](.*)$', re.IGNORECASE)
+
     for line in lines:
-        if 'PX' in line.upper():
-            # Skip comment lines
-            if line.strip().startswith('#'):
-                expanded_lines.append(line)
-                continue
-                
+        # Skip comment lines
+        if line.strip().startswith('#'):
+            expanded_lines.append(line)
+            continue
+
+        # Check for list pattern on right side: "10 POINTS <= [P1, P2, P3]"
+        match = list_pattern.match(line)
+        if match:
+            left_side = match.group(1).strip()
+            puzzle_list = match.group(2)
+            rest = match.group(3)  # Handle trailing comments
+
+            # Split puzzle IDs and create individual rules
+            puzzles = [p.strip() for p in puzzle_list.split(',')]
+            for puzzle in puzzles:
+                expanded_lines.append(f"{left_side} <= {puzzle.upper()}{rest}")
+        elif 'PX' in line.upper():
             # Replace PX with each puzzle ID
             for pid in sorted(puzzle_ids):
                 expanded_lines.append(line.upper().replace('PX', f'P{pid}'))
         else:
             expanded_lines.append(line)
-            
+
     return '\n'.join(expanded_lines)
 
 def parse_config(config_str, puzzle_ids):
     """
     Parse a config string and validate puzzle IDs and check for circular dependencies.
-    
+
     Args:
         config_str: The configuration string to parse
         puzzle_ids: Set of valid puzzle IDs to check against
-    
+
     Raises:
         ValueError: If an invalid puzzle ID is referenced or circular dependencies are found
     """
-    # Check that the original config string is valid
+    # Preprocess to expand PX and list patterns
+    config_str = preprocess_config(config_str, puzzle_ids)
+
+    # Check that the config string is valid
     try:
         config = parse(config_str.upper(), ConfigFile, comment=comment_sh)
     except SyntaxError as e:
@@ -167,11 +184,6 @@ def parse_config(config_str, puzzle_ids):
         error_msg = f"Syntax error in configuration {context}"
         raise ValueError(error_msg)
 
-    # Preprocess the config to expand PX patterns
-    config_str = preprocess_config(config_str, puzzle_ids)
-
-    config = parse(config_str.upper(), ConfigFile, comment=comment_sh)
-    
     # Build dependency graph
     dependencies = {}
     

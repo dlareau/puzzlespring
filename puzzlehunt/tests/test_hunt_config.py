@@ -996,3 +996,97 @@ def test_delayed_action_equivalence_with_limit(hunt_with_puzzles):
     # Both syntaxes should produce identical results
     assert hints_new_30 == hints_old_30 == 1
     assert hints_new_60 == hints_old_60 == 1  # Still 1, not 2 (one-time only)
+
+
+def test_bulk_points_assignment(hunt_with_puzzles):
+    """Test that bulk points syntax [P1, P2, P3] expands correctly"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    P1 <= 0 POINTS
+    P2 <= 0 POINTS
+    P3 <= 0 POINTS
+    10 POINTS <= [P1, P2, P3]
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # Solve P1 - should get 10 points
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    status.mark_solved()
+    team.process_unlocks()
+    assert team.points == 10
+
+    # Solve P2 - should get 10 more points
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[1])
+    status.mark_solved()
+    team.process_unlocks()
+    assert team.points == 20
+
+    # Solve P3 - should get 10 more points
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[2])
+    status.mark_solved()
+    team.process_unlocks()
+    assert team.points == 30
+
+
+def test_bulk_puzzle_unlock(hunt_with_puzzles):
+    """Test that bulk syntax works for unlocking puzzles too"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    P1 <= 0 POINTS
+    [P2, P3] <= [P1]
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # Initially only P1 should be unlocked
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 1
+    assert unlocked[0].id == "1"
+
+    # Solve P1 - should unlock P2 and P3
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    status.mark_solved()
+    team.process_unlocks()
+
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 3
+    assert sorted([p.id for p in unlocked]) == ["1", "2", "3"]
+
+
+def test_bulk_syntax_with_comment(hunt_with_puzzles):
+    """Test that bulk syntax works with trailing comments"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    P1 <= 0 POINTS
+    P2 <= 0 POINTS
+    P3 <= 0 POINTS
+    5 POINTS <= [P1, P2]  # Points for first two puzzles
+    10 POINTS <= [P3]     # Extra points for puzzle 3
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # Solve P1 - should get 5 points
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    status.mark_solved()
+    team.process_unlocks()
+    assert team.points == 5
+
+    # Solve P3 - should get 10 points
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[2])
+    status.mark_solved()
+    team.process_unlocks()
+    assert team.points == 15

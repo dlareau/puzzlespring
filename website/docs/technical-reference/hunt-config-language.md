@@ -72,6 +72,7 @@ P1 <= <condition>  # Unlock puzzle 1
 ```
 10 POINTS <= <condition>  # Award 10 points
 [5 POINTS, P1] <= <condition>  # Award 5 points and unlock P1
+10 POINTS <= [P1, P2, P3]  # Award 10 points for solving any of these puzzles
 ```
 
 ### Hints
