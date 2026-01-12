@@ -135,6 +135,29 @@ These rules can trigger multiple times based on intervals:
 {: .note }
 When using multiple clauses in a multi-use rule, they must appear in this order: `AFTER` (optional), `IF` (optional), `LIMIT` (optional). For example: `2 HINTS <= EVERY 30 MINUTES AFTER P1 SOLVE IF 10 POINTS LIMIT 3` is valid, but `2 HINTS <= EVERY 30 MINUTES IF 10 POINTS AFTER P1 SOLVE` is invalid because `IF` appears before `AFTER`.
 
+### Delayed Actions (One-Time)
+
+For actions that should trigger exactly once after a delay from a puzzle event, use this simplified syntax:
+
+```
+# Give a hint 30 minutes after P1 is solved
+1 HINT <= 30 MINUTES AFTER P1 SOLVE
+
+# Unlock P2 one hour after P1 is unlocked
+P2 <= 1 HOUR AFTER P1 UNLOCK
+```
+
+This is equivalent to but more readable than:
+```
+1 HINT <= EVERY 30 MINUTES AFTER P1 SOLVE LIMIT 1
+```
+
+You can also add conditions:
+```
+# Give a hint 30 minutes after P1 solve, but only if team has 10 points
+1 HINT <= 30 MINUTES AFTER P1 SOLVE IF 10 POINTS
+```
+
 ## Formal Grammar
 
 The language follows this simplified grammar:
@@ -152,10 +175,11 @@ badge := "\"" string "\""
 
 condition := single_use_condition | multi_use_condition
 
-single_use_condition := puzzle_solve | puzzle_id | puzzle_unlock | time_since_start | 
-                       point_threshold | logical_expression
+single_use_condition := puzzle_solve | puzzle_id | puzzle_unlock | time_since_start |
+                       point_threshold | logical_expression | delayed_action
 logical_expression := "(" condition ("AND"|"OR") condition ")" |
                      number "OF" "(" condition_list ")"
+delayed_action := number ("MINUTES"|"HOURS") "AFTER" point_in_time ["IF" single_use_condition]
 
 multi_use_condition := time_interval ["IF" single_use_condition]
 time_interval := "EVERY" number ("MINUTES"|"HOURS") ["AFTER" point_in_time]

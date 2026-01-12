@@ -17,6 +17,10 @@ var PhcmuConfigHighlightRules = function () {
                 regex: "(EVERY)(\\s+\\d+\\s+)((?:MINUTES?|HOURS?))",
                 caseInsensitive: true
             }, {
+                token: ["constant.numeric", "text", "keyword"],
+                regex: "(\\d+)(\\s+)((?:MINUTES?|HOURS?)(?=\\s+AFTER))",
+                caseInsensitive: true
+            }, {
                 token: ["keyword", "constant.language", "keyword"],
                 regex: "((?:P\\w+)\\s+)(SOLVE|UNLOCK)\\b",
                 caseInsensitive: true

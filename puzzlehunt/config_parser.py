@@ -53,13 +53,20 @@ class Parenthesized: pass
 class SomeOf(List): pass
 class And(List): pass
 class Or(List): pass
+class DelayedAction: pass
+class ConditionalDelayedAction: pass
 
-SingleUseRuleItems = PointInTime + [PuzzleID, NumPoints, SomeOf, Or, And, Parenthesized]
+SingleUseRuleItems = PointInTime + [PuzzleID, NumPoints, SomeOf, Or, And, Parenthesized,
+                                    ConditionalDelayedAction, DelayedAction]
 
 Parenthesized.grammar = "(", attr("item", SingleUseRuleItems), ")"
 SomeOf.grammar = attr("num", number), "OF", "(", csl(SingleUseRuleItems), ")"
 And.grammar = "(", SingleUseRuleItems, some("AND", SingleUseRuleItems), ")"
 Or.grammar = "(", SingleUseRuleItems, some("OR", SingleUseRuleItems), ")"
+
+# Delayed actions (one-time triggers after a delay)
+DelayedAction.grammar = attr("delay", number), attr("unit", TimeUnit), "AFTER", attr("start_time", PointInTime)
+ConditionalDelayedAction.grammar = attr("action", DelayedAction), "IF", attr("condition", SingleUseRuleItems)
 
 
 # Multi-use rules
@@ -226,6 +233,12 @@ def parse_config(config_str, puzzle_ids):
                 collect_dependencies(rule_item.item, target_puzzles)
             elif isinstance(rule_item, ConditionalTimeInterval):
                 collect_dependencies(rule_item.condition, target_puzzles)
+            elif isinstance(rule_item, DelayedAction):
+                # DelayedAction's start_time could reference a puzzle
+                collect_dependencies(rule_item.start_time, target_puzzles)
+            elif isinstance(rule_item, ConditionalDelayedAction):
+                collect_dependencies(rule_item.action, target_puzzles)
+                collect_dependencies(rule_item.condition, target_puzzles)
         
         collect_dependencies(rule.rule, unlockables)
     
@@ -242,35 +255,35 @@ def parse_config(config_str, puzzle_ids):
     return config
 
 
-def check_rule(rule, puzzle_status_dict, time, points):
+def check_rule(rule, puzzle_status_dict, time, points, current_time=None):
     # Handle string inputs (like parentheses and commas)
     if isinstance(rule, str):
         return True
 
     match rule:
         case Parenthesized():
-            return check_rule(rule.item, puzzle_status_dict, time, points)
-            
+            return check_rule(rule.item, puzzle_status_dict, time, points, current_time)
+
         case And():
             # Get all items that aren't strings (skip parentheses, AND, commas)
             subrules = [r for r in rule if not isinstance(r, str)]
-            return all(check_rule(subrule, puzzle_status_dict, time, points) for subrule in subrules)
-            
+            return all(check_rule(subrule, puzzle_status_dict, time, points, current_time) for subrule in subrules)
+
         case Or():
             # Get all items that aren't strings (skip parentheses, OR, commas)
             subrules = [r for r in rule if not isinstance(r, str)]
-            return any(check_rule(subrule, puzzle_status_dict, time, points) for subrule in subrules)
-            
+            return any(check_rule(subrule, puzzle_status_dict, time, points, current_time) for subrule in subrules)
+
         case SomeOf():
             # Get the number and the list of items
             num = rule.num
             # Get all items that aren't strings (skip OF, parentheses, commas)
             subrules = [r for r in rule if not isinstance(r, str) and not isinstance(r, int)]
-            return sum(1 for r in subrules if check_rule(r, puzzle_status_dict, time, points)) >= int(num)
-            
+            return sum(1 for r in subrules if check_rule(r, puzzle_status_dict, time, points, current_time)) >= int(num)
+
         case PuzzleID():
             return rule.id in puzzle_status_dict and puzzle_status_dict[rule.id].solve_time is not None
-            
+
         case TimeSinceStart():
             parts = rule.time.split(":")
             return time >= timedelta(hours=int(parts[0]), minutes=int(parts[1]))
@@ -280,10 +293,48 @@ def check_rule(rule, puzzle_status_dict, time, points):
 
         case PuzzleUnlock():
             return rule.puzzle.id in puzzle_status_dict and puzzle_status_dict[rule.puzzle.id].unlock_time is not None
-            
+
         case NumPoints():
             return points >= int(rule.points)
-            
+
+        case DelayedAction():
+            if current_time is None:
+                raise ValueError("DelayedAction requires current_time parameter")
+            # Calculate the trigger time based on start_time type
+            trigger_time = None
+            match rule.start_time:
+                case TimeSinceStart():
+                    # For TimeSinceStart, we need to calculate from hunt start
+                    # time is time_elapsed, so hunt_start = current_time - time
+                    parts = rule.start_time.time.split(":")
+                    hunt_start = current_time - time
+                    trigger_time = hunt_start + timedelta(hours=int(parts[0]), minutes=int(parts[1]))
+                case PuzzleSolve():
+                    if rule.start_time.puzzle.id in puzzle_status_dict:
+                        trigger_time = puzzle_status_dict[rule.start_time.puzzle.id].solve_time
+                case PuzzleUnlock():
+                    if rule.start_time.puzzle.id in puzzle_status_dict:
+                        trigger_time = puzzle_status_dict[rule.start_time.puzzle.id].unlock_time
+
+            if trigger_time is None:
+                return False
+
+            # Calculate the delay in minutes
+            delay_minutes = int(rule.delay)
+            if rule.unit.unit.upper().startswith("HOUR"):
+                delay_minutes *= 60
+
+            # Return True if we've passed trigger + delay
+            target_time = trigger_time + timedelta(minutes=delay_minutes)
+            return current_time >= target_time
+
+        case ConditionalDelayedAction():
+            # First check if the condition is met
+            if not check_rule(rule.condition, puzzle_status_dict, time, points, current_time):
+                return False
+            # Then check if the delayed action triggers
+            return check_rule(rule.action, puzzle_status_dict, time, points, current_time)
+
         case _:
             raise ValueError(f"Unknown rule type: {type(rule)} - {rule}")
 
@@ -321,7 +372,7 @@ def get_multi_use_count(rule, puzzle_status_dict, start_time, current_time, poin
             return get_multi_use_count(rule.interval, puzzle_status_dict, new_start_time, current_time, points)
             
         case ConditionalTimeInterval():
-            if not check_rule(rule.condition, puzzle_status_dict, time_elapsed, points):
+            if not check_rule(rule.condition, puzzle_status_dict, time_elapsed, points, current_time):
                 return 0
             return get_multi_use_count(rule.interval, puzzle_status_dict, start_time, current_time, points)
             
@@ -330,7 +381,7 @@ def get_multi_use_count(rule, puzzle_status_dict, start_time, current_time, poin
             
         case _:
             # Single use rules
-            return 1 if check_rule(rule, puzzle_status_dict, time_elapsed, points) else 0
+            return 1 if check_rule(rule, puzzle_status_dict, time_elapsed, points, current_time) else 0
 
 
 def process_config_rules(rules, puzzle_statuses, start_time, current_time):
@@ -362,7 +413,7 @@ def process_config_rules(rules, puzzle_statuses, start_time, current_time):
                 rule_value = get_multi_use_count(rule.rule, puzzle_status_dict, start_time, current_time, points)
                 rule_applies = rule_value > 0
             else:
-                rule_applies = check_rule(rule.rule, puzzle_status_dict, time_elapsed, points)
+                rule_applies = check_rule(rule.rule, puzzle_status_dict, time_elapsed, points, current_time)
                 rule_value = 1 if rule_applies else 0
                 
             if rule_applies:

@@ -756,4 +756,243 @@ def test_limited_time_intervals(hunt_with_puzzles):
         assert p1_status.num_available_hints == 2  # Limited to 2
         assert team.points == 10  # Limited to 2 rewards of 5 points
 
-    
+
+def test_delayed_action_after_solve(hunt_with_puzzles):
+    """Test that delayed actions trigger correctly after a puzzle solve"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    # Initial puzzle unlock
+    P1 <= 0 POINTS
+    # Give hint 30 minutes after solving P1
+    1 HINT <= 30 MINUTES AFTER P1 SOLVE
+    # Unlock P2 1 hour after solving P1
+    P2 <= 1 HOUR AFTER P1 SOLVE
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    current_time = timezone.now()
+
+    # Initial state - just P1 unlocked
+    team.process_unlocks()
+    assert team.num_available_hints == 0
+    unlocked = set(team.unlocked_puzzles().values_list('id', flat=True))
+    assert unlocked == {'1'}
+
+    # Solve P1
+    p1_status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    with patch.object(timezone, 'now', return_value=current_time):
+        p1_status.mark_solved()
+        team.process_unlocks()
+
+    # Nothing happens immediately after solve
+    assert team.num_available_hints == 0
+    unlocked = set(team.unlocked_puzzles().values_list('id', flat=True))
+    assert unlocked == {'1'}
+
+    # After 29 minutes: still nothing
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(minutes=29)):
+        team.process_unlocks()
+        assert team.num_available_hints == 0
+        unlocked = set(team.unlocked_puzzles().values_list('id', flat=True))
+        assert unlocked == {'1'}
+
+    # After 30 minutes: should get hint but not P2
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(minutes=30)):
+        team.process_unlocks()
+        assert team.num_available_hints == 1
+        unlocked = set(team.unlocked_puzzles().values_list('id', flat=True))
+        assert unlocked == {'1'}
+
+    # After 1 hour: should also have P2
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=1)):
+        team.process_unlocks()
+        assert team.num_available_hints == 1  # Still just 1, not increasing
+        unlocked = set(team.unlocked_puzzles().values_list('id', flat=True))
+        assert unlocked == {'1', '2'}
+
+    # After 2 hours: still the same (one-time trigger, not repeating)
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=2)):
+        team.process_unlocks()
+        assert team.num_available_hints == 1
+        unlocked = set(team.unlocked_puzzles().values_list('id', flat=True))
+        assert unlocked == {'1', '2'}
+
+
+def test_delayed_action_after_unlock(hunt_with_puzzles):
+    """Test delayed action triggers after puzzle unlock"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    P1 <= 0 POINTS
+    # Give points 1 hour after P1 is unlocked
+    5 POINTS <= 1 HOUR AFTER P1 UNLOCK
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    current_time = timezone.now()
+
+    # Mock time during initial unlock so unlock_time is set to current_time
+    with patch.object(timezone, 'now', return_value=current_time):
+        team.process_unlocks()
+    assert team.points == 0
+
+    # After 30 minutes: no points yet
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(minutes=30)):
+        team.process_unlocks()
+        assert team.points == 0
+
+    # After 1 hour: should get points
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=1)):
+        team.process_unlocks()
+        assert team.points == 5
+
+    # After 2 hours: still just 5 points (one-time only)
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=2)):
+        team.process_unlocks()
+        assert team.points == 5
+
+
+def test_delayed_action_with_condition(hunt_with_puzzles):
+    """Test delayed action with IF condition"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    P1 <= 0 POINTS
+    P2 <= 0 POINTS
+    # Give hint 30 minutes after P1 solve, but only if team has 10 points
+    1 HINT <= 30 MINUTES AFTER P1 SOLVE IF 10 POINTS
+    5 POINTS <= P1
+    10 POINTS <= P2
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    current_time = timezone.now()
+
+    team.process_unlocks()
+
+    # Solve P1 to get 5 points
+    p1_status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    with patch.object(timezone, 'now', return_value=current_time):
+        p1_status.mark_solved()
+        team.process_unlocks()
+    assert team.points == 5
+
+    # After 30 minutes: no hint yet (only 5 points, need 10)
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(minutes=30)):
+        team.process_unlocks()
+        assert team.num_available_hints == 0
+
+    # Solve P2 to get 15 points total
+    p2_status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[1])
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(minutes=30)):
+        p2_status.mark_solved()
+        team.process_unlocks()
+    assert team.points == 15
+
+    # After 30 minutes with 15 points: now should get hint
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(minutes=30)):
+        team.process_unlocks()
+        assert team.num_available_hints == 1
+
+
+def test_delayed_action_after_time_since_start(hunt_with_puzzles):
+    """Test delayed action after a time-since-start point"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    P1 <= 0 POINTS
+    # Give hint 30 minutes after the 1 hour mark
+    1 HINT <= 30 MINUTES AFTER +1:00
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    current_time = timezone.now()
+
+    team.process_unlocks()
+    assert team.num_available_hints == 0
+
+    # After 1 hour: no hint yet
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=1)):
+        team.process_unlocks()
+        assert team.num_available_hints == 0
+
+    # After 1 hour 29 minutes: still no hint
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=1, minutes=29)):
+        team.process_unlocks()
+        assert team.num_available_hints == 0
+
+    # After 1:30: should have hint
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=1, minutes=30)):
+        team.process_unlocks()
+        assert team.num_available_hints == 1
+
+
+def test_delayed_action_equivalence_with_limit(hunt_with_puzzles):
+    """Verify that new syntax behaves identically to EVERY X AFTER Y LIMIT 1"""
+    hunt, puzzles = hunt_with_puzzles
+
+    # Test with new syntax
+    config_new = """
+    P1 <= 0 POINTS
+    1 HINT <= 30 MINUTES AFTER P1 SOLVE
+    """
+    hunt.config = config_new
+    hunt.full_clean()
+    hunt.save()
+
+    team_new = Team.objects.create(name="Team New Syntax", hunt=hunt)
+    current_time = timezone.now()
+
+    team_new.process_unlocks()
+    p1_status_new = PuzzleStatus.objects.get(team=team_new, puzzle=puzzles[0])
+    with patch.object(timezone, 'now', return_value=current_time):
+        p1_status_new.mark_solved()
+        team_new.process_unlocks()
+
+    # Check results with new syntax
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(minutes=30)):
+        team_new.process_unlocks()
+        hints_new_30 = team_new.num_available_hints
+
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(minutes=60)):
+        team_new.process_unlocks()
+        hints_new_60 = team_new.num_available_hints
+
+    # Test with old syntax
+    config_old = """
+    P1 <= 0 POINTS
+    1 HINT <= EVERY 30 MINUTES AFTER P1 SOLVE LIMIT 1
+    """
+    hunt.config = config_old
+    hunt.full_clean()
+    hunt.save()
+
+    team_old = Team.objects.create(name="Team Old Syntax", hunt=hunt)
+
+    team_old.process_unlocks()
+    p1_status_old = PuzzleStatus.objects.get(team=team_old, puzzle=puzzles[0])
+    with patch.object(timezone, 'now', return_value=current_time):
+        p1_status_old.mark_solved()
+        team_old.process_unlocks()
+
+    # Check results with old syntax
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(minutes=30)):
+        team_old.process_unlocks()
+        hints_old_30 = team_old.num_available_hints
+
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(minutes=60)):
+        team_old.process_unlocks()
+        hints_old_60 = team_old.num_available_hints
+
+    # Both syntaxes should produce identical results
+    assert hints_new_30 == hints_old_30 == 1
+    assert hints_new_60 == hints_old_60 == 1  # Still 1, not 2 (one-time only)
