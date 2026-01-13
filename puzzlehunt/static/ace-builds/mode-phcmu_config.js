@@ -21,9 +21,12 @@ var PhcmuConfigHighlightRules = function () {
                 regex: "(\\d+)(\\s+)((?:MINUTES?|HOURS?)(?=\\s+AFTER))",
                 caseInsensitive: true
             }, {
-                token: ["keyword", "constant.language", "keyword"],
-                regex: "((?:P\\w+)\\s+)(SOLVE|UNLOCK)\\b",
+                token: ["constant.language", "text", "keyword"],
+                regex: "([Pp]#\\d+|[Pp](?:[a-fA-F0-9]+|[Xx]))(\\s+)(SOLVE|UNLOCK)\\b",
                 caseInsensitive: true
+            }, {
+                token: "constant.language",
+                regex: "[Pp]#\\d+\\b",
             }, {
                 token: "constant.language",
                 regex: "[Pp](?:[a-fA-F0-9]+|[Xx])\\b",

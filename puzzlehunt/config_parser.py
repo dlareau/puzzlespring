@@ -93,17 +93,33 @@ class ConfigFile(List):
     grammar = maybe_some(UnlockRule)
 
 
-def preprocess_config(config_str, puzzle_ids):
+def preprocess_config(config_str, puzzle_ids, order_to_id):
     """
-    Preprocess a config string to expand PX patterns and list patterns into individual lines.
+    Preprocess a config string to expand PX patterns, list patterns, and P# order references.
 
     Args:
         config_str: The configuration string to preprocess
         puzzle_ids: Set of valid puzzle IDs to expand PX with
+        order_to_id: Dict mapping order_number (int) to puzzle_id (str)
 
     Returns:
         The preprocessed configuration string
+
+    Raises:
+        ValueError: If a P# reference uses an invalid order number
     """
+    # First pass: resolve P# order references to actual puzzle IDs
+    order_ref_pattern = re.compile(r'P#(\d+)', re.IGNORECASE)
+
+    def replace_order_ref(match):
+        order_num = int(match.group(1))
+        if order_num not in order_to_id:
+            raise ValueError(f"No puzzle with order number {order_num}")
+        return f"P{order_to_id[order_num]}"
+
+    config_str = order_ref_pattern.sub(replace_order_ref, config_str)
+
+    # Second pass: expand list patterns and PX
     lines = config_str.split('\n')
     expanded_lines = []
 
@@ -136,19 +152,21 @@ def preprocess_config(config_str, puzzle_ids):
 
     return '\n'.join(expanded_lines)
 
-def parse_config(config_str, puzzle_ids):
+
+def parse_config(config_str, puzzle_ids, order_to_id):
     """
     Parse a config string and validate puzzle IDs and check for circular dependencies.
 
     Args:
         config_str: The configuration string to parse
         puzzle_ids: Set of valid puzzle IDs to check against
+        order_to_id: Dict mapping order_number (int) to puzzle_id (str)
 
     Raises:
         ValueError: If an invalid puzzle ID is referenced or circular dependencies are found
     """
-    # Preprocess to expand PX and list patterns
-    config_str = preprocess_config(config_str, puzzle_ids)
+    # Preprocess to expand P# order refs, PX, and list patterns
+    config_str = preprocess_config(config_str, puzzle_ids, order_to_id)
 
     # Check that the config string is valid
     try:

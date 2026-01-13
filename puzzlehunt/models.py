@@ -363,7 +363,10 @@ class Hunt(models.Model):
                 pass
         if self.pk and self.config:
             try:
-                parse_config(self.config, self.puzzle_set.values_list('id', flat=True))
+                puzzles = self.puzzle_set.values_list('id', 'order_number')
+                puzzle_ids = set(p[0] for p in puzzles)
+                order_to_id = {p[1]: p[0] for p in puzzles}
+                parse_config(self.config, puzzle_ids, order_to_id)
             except Exception as e:
                 raise ValidationError({'config': [str(e)]})
 
@@ -410,6 +413,7 @@ class Puzzle(models.Model):
 
     class Meta:
         ordering = ['-hunt', 'order_number']
+        unique_together = [['hunt', 'order_number']]
 
     class PuzzleType(models.TextChoices):
         STANDARD_PUZZLE = 'STD', 'Standard'
@@ -790,10 +794,12 @@ class Team(models.Model):
         if parsed_config:
             config_rules = parsed_config
         else:
-            puzzle_ids = set(hunt.puzzle_set.values_list('id', flat=True))
+            puzzles = hunt.puzzle_set.values_list('id', 'order_number')
+            puzzle_ids = set(p[0] for p in puzzles)
+            order_to_id = {p[1]: p[0] for p in puzzles}
             try:
                 # Parse the config and process unlocks
-                config_rules = parse_config(self.hunt.config, puzzle_ids)
+                config_rules = parse_config(self.hunt.config, puzzle_ids, order_to_id)
             except Exception as e:
                 # Log the error if config parsing fails
                 logger.error(f"Error processing hunt config: {e}")

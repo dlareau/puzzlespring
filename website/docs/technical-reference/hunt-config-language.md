@@ -31,12 +31,18 @@ P3 <= (P1 OR P2)
 
 ### Puzzle IDs
 
-Puzzles are referenced using `P` followed by their hexadecimal ID. For example:
+Puzzles can be referenced in two ways:
+
+**By hex ID:** Use `P` followed by the puzzle's hexadecimal ID:
 - `P1` refers to puzzle with ID 1
 - `PA5` refers to puzzle with ID A5
 
+**By order number:** Use `P#` followed by the puzzle's order number:
+- `P#1` refers to the first puzzle (order number 1)
+- `P#10` refers to the tenth puzzle (order number 10)
+
 {: .note }
-When using a puzzle ID in a non-time-based rule condition, you can use just the puzzle ID (e.g. `P1`) as a shortcut for `P1 SOLVE`. For example, `P2 <= P1` is equivalent to `P2 <= P1 SOLVE`.
+When using a puzzle reference in a non-time-based rule condition, you can use just the puzzle reference (e.g. `P1` or `P#1`) as a shortcut for `P1 SOLVE` or `P#1 SOLVE`. For example, `P2 <= P#1` is equivalent to `P2 <= P#1 SOLVE`.
 
 The special identifier `PX` can be used to create rules that apply to all puzzles. When `PX` appears multiple times in a single rule, each instance refers to the same puzzle when the rule is evaluated for each puzzle.
 

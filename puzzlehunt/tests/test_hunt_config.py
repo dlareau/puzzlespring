@@ -1090,3 +1090,142 @@ def test_bulk_syntax_with_comment(hunt_with_puzzles):
     status.mark_solved()
     team.process_unlocks()
     assert team.points == 15
+
+
+def test_puzzle_order_ref_basic(hunt_with_puzzles):
+    """Test that P# syntax references puzzles by order_number"""
+    hunt, puzzles = hunt_with_puzzles
+    # puzzles have order_number 1, 2, 3
+    config = """
+    P#1 <= 0 POINTS
+    P#2 <= P#1
+    10 POINTS <= P#1
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # P#1 (order 1) should be unlocked
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 1
+    assert unlocked[0].order_number == 1
+
+    # Solve P#1 - should get 10 points and unlock P#2
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    status.mark_solved()
+    team.process_unlocks()
+
+    assert team.points == 10
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 2
+    assert sorted([p.order_number for p in unlocked]) == [1, 2]
+
+
+def test_puzzle_order_ref_mixed_with_id(hunt_with_puzzles):
+    """Test that P# can be mixed with regular puzzle IDs"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    P#1 <= 0 POINTS
+    P2 <= P#1
+    5 POINTS <= P#2
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # Solve P#1 to unlock P2 (by ID)
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    status.mark_solved()
+    team.process_unlocks()
+
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 2
+
+    # Solve P#2 (which is puzzle with order_number 2)
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[1])
+    status.mark_solved()
+    team.process_unlocks()
+
+    assert team.points == 5
+
+
+def test_puzzle_order_ref_in_conditions(hunt_with_puzzles):
+    """Test P# in various condition types"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    P#1 <= 0 POINTS
+    P#2 <= 0 POINTS
+    P#3 <= (P#1 AND P#2)
+    5 POINTS <= P#1 SOLVE
+    5 POINTS <= P#2 SOLVE
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # Initially P#1 and P#2 unlocked
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 2
+
+    # Solve P#1
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    status.mark_solved()
+    team.process_unlocks()
+
+    # P#3 should not unlock yet (need both)
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 2
+    assert team.points == 5
+
+    # Solve P#2
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[1])
+    status.mark_solved()
+    team.process_unlocks()
+
+    # Now P#3 should unlock
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 3
+    assert team.points == 10
+
+
+def test_invalid_order_ref(hunt_with_puzzles):
+    """Test that invalid order numbers raise clear errors"""
+    hunt, puzzles = hunt_with_puzzles
+    config = "P#99 <= 0 POINTS"
+    hunt.config = config
+    with pytest.raises(ValidationError) as exc_info:
+        hunt.full_clean()
+    assert "order number 99" in str(exc_info.value).lower()
+
+
+def test_puzzle_order_ref_in_list(hunt_with_puzzles):
+    """Test P# syntax works in list expansion"""
+    hunt, puzzles = hunt_with_puzzles
+    config = """
+    P#1 <= 0 POINTS
+    P#2 <= 0 POINTS
+    P#3 <= 0 POINTS
+    5 POINTS <= [P#1, P#2, P#3]
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # Solve all puzzles
+    for i, puzzle in enumerate(puzzles):
+        status = PuzzleStatus.objects.get(team=team, puzzle=puzzle)
+        status.mark_solved()
+        team.process_unlocks()
+        assert team.points == 5 * (i + 1)
