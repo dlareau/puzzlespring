@@ -6,6 +6,9 @@ from pathlib import Path
 from zipfile import ZipFile
 import csv
 
+from dataclasses import dataclass
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import SuspiciousOperation
@@ -28,6 +31,7 @@ from .utils import create_media_files, get_media_file_model, get_media_file_pare
 from .hunt_views import protected_static
 from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile
 from .tasks import import_hunt_background
+from .config_parser import parse_config, process_config_rules
 
 
 @staff_member_required
@@ -988,3 +992,97 @@ def import_hunt(request, hunt):
 def hunt_reset(request, hunt):
     hunt.reset()
     return view_hunts(request, hunt)
+
+
+@dataclass
+class MockPuzzleStatus:
+    """Mock PuzzleStatus for config testing without database records."""
+    puzzle_id: str
+    unlock_time: object  # datetime or None
+    solve_time: object  # datetime or None
+
+
+@staff_member_required
+def config_tester(request, hunt):
+    """
+    View for testing hunt configuration without creating actual team data.
+    Simulates puzzle unlocks based on provided solved states and time.
+    """
+    puzzles = hunt.puzzle_set.order_by('order_number').all()
+    puzzle_ids = set(str(p.id) for p in puzzles)
+    order_to_id = {p.order_number: str(p.id) for p in puzzles}
+
+    # Parse simulated time offset from URL params as integer minutes (default: 0)
+    time_offset_mins = int(request.GET.get('t', 0))
+    simulated_time = hunt.start_date + timedelta(minutes=time_offset_mins)
+
+    # Build mock puzzle statuses from URL params
+    # Format: s_<puzzle_id>=<minutes> (minutes from hunt start when solved)
+    mock_statuses = []
+    solved_puzzle_ids = set()
+    solve_times_mins = {}  # puzzle_id -> integer minutes
+
+    for puzzle in puzzles:
+        solve_mins_param = request.GET.get(f's_{puzzle.id}')
+        if solve_mins_param is not None:
+            try:
+                solve_mins = int(solve_mins_param)
+                solve_time = hunt.start_date + timedelta(minutes=solve_mins)
+                # Assume unlock time is slightly before solve time (or at hunt start)
+                unlock_time = max(hunt.start_date, solve_time - timedelta(minutes=1))
+                mock_statuses.append(MockPuzzleStatus(
+                    puzzle_id=str(puzzle.id),
+                    unlock_time=unlock_time,
+                    solve_time=solve_time
+                ))
+                solved_puzzle_ids.add(str(puzzle.id))
+                solve_times_mins[str(puzzle.id)] = solve_mins
+            except ValueError:
+                pass  # Ignore invalid values
+
+    # Parse and process config rules
+    unlocked_puzzles = set()
+    points = 0
+    hints = 0
+    puzzle_hints = {}
+    earned_badges = []
+    parse_error = None
+
+    if hunt.config and hunt.config.strip():
+        try:
+            config_rules = parse_config(hunt.config, puzzle_ids, order_to_id)
+            unlocked_puzzles, points, hints, puzzle_hints, earned_badges = process_config_rules(
+                config_rules,
+                mock_statuses,
+                hunt.start_date,
+                simulated_time
+            )
+        except Exception as e:
+            parse_error = str(e)
+
+    # Build puzzle data for template
+    puzzle_data = []
+    for puzzle in puzzles:
+        pid = str(puzzle.id)
+        puzzle_data.append({
+            'puzzle': puzzle,
+            'is_solved': pid in solved_puzzle_ids,
+            'is_unlocked': pid in unlocked_puzzles,
+            'solve_time_mins': solve_times_mins.get(pid),
+            'puzzle_hints': puzzle_hints.get(pid, 0),
+        })
+
+    context = {
+        'hunt': hunt,
+        'puzzle_data': puzzle_data,
+        'time_offset_mins': time_offset_mins,
+        'simulated_time': simulated_time,
+        'points': points,
+        'hints': hints,
+        'earned_badges': earned_badges,
+        'parse_error': parse_error,
+        'num_unlocked': len(unlocked_puzzles),
+        'num_solved': len(solved_puzzle_ids),
+    }
+
+    return render(request, "staff_config_tester.html", context)

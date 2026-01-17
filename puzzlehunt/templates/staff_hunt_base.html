@@ -124,6 +124,10 @@
               href="{% url 'puzzlehunt:staff:hunt_config' hunt.id %}">
                 Hunt Config
               </a></li>
+              <li><a class="{% active_page request "config_tester" %}"
+              href="{% url 'puzzlehunt:staff:config_tester' hunt.id %}">
+                Config Tester
+              </a></li>
             </ul>
           </aside>
         </div>

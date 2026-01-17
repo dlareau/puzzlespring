@@ -1,0 +1,309 @@
+{% extends 'staff_hunt_base.html' %}
+{% comment %}
+@template: staff_config_tester.html
+@description: Interface for testing hunt configuration without creating actual team data.
+@extends: staff_hunt_base.html
+@blocks:
+  staff_content: Displays time controls, results summary, and puzzle state table
+@context:
+  hunt: The current Hunt object
+  puzzle_data: List of dicts with puzzle info and simulated state
+  time_offset_mins: Current simulated time offset in minutes (integer)
+  simulated_time: Absolute simulated datetime
+  points: Accumulated points
+  hints: Accumulated hints
+  earned_badges: List of earned badge texts
+  parse_error: Config parse error message if any
+{% endcomment %}
+
+{% load static %}
+{% load hunt_tags %}
+
+{% block title_meta_elements %}
+  {% with title="Staff Config Tester" %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
+
+
+{% block staff_content %}
+<style>
+  .solve-time-input {
+    width: 80px;
+    font-family: monospace;
+  }
+  .mono {
+    font-family: monospace;
+  }
+  .puzzle-row td {
+    vertical-align: middle;
+  }
+  /* Disable switch transitions to prevent animation on HTMX reload */
+  .switch[type="checkbox"] + label::before,
+  .switch[type="checkbox"] + label::after {
+    transition: none !important;
+  }
+</style>
+
+<div x-data="configTester()" class="columns is-multiline">
+  <!-- Time Control Section -->
+  <div class="column is-12">
+    <div class="box">
+      <div class="is-flex is-flex-wrap-wrap is-align-items-center is-justify-content-space-between" style="gap: 0.75rem;">
+        <div class="is-flex is-flex-wrap-wrap is-align-items-center" style="gap: 0.75rem;">
+          <span class="subtitle is-5 mb-0">Simulated Time:</span>
+          <div class="field has-addons mb-0">
+            <p class="control">
+              <button class="button" @click="adjustTime(-60)" title="-1 hour">-1h</button>
+            </p>
+            <p class="control">
+              <button class="button" @click="adjustTime(-5)" title="-5 minutes">-5m</button>
+            </p>
+            <p class="control">
+              <input class="input mono" type="text"
+                     :value="formatTime(timeOffset)"
+                     @change="parseAndSetTime($event.target.value)"
+                     @keyup.enter="parseAndSetTime($event.target.value)"
+                     style="width: 80px;">
+            </p>
+            <p class="control">
+              <button class="button" @click="adjustTime(5)" title="+5 minutes">+5m</button>
+            </p>
+            <p class="control">
+              <button class="button" @click="adjustTime(60)" title="+1 hour">+1h</button>
+            </p>
+          </div>
+          <span class="has-text-grey" x-text="'(' + formatAbsoluteTime() + ')'"></span>
+        </div>
+        <button class="button is-warning" @click="resetAll()">Reset All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Summary -->
+  <div class="column is-12">
+    <div class="box">
+      <div class="level">
+        <div class="level-item has-text-centered">
+          <div>
+            <p class="heading">Unlocked</p>
+            <p class="title">{{ num_unlocked }}</p>
+          </div>
+        </div>
+        <div class="level-item has-text-centered">
+          <div>
+            <p class="heading">Solved</p>
+            <p class="title">{{ num_solved }}</p>
+          </div>
+        </div>
+        <div class="level-item has-text-centered">
+          <div>
+            <p class="heading">Points</p>
+            <p class="title">{{ points }}</p>
+          </div>
+        </div>
+        <div class="level-item has-text-centered">
+          <div>
+            <p class="heading">Hints</p>
+            <p class="title">{{ hints }}</p>
+          </div>
+        </div>
+      </div>
+      {% if parse_error %}
+        <div class="notification is-danger mt-3">
+          <strong>Config Error:</strong> {{ parse_error }}
+        </div>
+      {% endif %}
+      {% if not hunt.config or not hunt.config.strip %}
+        <div class="notification is-warning mt-3">
+          No hunt configuration defined. <a href="{% url 'puzzlehunt:staff:hunt_config' hunt.id %}">Edit Hunt Config</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if earned_badges %}
+  <!-- Badges -->
+  <div class="column is-12">
+    <div class="box">
+      <div class="level">
+        <div class="level-left">
+          <div class="level-item">
+            <span class="has-text-weight-semibold mr-3">Badges Earned:</span>
+          </div>
+          <div class="level-item">
+            <div class="tags mb-0">
+              {% for badge in earned_badges %}
+                <span class="tag is-info is-medium">{{ badge }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Puzzle Grid -->
+  <div class="column is-12">
+    <table class="table is-fullwidth is-striped is-hoverable">
+      <thead>
+        <tr>
+          <th style="width: 50px;">#</th>
+          <th style="width: 100px;">Puzzle ID</th>
+          <th>Name</th>
+          <th style="width: 80px;" class="has-text-centered">Solved?</th>
+          <th style="width: 120px;">Solve Time</th>
+          <th style="width: 100px;" class="has-text-centered">Unlocked?</th>
+          <th style="width: 80px;" class="has-text-centered">P. Hints</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in puzzle_data %}
+        <tr class="puzzle-row">
+          <td class="mono">{{ item.puzzle.order_number }}</td>
+          <td class="mono"><strong>P{{ item.puzzle.id }}</strong></td>
+          <td>{{ item.puzzle.name }}</td>
+          <td class="has-text-centered">
+            <input type="checkbox"
+                   class="switch is-rounded is-success"
+                   id="solve-toggle-{{ item.puzzle.id }}"
+                   x-model="solvedPuzzles['{{ item.puzzle.id }}']"
+                   @change="onSolvedChange('{{ item.puzzle.id }}')">
+            <label for="solve-toggle-{{ item.puzzle.id }}"></label>
+          </td>
+          <td>
+            <input class="input is-small solve-time-input" type="text"
+                   :value="formatTime(solveTimes['{{ item.puzzle.id }}'])"
+                   @change="parseAndSetSolveTime('{{ item.puzzle.id }}', $event.target.value)"
+                   @keyup.enter="parseAndSetSolveTime('{{ item.puzzle.id }}', $event.target.value)"
+                   x-bind:disabled="!solvedPuzzles['{{ item.puzzle.id }}']"
+                   placeholder="+0:00">
+          </td>
+          <td class="has-text-centered">
+            {% if item.is_unlocked %}
+              <span class="tag is-success">Unlocked</span>
+            {% else %}
+              <span class="tag is-light">Locked</span>
+            {% endif %}
+          </td>
+          <td class="has-text-centered">
+            {% if item.puzzle_hints > 0 %}
+              <span class="tag is-info">{{ item.puzzle_hints }}</span>
+            {% else %}
+              <span class="has-text-grey">0</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="has-text-centered has-text-grey">
+            No puzzles in this hunt. <a href="{% url 'puzzlehunt:staff:hunt_puzzles' hunt.id %}">Add Puzzles</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function configTester() {
+  const huntStart = new Date('{{ hunt.start_date|date:"c" }}');
+
+  return {
+    timeOffset: {{ time_offset_mins }},  // integer minutes
+    solvedPuzzles: {
+      {% for item in puzzle_data %}
+      '{{ item.puzzle.id }}': {{ item.is_solved|yesno:"true,false" }},
+      {% endfor %}
+    },
+    solveTimes: {
+      {% for item in puzzle_data %}
+      '{{ item.puzzle.id }}': {{ item.solve_time_mins|default:"null" }},
+      {% endfor %}
+    },
+
+    formatTime(mins) {
+      if (mins === null || mins === undefined) return '';
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return `+${h}:${m.toString().padStart(2, '0')}`;
+    },
+
+    parseTime(str) {
+      // Parse "+H:MM" or "H:MM" format to integer minutes
+      if (!str) return null;
+      const match = str.trim().match(/^\+?(\d+):(\d{2})$/);
+      if (!match) return null;
+      return parseInt(match[1]) * 60 + parseInt(match[2]);
+    },
+
+    parseAndSetTime(str) {
+      const mins = this.parseTime(str);
+      if (mins !== null) {
+        this.timeOffset = mins;
+        this.recalculate();
+      }
+    },
+
+    parseAndSetSolveTime(puzzleId, str) {
+      const mins = this.parseTime(str);
+      if (mins !== null) {
+        this.solveTimes[puzzleId] = mins;
+        this.recalculate();
+      }
+    },
+
+    adjustTime(minutes) {
+      this.timeOffset = Math.max(0, this.timeOffset + minutes);
+      this.recalculate();
+    },
+
+    onSolvedChange(puzzleId) {
+      if (this.solvedPuzzles[puzzleId]) {
+        // When toggling on, default solve time to current simulated time
+        if (this.solveTimes[puzzleId] === null) {
+          this.solveTimes[puzzleId] = this.timeOffset;
+        }
+      } else {
+        // When toggling off, clear solve time
+        this.solveTimes[puzzleId] = null;
+      }
+      this.recalculate();
+    },
+
+    formatAbsoluteTime() {
+      const simTime = new Date(huntStart.getTime() + this.timeOffset * 60000);
+      return simTime.toLocaleString();
+    },
+
+    resetAll() {
+      this.timeOffset = 0;
+      for (const puzzleId in this.solvedPuzzles) {
+        this.solvedPuzzles[puzzleId] = false;
+        this.solveTimes[puzzleId] = null;
+      }
+      this.recalculate();
+    },
+
+    recalculate() {
+      const params = new URLSearchParams();
+      params.set('t', this.timeOffset);
+
+      for (const [puzzleId, solved] of Object.entries(this.solvedPuzzles)) {
+        if (solved && this.solveTimes[puzzleId] !== null) {
+          params.set(`s_${puzzleId}`, this.solveTimes[puzzleId]);
+        }
+      }
+
+      history.replaceState(null, '', '?' + params.toString());
+
+      htmx.ajax('GET', '?' + params.toString(), {
+        target: '#staff-content-container',
+        select: '#staff-content-container',
+        swap: 'outerHTML'
+      });
+    }
+  }
+}
+</script>
+{% endblock %}
