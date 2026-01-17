@@ -1,16 +1,13 @@
 {% extends 'staff_hunt_base.html' %}
 {% comment %}
 @template: staff_hunt_puzzles.html
-@description: Staff interface for managing and viewing puzzle statistics and files.
+@description: Staff interface for managing puzzle files.
 @extends: staff_hunt_base.html
 @blocks:
   staff_content: The main content area displaying puzzle management interface
 @context:
   puzzles: List of all Puzzle objects in the hunt
-  num_teams: Total number of teams in the hunt
 {% endcomment %}
-
-{% load mathfilters %}
 
 {% block title_meta_elements %}
   {% with title="Staff Puzzles" %} {{ block.super }} {% endwith %}
@@ -23,58 +20,30 @@
       <hr class="has-background-grey" style="height:1px">
     {% endif %}
     <div class="box p-4">
-      <div class="columns is-multiline" x-data="{openFiles: false, openSolFiles: false, openStats: false}">
-        <div class="column is-narrow">
-          <div>
-            <span class="ml-2 is-size-3"># {{ puzzle.order_number }}</span>
-          </div>
-          <div class="ml-2 has-text-grey">
-            (ID: {{ puzzle.id }})
-          </div>
+      <div class="columns is-multiline" x-data="{fileModal: false, activeTab: 'puzzle'}">
+        <div class="column is-narrow has-text-grey">
+          <div>#{{ puzzle.order_number }}</div>
+          <div>ID: {{ puzzle.id }}</div>
+          {% if puzzle.type == puzzle.PuzzleType.STANDARD_PUZZLE %}
+            <span class="tag is-primary">Standard</span>
+          {% elif puzzle.type == puzzle.PuzzleType.META_PUZZLE %}
+            <span class="tag is-warning">Meta</span>
+          {% elif puzzle.type == puzzle.PuzzleType.FINAL_PUZZLE %}
+            <span class="tag is-danger">Final</span>
+          {% elif puzzle.type == puzzle.PuzzleType.NON_PUZZLE %}
+            <span class="tag is-info">Non-Puzzle</span>
+          {% endif %}
         </div>
-        <div class="column pt-1">
-          <div>
-            <h3 class="is-size-4">{{ puzzle.name }}</h3>
-          </div>
-          <div class="tags are-medium">
-            <span class="tag {% if puzzle.type == puzzle.PuzzleType.STANDARD_PUZZLE %}is-primary{% else %}is-light{% endif %}">
-              Standard
-            </span>
-            <span class="tag {% if puzzle.type == puzzle.PuzzleType.META_PUZZLE %}is-warning{% else %}is-light{% endif %}">
-              Meta
-            </span>
-            <span class="tag {% if puzzle.type == puzzle.PuzzleType.FINAL_PUZZLE %}is-danger{% else %}is-light{% endif %}">
-              Final
-            </span>
-            <span class="tag {% if puzzle.type == puzzle.PuzzleType.NON_PUZZLE %}is-info{% else %}is-light{% endif %}">
-              Non-Puzzle
-            </span>
-          </div>
+        <div class="column">
+          <h3 class="is-size-4">{{ puzzle.name }}</h3>
         </div>
         <div class="column is-narrow">
           <div>
             <button class="button mr-1 has-tooltip-arrow has-tooltip-top"
-                    data-tooltip="Manage Puzzle Files"
-                    @click="openFiles = !openFiles; openStats = false; openSolFiles = false;"
-                    :class="openFiles && 'is-primary'">
+                    data-tooltip="Manage Files"
+                    @click="fileModal = true">
               <span class="icon is-small">
-                <i class="fa fa-lg fa-folder-open">P</i>
-              </span>
-            </button>
-            <button class="button mr-1 has-tooltip-arrow has-tooltip-top"
-                    data-tooltip="Manage Solution Files"
-                    @click="openSolFiles = !openSolFiles; openStats = false; openFiles = false;"
-                    :class="openSolFiles && 'is-primary'">
-              <span class="icon is-small">
-                <i class="fa fa-lg fa-folder-open">S</i>
-              </span>
-            </button>
-            <button class="button mr-1 has-tooltip-arrow has-tooltip-top"
-                    data-tooltip="View Puzzle Statistics"
-                    @click="openStats = !openStats; openFiles = false; openSolFiles = false;"
-                    :class="openStats && 'is-primary'">
-              <span class="icon is-small">
-                <i class="fa fa-lg fa-bar-chart-o"></i>
+                <i class="fa fa-lg fa-folder-open"></i>
               </span>
             </button>
             <a href="{% url 'admin:puzzlehunt_puzzle_change' puzzle.id %}"
@@ -101,74 +70,38 @@
             </button>
           </div>
         </div>
-        <div class="column is-12 mb-0" x-show="openFiles" x-cloak x-transition>
-          {% with parent=puzzle parent_type='puzzle'%}
-            {% include 'partials/_staff_file_list.html' %}
-          {% endwith %}
-        </div>
-        <div class="column is-12 mb-0" x-show="openSolFiles" x-cloak x-transition>
-          {% with parent=puzzle parent_type='solution'%}
-            {% include 'partials/_staff_file_list.html' %}
-          {% endwith %}
-        </div>
-        <div class="column is-12 mb-0" x-show="openStats" x-cloak x-transition>
-          <div class="columns">
-            <div class="column">
-              <p><b>Basic stats</b></p>
-              <table class="table is-narrow is-fullwidth">
-                <tbody>
-                  <tr> <td># Hints Used:</td> <td>{{ puzzle.num_hints }}</td> </tr>
-                  <tr>
-                    <td># Unlocks:</td>
-                    <td>{{ puzzle.num_unlocks }} / {{ num_teams }} ({{ puzzle.num_unlocks|div:num_teams|mul:100|floatformat:1 }}%)</td>
-                  </tr>
-                  <tr>
-                    <td># Solves:</td>
-                    <td>{{ puzzle.num_solves }} / {{ puzzle.num_unlocks }} ({{ puzzle.num_solves|div:puzzle.num_unlocks|mul:100|floatformat:1 }}%)</td>
-                  </tr>
-                  <tr> <td>Avg. Solve time:</td> <td>{{ puzzle.avg_solve_time|smooth_timedelta }}</td> </tr>
-                  <tr> <td># Submissions:</td> <td>{{ puzzle.num_submissions }}</td> </tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="column">
-              <p><b>Commonly Guessed Answers</b></p>
-              <table class="table is-narrow is-fullwidth">
-                <thead>
-                  <tr>
-                    <th>Answer</th>
-                    <th>Count</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for answer in puzzle.commonly_guessed_answers %}
-                    <tr>
-                      <td>{{ answer.submission_text }}</td>
-                      <td>{{ answer.count }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-            <div class="column">
-              <p><b>Submissions to Solve</b></p>
-              <table class="table is-narrow is-fullwidth">
-                <thead>
-                  <tr>
-                    <th>Submissions</th>
-                    <th>Count</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for submission, count in puzzle.sub_table %}
-                    <tr>
-                      <td>{{ submission }}</td>
-                      <td>{{ count }}</td>
-                    </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
+        <!-- File Management Modal -->
+        <div class="modal" :class="fileModal && 'is-active'" x-cloak @keydown.escape.window="fileModal = false">
+          <div class="modal-background" @click="fileModal = false"></div>
+          <div class="modal-card" style="width: 95vw;">
+            <header class="modal-card-head">
+              <p class="modal-card-title">{{ puzzle.name }} - File Management</p>
+              <button class="delete" aria-label="close" @click="fileModal = false"></button>
+            </header>
+            <section class="modal-card-body">
+              <!-- Tabs -->
+              <div class="tabs is-boxed">
+                <ul>
+                  <li :class="activeTab === 'puzzle' && 'is-active'">
+                    <a @click.prevent="activeTab = 'puzzle'">Puzzle Files</a>
+                  </li>
+                  <li :class="activeTab === 'solution' && 'is-active'">
+                    <a @click.prevent="activeTab = 'solution'">Solution Files</a>
+                  </li>
+                </ul>
+              </div>
+              <!-- Tab Content -->
+              <div x-show="activeTab === 'puzzle'">
+                {% with parent=puzzle parent_type='puzzle'%}
+                  {% include 'partials/_staff_file_list.html' %}
+                {% endwith %}
+              </div>
+              <div x-show="activeTab === 'solution'">
+                {% with parent=puzzle parent_type='solution'%}
+                  {% include 'partials/_staff_file_list.html' %}
+                {% endwith %}
+              </div>
+            </section>
           </div>
         </div>
       </div>
