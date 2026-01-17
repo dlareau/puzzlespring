@@ -20,7 +20,7 @@
       <hr class="has-background-grey" style="height:1px">
     {% endif %}
     <div class="box p-4">
-      <div class="columns is-multiline" x-data="{fileModal: false, activeTab: 'puzzle'}">
+      <div class="columns is-multiline" x-data="{fileModal: false}">
         <div class="column is-narrow has-text-grey">
           <div>#{{ puzzle.order_number }}</div>
           <div>ID: {{ puzzle.id }}</div>
@@ -38,69 +38,62 @@
           <h3 class="is-size-4">{{ puzzle.name }}</h3>
         </div>
         <div class="column is-narrow">
-          <div>
-            <button class="button mr-1 has-tooltip-arrow has-tooltip-top"
-                    data-tooltip="Manage Files"
-                    @click="fileModal = true">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+            <button class="button" @click="fileModal = true">
               <span class="icon is-small">
-                <i class="fa fa-lg fa-folder-open"></i>
+                <i class="fa fa-folder-open"></i>
               </span>
+              <span>Files</span>
             </button>
-            <a href="{% url 'admin:puzzlehunt_puzzle_change' puzzle.id %}"
-               class="button mr-1 has-tooltip-arrow has-tooltip-top"
-               data-tooltip="Edit Puzzle">
+            <a href="{% url 'admin:puzzlehunt_puzzle_change' puzzle.id %}" class="button">
               <span class="icon is-small">
-                <i class="fa fa-lg fa-pencil"></i>
+                <i class="fa fa-pencil"></i>
               </span>
+              <span>Edit</span>
             </a>
-            <a href="{% url 'puzzlehunt:puzzle_view' puzzle.pk %}"
-               class="button has-tooltip-arrow has-tooltip-top"
-               data-tooltip="Preview Puzzle">
+            <a href="{% url 'puzzlehunt:puzzle_view' puzzle.pk %}" class="button">
               <span class="icon is-small">
-                <i class="fa fa-lg fa-eye"></i>
+                <i class="fa fa-eye"></i>
               </span>
+              <span>Preview</span>
             </a>
-          </div>
-          <div x-data="{showAnswer: false}">
-            <button class="is-fullwidth button mt-2"
-                    :class="showAnswer &&'is-danger is-light'"
-                    @click="showAnswer = !showAnswer;"
-                    x-text="showAnswer ? '{{ puzzle.answer }}' : 'Show Answer'">
-            >
-            </button>
+            <div x-data="{showAnswer: false}" style="position: relative;">
+              <button class="button is-fullwidth"
+                      :class="showAnswer && 'is-danger is-light'"
+                      @click="showAnswer = !showAnswer;">
+                <span class="icon is-small">
+                  <i class="fa fa-key"></i>
+                </span>
+                <span>Answer</span>
+              </button>
+              <div x-show="showAnswer" x-cloak
+                   style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); z-index: 10; margin-top: 0.25rem;"
+                   @click.outside="showAnswer = false">
+                <span class="tag is-danger is-medium">{{ puzzle.answer }}</span>
+              </div>
+            </div>
           </div>
         </div>
         <!-- File Management Modal -->
         <div class="modal" :class="fileModal && 'is-active'" x-cloak @keydown.escape.window="fileModal = false">
           <div class="modal-background" @click="fileModal = false"></div>
-          <div class="modal-card" style="width: 95vw;">
+          <div class="modal-card" style="width: 95vw; max-height: 90vh;">
             <header class="modal-card-head">
               <p class="modal-card-title">{{ puzzle.name }} - File Management</p>
               <button class="delete" aria-label="close" @click="fileModal = false"></button>
             </header>
-            <section class="modal-card-body">
-              <!-- Tabs -->
-              <div class="tabs is-boxed">
-                <ul>
-                  <li :class="activeTab === 'puzzle' && 'is-active'">
-                    <a @click.prevent="activeTab = 'puzzle'">Puzzle Files</a>
-                  </li>
-                  <li :class="activeTab === 'solution' && 'is-active'">
-                    <a @click.prevent="activeTab = 'solution'">Solution Files</a>
-                  </li>
-                </ul>
-              </div>
-              <!-- Tab Content -->
-              <div x-show="activeTab === 'puzzle'">
-                {% with parent=puzzle parent_type='puzzle'%}
-                  {% include 'partials/_staff_file_list.html' %}
-                {% endwith %}
-              </div>
-              <div x-show="activeTab === 'solution'">
-                {% with parent=puzzle parent_type='solution'%}
-                  {% include 'partials/_staff_file_list.html' %}
-                {% endwith %}
-              </div>
+            <section class="modal-card-body" style="min-height: 300px;">
+              <!-- Puzzle Files Section -->
+              <h4 class="title is-5">Puzzle Files</h4>
+              {% with parent=puzzle parent_type='puzzle'%}
+                {% include 'partials/_staff_file_list.html' %}
+              {% endwith %}
+
+              <!-- Solution Files Section -->
+              <h4 class="title is-5 mt-5">Solution Files</h4>
+              {% with parent=puzzle parent_type='solution'%}
+                {% include 'partials/_staff_file_list.html' %}
+              {% endwith %}
             </section>
           </div>
         </div>
