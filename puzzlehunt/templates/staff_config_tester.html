@@ -19,12 +19,19 @@
 {% load static %}
 {% load hunt_tags %}
 
+{% block includes %}
+  {{ block.super }}
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/morph@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/htmx-ext-alpine-morph@2.0.0/alpine-morph.js"></script>
+{% endblock includes %}
+
 {% block title_meta_elements %}
   {% with title="Staff Config Tester" %} {{ block.super }} {% endwith %}
 {% endblock title_meta_elements %}
 
 
 {% block staff_content %}
+<div id="config-tester-content">
 <style>
   .solve-time-input {
     width: 80px;
@@ -43,7 +50,7 @@
   }
 </style>
 
-<div x-data="configTester()" class="columns is-multiline">
+<div x-data="configTester()" class="columns is-multiline" hx-ext="alpine-morph">
   <!-- Time Control Section -->
   <div class="column is-12">
     <div class="box">
@@ -218,7 +225,7 @@ function configTester() {
     },
     solveTimes: {
       {% for item in puzzle_data %}
-      '{{ item.puzzle.id }}': {{ item.solve_time_mins|default:"null" }},
+      '{{ item.puzzle.id }}': {{ item.solve_time_mins|default_if_none:"null" }},
       {% endfor %}
     },
 
@@ -298,12 +305,13 @@ function configTester() {
       history.replaceState(null, '', '?' + params.toString());
 
       htmx.ajax('GET', '?' + params.toString(), {
-        target: '#staff-content-container',
-        select: '#staff-content-container',
-        swap: 'outerHTML'
+        target: '#config-tester-content',
+        select: '#config-tester-content > *',
+        swap: 'morph:innerHTML'
       });
     }
   }
 }
 </script>
+</div>
 {% endblock %}
