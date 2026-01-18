@@ -494,7 +494,7 @@ def charts(request, hunt):
     )
 
     # Then use that to get the actual PuzzleStatus objects
-    results = PuzzleStatus.objects.filter(
+    earliest_solve_statuses = PuzzleStatus.objects.filter(
         puzzle__hunt=hunt,
         solve_time__isnull=False,
         team__playtester=False
@@ -504,10 +504,51 @@ def charts(request, hunt):
         )
     ).select_related('puzzle', 'team').order_by('puzzle__order_number')
 
+    # Build a lookup dict for earliest solves by puzzle id
+    earliest_solve_lookup = {status.puzzle_id: status for status in earliest_solve_statuses}
+
+    # Puzzle Statistics (copied from hunt_puzzles)
+    puzzle_stats = [
+        ('num_hints', '# Hints Used'),
+        ('num_solves', '# Solves'),
+        ('num_unlocks', '# Unlocks'),
+        ('num_submissions', '# Submissions'),
+        ('avg_solve_time', 'Avg. Solve Time'),
+    ]
+
+    stats_puzzles = hunt.puzzle_set
+    for stat in puzzle_stats:
+        stats_puzzles = Puzzle.annotate_query(stats_puzzles, stat[0])
+    stats_puzzles = stats_puzzles.order_by('order_number').all()
+
+    for puzzle in stats_puzzles:
+        sq = (Submission.objects.filter(team__pk=OuterRef('pk'), puzzle=puzzle).values('team', 'puzzle')
+              .annotate(c=Count('*')).values('c'))
+        num_subs = (puzzle.team_set.filter(puzzlestatus__solve_time__isnull=False)
+                    .annotate(num_s=Subquery(sq, output_field=PositiveIntegerField())).values_list('num_s', flat=True))
+        sub_table_full = sorted(list(Counter(num_subs).items()), key=lambda x: x[0])
+        cutoff = 5
+        sub_table = sub_table_full[:cutoff]
+        if len(sub_table_full) > cutoff:
+            sub_table.append((f"{int(sub_table[-1][0]) + 1}+", sum([x[1] for x in sub_table_full[cutoff:]])))
+        puzzle.sub_table = sub_table
+
+        commonly_guessed_answers = Submission.objects.filter(puzzle=puzzle).values('submission_text').annotate(
+            count=Count('submission_text')).order_by('-count')[:7]
+        commonly_guessed_answers = [x for x in commonly_guessed_answers if
+                                    x['submission_text'].lower() != puzzle.answer.lower()][:6]
+        puzzle.commonly_guessed_answers = commonly_guessed_answers
+
+        # Attach earliest solve info
+        earliest_solve = earliest_solve_lookup.get(puzzle.id)
+        puzzle.first_solve_team = earliest_solve.team if earliest_solve else None
+        puzzle.first_solve_time = earliest_solve.solve_time if earliest_solve else None
+
     context = {'chart_solves_data': puzzle_info_dict1, 'chart_submissions_data': puzzle_info_dict2,
                'chart_submissions_by_time_data': submission_hours, 'chart_solves_by_time_data': solve_hours,
-               'teams': teams, 'num_puzzles': num_puzzles, 'chart_rows': results, 'puzzles': puzzles,
-               'chart_hints_data': puzzle_info_dict7, 'hunt': hunt}
+               'teams': teams, 'num_puzzles': num_puzzles, 'puzzles': puzzles,
+               'chart_hints_data': puzzle_info_dict7, 'hunt': hunt, 'stats_puzzles': stats_puzzles,
+               'num_teams': num_teams}
     return render(request, "staff_charts.html", context)
 
 
@@ -720,52 +761,17 @@ def hunt_puzzles(request, hunt):
     """
     View function to display puzzles for the current hunt.
 
-    This view fetches and annotates puzzles for a given hunt.
+    This view fetches puzzles for a given hunt.
     The puzzles are then rendered in the 'staff_hunt_puzzles.html' template.
 
     Args:
         hunt (Hunt): The hunt instance for which to display puzzles
     """
-    puzzle_stats = [
-        ('num_hints', '# Hints Used'),
-        ('num_solves', '# Solves'),
-        ('num_unlocks', '# Unlocks'),
-        ('num_submissions', '# Submissions'),
-        ('avg_solve_time', 'Avg. Solve Time'),
-    ]
-
-    # Fetch puzzles
-    puzzles = hunt.puzzle_set
-    for stat in puzzle_stats:
-        puzzles = Puzzle.annotate_query(puzzles, stat[0])
-    puzzles = puzzles.all()
-
-    for puzzle in puzzles:
-        sq = (Submission.objects.filter(team__pk=OuterRef('pk'), puzzle=puzzle).values('team', 'puzzle')
-              .annotate(c=Count('*')).values('c'))
-        num_subs = (puzzle.team_set.filter(puzzlestatus__solve_time__isnull=False)
-                    .annotate(num_s=Subquery(sq, output_field=PositiveIntegerField())).values_list('num_s', flat=True))
-        sub_table_full = sorted(list(Counter(num_subs).items()), key=lambda x: x[0])
-        cutoff = 5
-        sub_table = sub_table_full[:cutoff]
-        if len(sub_table_full) > cutoff:
-            sub_table.append((f"{int(sub_table[-1][0]) + 1}+", sum([x[1] for x in sub_table_full[cutoff:]])))
-        puzzle.sub_table = sub_table
-
-        commonly_guessed_answers = Submission.objects.filter(puzzle=puzzle).values('submission_text').annotate(
-            count=Count('submission_text')).order_by('-count')[:7]
-        commonly_guessed_answers = [x for x in commonly_guessed_answers if
-                                    x['submission_text'].lower() != puzzle.answer.lower()][:6]
-        puzzle.commonly_guessed_answers = commonly_guessed_answers
-
-    puzzles = list(puzzles)
+    puzzles = list(hunt.puzzle_set.order_by('order_number').all())
     for i, puzzle in enumerate(puzzles):
-        if i != 0:
-            puzzle.has_gap = puzzles[i].order_number - puzzles[i-1].order_number > 1
-        else:
-            puzzle.has_gap = False
+        puzzle.has_gap = (puzzles[i].order_number - puzzles[i-1].order_number > 1) if i != 0 else False
 
-    context = {'hunt': hunt, 'puzzles': puzzles, 'num_teams': hunt.team_set.count()}
+    context = {'hunt': hunt, 'puzzles': puzzles}
     return render(request, "staff_hunt_puzzles.html", context)
 
 

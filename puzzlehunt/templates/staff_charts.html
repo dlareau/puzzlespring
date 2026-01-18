@@ -1,13 +1,15 @@
 {% extends 'staff_hunt_base.html' %}
+{% load mathfilters %}
+{% load hunt_tags %}
 {% comment %}
 @template: staff_charts.html
 @description: Displays various charts and statistics about puzzle solves, submissions, and hints using Google Charts.
 @extends: staff_hunt_base.html
 @blocks:
   extra_head: Adds Google Charts loader
-  staff_content: Displays charts and earliest solves table
+  staff_content: Displays charts and puzzle statistics tables
 @context:
-  chart_rows: List of earliest solve data for each puzzle
+  stats_puzzles: List of puzzles with statistics including first solve info
   chart_solves_data: Data for puzzle solve status chart
   chart_submissions_data: Data for puzzle submissions chart
   chart_hints_data: Data for hints per puzzle chart
@@ -33,24 +35,76 @@
   <div id="chart_solves_by_time"></div>
 
 
-<h4 class="title is-4">Earliest solves</h4>
-<table class="table is-narrow is-hoverable">
-    <thead>
-        <tr>
-            <th>Puzzle</th>
-            <th>First Team</th>
-            <th>First Time</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for row in chart_rows %}
-        <tr>
-            <td>{{ row.puzzle.name }}</td>
-            <td>{{ row.team.name }}</td>
-            <td>{{ row.solve_time|time:"h:i a" }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
+<h4 class="title is-4 mt-5">Puzzle Statistics</h4>
+<table class="table is-narrow is-hoverable is-fullwidth">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Puzzle</th>
+      <th>Hints</th>
+      <th>Unlocks</th>
+      <th>Solves</th>
+      <th>Avg Solve Time</th>
+      <th>Submissions</th>
+      <th>First Team</th>
+      <th>First Time</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for puzzle in stats_puzzles %}
+    <tr>
+      <td>{{ puzzle.order_number }}</td>
+      <td>{{ puzzle.name }}</td>
+      <td>{{ puzzle.num_hints }}</td>
+      <td>{{ puzzle.num_unlocks }}/{{ num_teams }} ({{ puzzle.num_unlocks|div:num_teams|mul:100|floatformat:0 }}%)</td>
+      <td>{{ puzzle.num_solves }}/{{ puzzle.num_unlocks }} ({{ puzzle.num_solves|div:puzzle.num_unlocks|mul:100|floatformat:0 }}%)</td>
+      <td>{{ puzzle.avg_solve_time|smooth_timedelta }}</td>
+      <td>{{ puzzle.num_submissions }}</td>
+      <td>{{ puzzle.first_solve_team.name|default:"-" }}</td>
+      <td>{% if puzzle.first_solve_time %}{{ puzzle.first_solve_time|time:"h:i a" }}{% else %}-{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h4 class="title is-4 mt-5">Commonly Guessed Wrong Answers</h4>
+<table class="table is-narrow is-hoverable is-fullwidth">
+  <thead>
+    <tr>
+      <th>Puzzle</th>
+      <th>Answer</th>
+      <th>Count</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for puzzle in stats_puzzles %}
+      {% for answer in puzzle.commonly_guessed_answers %}
+      <tr>
+        <td>{{ puzzle.name }}</td>
+        <td>{{ answer.submission_text }}</td>
+        <td>{{ answer.count }}</td>
+      </tr>
+      {% endfor %}
+    {% endfor %}
+  </tbody>
+</table>
+
+<h4 class="title is-4 mt-5">Submissions to Solve</h4>
+<table class="table is-narrow is-hoverable is-fullwidth">
+  <thead>
+    <tr>
+      <th>Puzzle</th>
+      <th>Distribution</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for puzzle in stats_puzzles %}
+    <tr>
+      <td>{{ puzzle.name }}</td>
+      <td>{% for sub, count in puzzle.sub_table %}{{ sub }}: {{ count }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
 </table>
 
   <script>
