@@ -234,18 +234,14 @@
                 if (!data) {
                   return type === 'sort' ? '9999-12-31T23:59:59' : '';
                 }
-                
+
                 // For sorting, use solve_time or last_submission
                 if (type === 'sort') {
                   return data.solve_time || data.last_submission || '9999-12-31T23:59:59';
                 }
-                
-                // Calculate background color and border style
-                const bgColor = `background-color: ${getBackgroundColor(data)};`;
-                const borderStyle = getBorderStyle(data.num_hints);
-                
-                // For display, use the existing format with background color and border
-                let content = `<div class="puzzle-cell-container" style="${bgColor} ${borderStyle}">`;
+
+                // For display, render content without wrapper styling (styles applied to td via createdCell)
+                let content = `<div class="puzzle-cell-container">`;
 
                 const displayTime = data.solve_time || data.last_submission;
                 if (displayTime) {
@@ -257,6 +253,18 @@
                 }
                 content += '</div>';
                 return content;
+              },
+              createdCell: function(td, cellData, rowData, row, col) {
+                if (cellData) {
+                  const bgColor = getBackgroundColor(cellData);
+                  if (bgColor) {
+                    td.style.backgroundColor = bgColor;
+                  }
+                  if (cellData.num_hints >= 1) {
+                    const borderColors = { 1: '#ffdb26', 2: '#db5100', 3: '#000000' };
+                    td.style.border = `4px solid ${borderColors[Math.min(cellData.num_hints, 3)]}`;
+                  }
+                }
               }
             },
           {% endfor %}

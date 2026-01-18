@@ -127,15 +127,3 @@ html {
   padding-left: 1em;
 }
 
-.puzzle-cell-container {
-  height: 100%;
-}
-
-#progressTable tbody tr {
-  height: 1px;
-}
-
-#progressTable td:has(.puzzle-cell-container) {
-  padding: 0;
-  height: inherit;
-}
