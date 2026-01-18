@@ -68,29 +68,25 @@
 </table>
 
 <h4 class="title is-4 mt-5">Commonly Guessed Wrong Answers</h4>
-<table class="table is-narrow">
-  <thead>
-    <tr>
-      <th>Answer</th>
-      <th>Count</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for puzzle in stats_puzzles %}
-      {% if puzzle.commonly_guessed_answers %}
-      <tr class="has-background-light">
-        <th colspan="2">{{ puzzle.name }}</th>
-      </tr>
-      {% for answer in puzzle.commonly_guessed_answers %}
-      <tr>
-        <td>{{ answer.submission_text }}</td>
-        <td>{{ answer.count }}</td>
-      </tr>
-      {% endfor %}
-      {% endif %}
-    {% endfor %}
-  </tbody>
-</table>
+<div style="display: flex; flex-wrap: wrap; gap: 12px;">
+  {% for puzzle in stats_puzzles %}
+    {% if puzzle.commonly_guessed_answers %}
+    <div class="box p-3" style="min-width: 200px; flex: 0 1 auto;">
+      <p class="has-text-weight-bold mb-2">{{ puzzle.name }}</p>
+      <table class="table is-narrow is-size-7 mb-0">
+        <tbody>
+          {% for answer in puzzle.commonly_guessed_answers %}
+          <tr>
+            <td>{{ answer.submission_text }}</td>
+            <td class="has-text-right">{{ answer.count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  {% endfor %}
+</div>
 
 <h4 class="title is-4 mt-5">Submissions to Solve</h4>
 <table class="table is-narrow is-hoverable is-fullwidth">
