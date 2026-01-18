@@ -929,6 +929,12 @@ class Submission(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         help_text="The user who created the submission")
+    matched_response = models.ForeignKey(
+        'Response',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="The custom Response that matched this submission (if any)")
 
     @property
     def is_correct(self):
@@ -958,9 +964,11 @@ class Submission(models.Model):
         """ Takes the submission's text and uses various methods to craft and populate a response. """
 
         # Check against regexes
+        matched_response = None
         for resp in self.puzzle.response_set.all():
             if re.match(resp.regex, self.submission_text, re.IGNORECASE):
                 response = resp.text
+                matched_response = resp
                 break
         else:  # Give a default response if no regex matches
             if self.is_correct:
@@ -970,6 +978,7 @@ class Submission(models.Model):
                 response = "Wrong Answer."
 
         self.response_text = response
+        self.matched_response = matched_response
 
     def __str__(self):
         return f"{self.team_id}-{self.puzzle_id}-{self.submission_text}"

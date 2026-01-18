@@ -41,11 +41,11 @@
     <tr>
       <th>#</th>
       <th>Puzzle</th>
-      <th>Hints</th>
       <th>Unlocks</th>
       <th>Solves</th>
+      <th>Subs (C/R/I)</th>
+      <th>Hints</th>
       <th>Avg Solve Time</th>
-      <th>Submissions</th>
       <th>First Team</th>
       <th>First Time</th>
     </tr>
@@ -55,11 +55,11 @@
     <tr>
       <td>{{ puzzle.order_number }}</td>
       <td>{{ puzzle.name }}</td>
-      <td>{{ puzzle.num_hints }}</td>
       <td>{{ puzzle.num_unlocks }}/{{ num_teams }} ({{ puzzle.num_unlocks|div:num_teams|mul:100|floatformat:0 }}%)</td>
       <td>{{ puzzle.num_solves }}/{{ puzzle.num_unlocks }} ({{ puzzle.num_solves|div:puzzle.num_unlocks|mul:100|floatformat:0 }}%)</td>
+      <td>{{ puzzle.num_solves }} / {{ puzzle.num_custom_response }} / {{ puzzle.num_incorrect }}</td>
+      <td>{{ puzzle.num_hints }}</td>
       <td>{{ puzzle.avg_solve_time|smooth_timedelta }}</td>
-      <td>{{ puzzle.num_submissions }}</td>
       <td>{{ puzzle.first_solve_team.name|default:"-" }}</td>
       <td>{% if puzzle.first_solve_time %}{{ puzzle.first_solve_time|time:"h:i a" }}{% else %}-{% endif %}</td>
     </tr>
@@ -157,12 +157,13 @@
         // Chart 2
         var submissions_data = new google.visualization.DataTable();
         submissions_data.addColumn('string', 'Puzzle Name');
-        submissions_data.addColumn('number', 'Correct submissions');
-        submissions_data.addColumn('number', 'Incorrect submissions');
-    
+        submissions_data.addColumn('number', 'Correct');
+        submissions_data.addColumn('number', 'Custom Response');
+        submissions_data.addColumn('number', 'Incorrect');
+
         submissions_data.addRows([
         {% for point in chart_submissions_data %}
-            ["{{point.name}}", {{point.correct}}, -{{point.incorrect}}],
+            ["{{point.name}}", {{point.correct}}, -{{point.custom_response}}, -{{point.incorrect}}],
         {% endfor %}
         ]);
     

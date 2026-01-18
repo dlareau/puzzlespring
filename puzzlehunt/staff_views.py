@@ -5,7 +5,6 @@ import shutil
 from pathlib import Path
 from zipfile import ZipFile
 import csv
-import re
 
 from dataclasses import dataclass
 from datetime import timedelta
@@ -30,7 +29,7 @@ from django.core import serializers
 from django_sendfile import sendfile
 from .utils import create_media_files, get_media_file_model, get_media_file_parent_model, create_hunt_export_zip, import_hunt_from_zip, import_hunt_from_zip, validate_hunt_zip
 from .hunt_views import protected_static
-from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile, Response
+from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile
 from .tasks import import_hunt_background
 from .config_parser import parse_config, process_config_rules
 
@@ -473,21 +472,15 @@ def charts(request, hunt):
             sub_table.append((f"{int(sub_table[-1][0]) + 1}+", sum([x[1] for x in sub_table_full[cutoff:]])))
         puzzle.sub_table = sub_table
 
-        # Commonly guessed answers table
-        commonly_guessed_answers = Submission.objects.filter(puzzle=puzzle).values('submission_text').annotate(
-            count=Count('submission_text')).order_by('-count').all()
-        responses = Response.objects.filter(puzzle=puzzle).all()
-        wrong_answers = []
-        for submission in commonly_guessed_answers:
-            if submission['submission_text'].lower() == puzzle.answer.lower():
-                continue
-            for resp in responses:
-                if re.match(resp.regex, submission['submission_text'], re.IGNORECASE):
-                    break
-            else:
-                wrong_answers.append(submission['submission_text'].lower())
-
-        commonly_guessed_answers = [x for x in commonly_guessed_answers if x['submission_text'].lower() in wrong_answers][:6]
+        # Commonly guessed wrong answers (submissions that didn't match any custom response)
+        commonly_guessed_answers = (
+            Submission.objects
+            .filter(puzzle=puzzle, matched_response__isnull=True)
+            .exclude(submission_text__iexact=puzzle.answer)
+            .values('submission_text')
+            .annotate(count=Count('submission_text'))
+            .order_by('-count')[:6]
+        )
         puzzle.commonly_guessed_answers = commonly_guessed_answers
 
         # First solve info
@@ -503,10 +496,22 @@ def charts(request, hunt):
             "solved": puzzle.num_solves or 0
         })
 
-        # Submissions chart data
+        # Submissions breakdown (for table and chart)
+        # Count submissions that matched a custom response (excluding correct answers)
+        custom_response_count = (
+            Submission.objects
+            .filter(puzzle=puzzle, matched_response__isnull=False)
+            .exclude(submission_text__iexact=puzzle.answer)
+            .count()
+        )
+        total_incorrect = (puzzle.num_submissions or 0) - (puzzle.num_solves or 0)
+        puzzle.num_custom_response = custom_response_count
+        puzzle.num_incorrect = total_incorrect - custom_response_count
+
         chart_submissions_data.append({
             "name": puzzle.name,
-            "incorrect": (puzzle.num_submissions or 0) - (puzzle.num_solves or 0),
+            "incorrect": puzzle.num_incorrect,
+            "custom_response": puzzle.num_custom_response,
             "correct": puzzle.num_solves or 0
         })
 

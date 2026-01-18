@@ -293,8 +293,8 @@ class TeamAdmin(admin.ModelAdmin):
 @admin.register(Submission)
 class SubmissionAdmin(admin.ModelAdmin):
     search_fields = ['submission_text']
-    list_filter = ['puzzle', 'submission_time']
-    list_display = ['submission_text', short_team_name, 'submission_time']
+    list_filter = ['puzzle', 'submission_time', 'matched_response']
+    list_display = ['submission_text', short_team_name, 'submission_time', 'matched_response']
     autocomplete_fields = ['team', 'user', 'puzzle']
 
 
