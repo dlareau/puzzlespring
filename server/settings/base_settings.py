@@ -230,6 +230,7 @@ CONSTANCE_CONFIG = {
     
     # Hunt Display Settings
     'SINGLE_HUNT_MODE': (False, 'If enabled, only one hunt will be visible and accessible'), # Not yet implemented
+    'STYLE_INFO_PAGES_WITH_HUNT_CSS': (False, 'If enabled, info pages like leaderboard and updates will use the hunt CSS'),
 
     # Puzzle Display Settings
     'PROGRESS_FULL_PUZZLE_NAMES': (False, 'If enabled, the progress page will show full puzzle names'),

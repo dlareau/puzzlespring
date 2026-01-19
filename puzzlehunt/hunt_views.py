@@ -387,7 +387,7 @@ def hunt_updates(request, hunt):
             updates = Update.objects.none()
 
     updates = updates.all().order_by('time')
-    return render(request, "updates.html", {"updates": updates})
+    return render(request, "updates.html", {"updates": updates, "hunt": hunt})
 
 
 def hunt_info(request, hunt):

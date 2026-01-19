@@ -2,13 +2,23 @@
 
 {% comment %}
 @template: hunt_info_base.html
-@description: Base template for hunt information pages with a centered content layout.
+@description: Base template for hunt information pages with a centered content layout. Optionally applies hunt CSS.
 @extends: info_base.html
 @blocks:
   title: Sets page title to "Hunt Details"
+  includes: Conditionally includes hunt CSS based on STYLE_INFO_PAGES_WITH_HUNT_CSS setting
   content_wrapper: Provides a centered content layout with specific width
   content: Block for hunt information content
+@context:
+  hunt: The Hunt object (optional, will fall back to current hunt)
 {% endcomment %}
+
+{% block includes %}
+  {% set_hunt_from_context %}
+  {% if config.STYLE_INFO_PAGES_WITH_HUNT_CSS and tmpl_hunt.css_file %}
+    <link rel="stylesheet" type="text/css" href="{{ tmpl_hunt.css_file.file.url }}">
+  {% endif %}
+{% endblock includes %}
 
 {% block title %} Hunt Details {% endblock title %}
 
