@@ -108,7 +108,7 @@
       </div>
     </div>
     <div id="feed_items"
-         hx-trigger="sse:events"
+         hx-trigger="sse:events[shouldRefreshFeed(event)]"
          hx-get=""
          hx-select="#feed_items"
          hx-swap="outerHTML settle:0"
@@ -132,6 +132,57 @@
             }
         }
         return array.join(',');
+    }
+
+    function shouldRefreshFeed(event) {
+        let data;
+        try {
+            data = JSON.parse(event.detail.data);
+        } catch (e) {
+            console.log('Error parsing event data');
+            console.log(e);
+            console.log(event);
+            console.log(event.detail.data);
+            return true;  // Can't parse, refresh to be safe
+        }
+
+        // Check event type filter - read directly from checkbox elements
+        let checkedTypes = [];
+        let checkboxes = document.getElementsByClassName('type-checkbox');
+        for (let i = 0; i < checkboxes.length; i++) {
+            if (checkboxes[i].checked) {
+                checkedTypes.push(checkboxes[i].name);
+            }
+        }
+        if (checkedTypes.length > 0 && checkedTypes.length < checkboxes.length) {
+            if (!checkedTypes.includes(data.type)) {
+                console.log(event);
+                console.log('Event type not allowed:', data.type);
+                return false;
+            }
+        }
+
+        // Check team/puzzle tag filters
+        const tagSelect = document.getElementById('team-puzzle-select');
+        if (tagSelect && tagSelect.BulmaTagsInput) {
+            const selectedTags = tagSelect.BulmaTagsInput().items.map(item => item.value);
+            if (selectedTags.length > 0) {
+                const puzzleFilters = selectedTags.filter(t => t.startsWith('p:')).map(t => parseInt(t.substring(2)));
+                const teamFilters = selectedTags.filter(t => t.startsWith('t:')).map(t => parseInt(t.substring(2)));
+
+                if (puzzleFilters.length > 0 && (data.puzzle_id === null || !puzzleFilters.includes(data.puzzle_id))) {
+                    console.log('Puzzle filter not matched:', data.puzzle_id);
+                    return false;
+                }
+                if (teamFilters.length > 0 && (data.team_id === null || !teamFilters.includes(data.team_id))) {
+                    console.log('Team filter not matched:', data.team_id);
+                    return false;
+                }
+            }
+        }
+
+        console.log('Event allowed:', data);
+        return true;
     }
 
     BulmaTagsInput.attach('input[type="tags"], select[type="tags"]', {

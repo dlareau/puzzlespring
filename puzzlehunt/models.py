@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError, ObjectDoesNotExist
 import logging
 import os
 import random
+import json
 from constance import config
 from django.contrib.auth.models import AbstractUser
 from django.dispatch import receiver
@@ -1473,7 +1474,12 @@ class EventManager(models.Manager):
             related_object_id = related_object.id
 
         # Send all events to the staff channel for the feed page
-        send_event("staff", "events", "new_event")
+        event_metadata = {
+            "type": event_type,
+            "team_id": team.pk if team else None,
+            "puzzle_id": puzzle.pk if puzzle else None,
+        }
+        send_event("staff", "events", event_metadata)
 
         event = self.create(
             timestamp=timestamp,
