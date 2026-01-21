@@ -63,7 +63,11 @@ def set_curr_team(parser, token):
 
 class CurrentTeamEventNode(template.Node):
     def render(self, context):
-        context['current_hunt_team'] = Hunt.objects.get(is_current_hunt=True).team_from_user(context['request'].user)
+        if "hunt" in context and context['hunt'].is_current_hunt:
+            hunt = context['hunt']
+        else:
+            hunt = Hunt.objects.get(is_current_hunt=True)
+        context['current_hunt_team'] = hunt.team_from_user(context['request'].user)
         return ''
 
 
