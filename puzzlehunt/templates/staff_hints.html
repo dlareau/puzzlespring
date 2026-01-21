@@ -17,7 +17,9 @@
 
 {% block staff_content %}
   {# Top level element #}
-  <div x-data="{modal: false}" hx-ext="sse" sse-connect="{% url 'puzzlehunt:staff_events' %}" >
+  <div x-data="{modal: false}"
+       x-init="$watch('modal', (value, oldValue) => { if(!value && oldValue) htmx.trigger('#hint-rows-outer', 'modal-closed') })"
+       hx-ext="sse" sse-connect="{% url 'puzzlehunt:staff_events' %}" >
     <div id="staff-hint-modal" class="modal pt-6" :class="modal && 'is-active'" style="justify-content: start;"
          x-cloak x-show="modal" x-transition.opacity.duration.300ms x-transition.delay.200ms>
       <div class="modal-background" @click="modal = false"></div> {# Hide the modal when you click out of it #}
@@ -111,7 +113,7 @@
     {# The rows of hints, taken care of by the _hint_row partial template #}
     {# This div will refresh its contents whenever there are new hints available via SSE #}
     <div id="hint-rows-outer"
-         hx-trigger="sse:hints"
+         hx-trigger="sse:hints, modal-closed"
          hx-get="{{ request.get_full_path }}"
          hx-select="#hint-rows-outer"
          hx-swap="outerHTML swap:200ms"
