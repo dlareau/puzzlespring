@@ -22,7 +22,7 @@
 <div id="huntContent" 
      class="bulma" 
      hx-ext="sse" 
-     {% if not team.is_staff %}
+     {% if team %}
        sse-connect="{% url 'puzzlehunt:team_events' team.pk %}"
      {% endif %}
 >

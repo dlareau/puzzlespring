@@ -51,7 +51,9 @@
     {% if team %}
       <div
         hx-ext="sse" 
-        sse-connect="{% url 'puzzlehunt:team_events' team.pk %}"
+        {% if team %}
+          sse-connect="{% url 'puzzlehunt:team_events' team.pk %}"
+        {% endif %}
       >
         {% comment %} TODO: Uncomment this to enable full page hunt updates {% endcomment %}
         {% comment %} <div
