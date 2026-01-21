@@ -5,16 +5,17 @@
   messages: List of Django message objects to display
 {% endcomment %}
 
-<div id="outer-message-container" class="bulma" {% if request.htmx and not request.htmx.boosted %}hx-swap-oob="true"{% endif %} style="position: absolute; width: 100%;">
+<div id="built-in-message-container" class="bulma" {% if request.htmx and not request.htmx.boosted %}hx-swap-oob="true"{% endif %} style="position: absolute; width: 100%;">
   {% if messages %}
     <script>
     {% for message in messages %}
       bulmaToast.toast({
         message: '{{ message|linebreaks }}',
         type: 'is-{% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}danger{% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}warning{% elif message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS %}success{% else %}info{% endif %}',
-        appendTo: document.getElementById('outer-message-container')
+        appendTo: document.getElementById('built-in-message-container')
       });
     {% endfor %}
     </script>
   {% endif %}
 </div>
+<div id="sse-message-container" class="bulma" style="position: absolute; width: 100%;"></div>

@@ -115,7 +115,8 @@
          hx-get="{{ request.get_full_path }}"
          hx-select="#hint-rows-outer"
          hx-swap="outerHTML swap:200ms"
-         hx-disinherit="*">
+         hx-disinherit="*"
+         @htmx:before-request.camel="if(modal && $event.detail.elt === $el) $event.preventDefault()">
       {% for hint in hints %}
         {% include "partials/_hint_row.html" with staff=True%}
       {% endfor %}

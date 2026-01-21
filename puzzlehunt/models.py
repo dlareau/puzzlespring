@@ -16,7 +16,7 @@ from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from django.utils.functional import cached_property
 
-from django.db.models import F, OuterRef, Count, Subquery, Max, Avg
+from django.db.models import F, OuterRef, Count, Subquery, Max, Avg, Q
 from django.db.models.fields import PositiveIntegerField, DateTimeField, DurationField
 from django.db.models.functions import Lower
 from django.db.models.signals import m2m_changed
@@ -29,7 +29,8 @@ logger = logging.getLogger(__name__)
 time_zone = tz.gettz(settings.TIME_ZONE)
 
 def send_notification(text, team):
-    toast_data = f"{{message: '{text}', position: 'bottom-right', appendTo: document.getElementById('outer-message-container')}}"
+    escaped_text = json.dumps(text)  # Properly escape newlines and quotes for JavaScript
+    toast_data = f"{{message: {escaped_text}, position: 'bottom-right', appendTo: document.getElementById('sse-message-container')}}"
     sse_notification_string = f"<script> bulmaToast.toast({toast_data});</script>"
     send_event(f"team-{team.pk}", f"notification", sse_notification_string, json_encode=False)
 
@@ -1155,6 +1156,10 @@ class Hint(models.Model):
         if send_team_msg:
             if data == "response":
                 send_notification(f"You have received a response to your hint\nrequest for {self.puzzle.name}", self.team)
+            elif data == "response_update":
+                send_notification(f"Your hint response has been updated for {self.puzzle.name}", self.team)
+            elif data == "refund":
+                send_notification(f"Your hint has been refunded for {self.puzzle.name}", self.team)
             send_event(f"team-{self.team.pk}", "hints", data)
 
     def save(self, *args, **kwargs):
@@ -1208,12 +1213,13 @@ class Hint(models.Model):
         return self
 
     def respond(self, user, response):
+        notification_type = "response" if self.response == "" else "response_update"
         self.response = response
         self.response_time = timezone.now()
         self.responder = user
         self.last_modified_time = timezone.now()
         self.save()
-        self.send_hint_sse("response", True)
+        self.send_hint_sse(notification_type, True)
         Event.objects.create_event(Event.EventType.HINT_RESPONSE, self, user)
         return self
 
@@ -1362,8 +1368,8 @@ class TeamRankingRule(models.Model):
                 args = {self.rule_type: Subquery(sq, output_field=PositiveIntegerField())}
                 return query.annotate(**args)
             case self.RuleType.NUM_METAS:
-                sq = PuzzleStatus.objects.filter(team__pk=OuterRef('pk'), puzzle__type=Puzzle.PuzzleType.META_PUZZLE,
-                                                 solve_time__isnull=False).order_by()
+                sq = PuzzleStatus.objects.filter(Q(puzzle__type=Puzzle.PuzzleType.META_PUZZLE) | Q(puzzle__type=Puzzle.PuzzleType.FINAL_PUZZLE))
+                sq = sq.filter(team__pk=OuterRef('pk'), solve_time__isnull=False).order_by()
                 sq = sq.values('team').annotate(c=Count('*')).values('c')
                 args = {self.rule_type: Subquery(sq, output_field=PositiveIntegerField())}
                 return query.annotate(**args)
@@ -1374,8 +1380,8 @@ class TeamRankingRule(models.Model):
                 args = {self.rule_type: Subquery(sq, output_field=DateTimeField())}
                 return query.annotate(**args)
             case self.RuleType.LAST_META_TIME:
-                sq = PuzzleStatus.objects.filter(team__pk=OuterRef('pk'), puzzle__type=Puzzle.PuzzleType.META_PUZZLE,
-                                                 solve_time__isnull=False).order_by()
+                sq = PuzzleStatus.objects.filter(Q(puzzle__type=Puzzle.PuzzleType.META_PUZZLE) | Q(puzzle__type=Puzzle.PuzzleType.FINAL_PUZZLE))
+                sq = sq.filter(team__pk=OuterRef('pk'), solve_time__isnull=False).order_by()
                 sq = sq.values('team').annotate(last_time=Max('solve_time')).values('last_time')
                 args = {self.rule_type: Subquery(sq, output_field=DateTimeField())}
                 return query.annotate(**args)
