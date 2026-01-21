@@ -93,6 +93,12 @@ urlpatterns = [
         path('hunt/<hunt-fallback:hunt>/import/', staff_views.import_hunt, name='hunt_import'),
         path('hunt/<hunt-fallback:hunt>/reset/', staff_views.hunt_reset, name='hunt_reset'),
 
+        path('hunt/<hunt-fallback:hunt>/file-editor/', staff_views.file_editor, name='file_editor'),
+        path('file-editor/puzzle-list/', staff_views.file_editor_puzzle_list, name='file_editor_puzzle_list'),
+        path('file-editor/file-list/', staff_views.file_editor_file_list, name='file_editor_file_list'),
+        path('file-editor/load-content/', staff_views.file_editor_load_content, name='file_editor_load_content'),
+        path('file/<str:parent_type>/<int:pk>/save/', staff_views.file_save_content, name='file_save_content'),
+
         path('<str:parent_type>/file/<str:pk>/delete/', staff_views.file_delete, name='file_delete'),
         path('<str:parent_type>/file/<str:pk>/replace/', staff_views.file_replace, name='file_replace'),
         path('<str:parent_type>/file/<str:pk>/download/', staff_views.file_download, name='file_download'),

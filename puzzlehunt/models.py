@@ -161,6 +161,12 @@ class MediaFile(models.Model):
     def extension(self):
         return self.file.name.split(".")[-1]
 
+    @property
+    def is_text_editable(self):
+        TEXT_EXTENSIONS = {'.html', '.htm', '.css', '.js', '.txt', '.tmpl'}
+        from pathlib import Path
+        return Path(self.file.name).suffix.lower() in TEXT_EXTENSIONS
+
     def __str__(self):
         return self.file.name.removeprefix("trusted/")
 

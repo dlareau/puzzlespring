@@ -1,0 +1,39 @@
+{% if file %}
+<div class="columns">
+  <div class="column">
+    <div class="level">
+      <div class="level-left">
+        <div class="level-item">
+          <span class="tag is-medium">{{ file.relative_name }}</span>
+        </div>
+      </div>
+      <div class="level-right">
+        <div class="level-item">
+          <span id="save-status"></span>
+        </div>
+        <div class="level-item">
+          <button id="save-btn"
+                  class="button is-primary"
+                  hx-post="{% url 'puzzlehunt:staff:file_save_content' parent_type file.pk %}"
+                  hx-vals="js:{content: editor.getValue()}"
+                  hx-swap="none"
+                  hx-indicator="#save-btn"
+                  hx-on::before-request="onSaveStart()"
+                  hx-on::after-request="onSaveComplete(event)">
+            <span class="icon htmx-indicator">
+              <i class="fa fa-spinner fa-spin"></i>
+            </span>
+            <span>Save</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="ace-editor" style="height: 70vh; border: 1px solid #ccc;"></div>
+<textarea id="file-content" style="display: none;" data-extension="{{ file.extension }}">{{ content }}</textarea>
+{% else %}
+<div id="editor-placeholder" class="has-text-centered has-text-grey p-6" style="height: 70vh; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center;">
+  Select a file to edit
+</div>
+{% endif %}

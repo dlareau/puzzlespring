@@ -1,0 +1,140 @@
+{% extends 'staff_hunt_base.html' %}
+
+{% load static %}
+
+{% block title_meta_elements %}
+  {% with title="Staff File Editor" %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
+
+{% block staff_content %}
+<div>
+  <div class="columns is-multiline">
+    <div class="column is-12">
+      <h1 class="subtitle">File Editor</h1>
+    </div>
+
+    <div class="column is-4">
+      <div class="field">
+        <label class="label">Hunt</label>
+        <div class="control">
+          <div class="select is-fullwidth">
+            <select name="hunt_id"
+                    hx-get="{% url 'puzzlehunt:staff:file_editor_puzzle_list' %}"
+                    hx-target="#puzzle-select-container"
+                    hx-trigger="change, load">
+              <option value="">-- Select a hunt --</option>
+              {% for h in hunts %}
+              <option value="{{ h.pk }}" {% if h.pk == hunt.pk %}selected{% endif %}>{{ h.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="column is-4">
+      <div class="field">
+        <label class="label">Puzzle / Hunt Files</label>
+        <div class="control" id="puzzle-select-container">
+          <div class="select is-fullwidth">
+            <select disabled>
+              <option>-- Select a hunt first --</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="column is-4">
+      <div class="field">
+        <label class="label">File</label>
+        <div class="control" id="file-select-container">
+          <div class="select is-fullwidth">
+            <select disabled>
+              <option>-- Select a puzzle first --</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="editor-outer-container">
+    {% include "partials/_file_editor_content.html" %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script>
+  let editor = null;
+
+  const MODE_MAP = {
+    'html': 'ace/mode/html',
+    'htm': 'ace/mode/html',
+    'css': 'ace/mode/css',
+    'js': 'ace/mode/javascript',
+    'txt': 'ace/mode/text',
+    'tmpl': 'ace/mode/django',
+  };
+
+  function initializeEditor() {
+    const editorDiv = document.getElementById('ace-editor');
+    const contentEl = document.getElementById('file-content');
+
+    if (!editorDiv || !contentEl) return;
+
+    const content = contentEl.value;
+    const extension = contentEl.dataset.extension;
+
+    editor = ace.edit('ace-editor');
+    window.editor = editor;
+    editor.setTheme('ace/theme/chrome');
+    editor.session.setTabSize(2);
+    editor.session.setUseSoftTabs(true);
+    editor.setFontSize(14);
+
+    const mode = MODE_MAP[extension] || 'ace/mode/text';
+    editor.session.setMode(mode);
+
+    editor.setValue(content);
+    editor.selection.clearSelection();
+    editor.focus();
+  }
+
+  function onSaveStart() {
+    document.getElementById('save-status').innerHTML = '<span class="tag is-warning is-medium">Saving...</span>';
+  }
+
+  function onSaveComplete(event) {
+    const statusEl = document.getElementById('save-status');
+    if (event.detail.successful) {
+      statusEl.innerHTML = '<span class="tag is-success is-medium">Saved!</span>';
+      setTimeout(() => statusEl.innerHTML = '', 3000);
+    } else {
+      statusEl.innerHTML = '<span class="tag is-danger is-medium">Error saving</span>';
+    }
+  }
+
+  // Initialize or destroy editor after HTMX swaps content
+  document.body.addEventListener('htmx:afterSettle', function(evt) {
+    if (evt.detail.target.id === 'editor-outer-container') {
+      if (editor) {
+        editor.destroy();
+      }
+      initializeEditor();
+    }
+  });
+
+  // Keyboard shortcut for save (Ctrl/Cmd + S)
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 's' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      const saveBtn = document.getElementById('save-btn');
+      if (saveBtn && editor) {
+        saveBtn.click();
+      }
+    }
+  });
+</script>
+{% endblock %}

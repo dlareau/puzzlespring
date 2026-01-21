@@ -1,0 +1,30 @@
+<div class="select is-fullwidth">
+  <select name="parent"
+          hx-get="{% url 'puzzlehunt:staff:file_editor_file_list' %}"
+          hx-target="#file-select-container"
+          hx-include="[name='hunt_id']"
+          hx-trigger="change">
+    <option value="">-- Select a puzzle --</option>
+    {% if hunt_has_files %}
+    <option value="hunt:{{ hunt.pk }}">[Hunt Files]</option>
+    {% endif %}
+    {% for puzzle in puzzles %}
+    <option value="puzzle:{{ puzzle.pk }}">{{ puzzle.order_number }}. {{ puzzle.name }}</option>
+    {% endfor %}
+    {% if not hunt_has_files and not puzzles %}
+    <option value="" disabled>No editable files found</option>
+    {% endif %}
+  </select>
+</div>
+
+<div id="file-select-container" hx-swap-oob="true">
+  <div class="select is-fullwidth">
+    <select disabled>
+      <option>-- Select a puzzle first --</option>
+    </select>
+  </div>
+</div>
+
+<div id="editor-outer-container" hx-swap-oob="true">
+  {% include "partials/_file_editor_content.html" with file=None %}
+</div>

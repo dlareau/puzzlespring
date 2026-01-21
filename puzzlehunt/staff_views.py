@@ -1109,3 +1109,158 @@ def config_tester(request, hunt):
     }
 
     return render(request, "staff_config_tester.html", context)
+
+
+@staff_member_required
+def file_editor(request, hunt):
+    """
+    Main file editor page with three-panel selector and Ace editor.
+    """
+    hunts = Hunt.objects.order_by('-start_date').all()
+
+    # Check for pre-selected file from query params
+    preselect_type = request.GET.get('type')
+    preselect_file_pk = request.GET.get('file')
+
+    context = {
+        'hunt': hunt,
+        'hunts': hunts,
+        'preselect_type': preselect_type,
+        'preselect_file_pk': preselect_file_pk,
+    }
+    return render(request, "staff_file_editor.html", context)
+
+
+@require_GET
+@staff_member_required
+def file_editor_puzzle_list(request):
+    """
+    HTMX endpoint returning puzzle select dropdown for a given hunt.
+    """
+    hunt_id = request.GET.get('hunt_id')
+    if not hunt_id:
+        return render(request, "partials/_file_editor_puzzle_select.html", {
+            'hunt': None,
+            'puzzles': [],
+            'hunt_has_files': False,
+        })
+
+    hunt = get_object_or_404(Hunt, pk=hunt_id)
+    puzzles = hunt.puzzle_set.order_by('order_number').all()
+
+    # Filter to only puzzles that have editable files
+    puzzles_with_files = []
+    for puzzle in puzzles:
+        if puzzle.files.exists() and any(f.is_text_editable for f in puzzle.files.all()):
+            puzzles_with_files.append(puzzle)
+
+    context = {
+        'hunt': hunt,
+        'puzzles': puzzles_with_files,
+        'hunt_has_files': hunt.files.exists() and any(f.is_text_editable for f in hunt.files.all()),
+    }
+    return render(request, "partials/_file_editor_puzzle_select.html", context)
+
+
+@require_GET
+@staff_member_required
+def file_editor_file_list(request):
+    """
+    HTMX endpoint returning file select dropdown for a given puzzle or hunt.
+    """
+    # Parse parent value (format: "type:id")
+    parent_value = request.GET.get('parent')
+    if not parent_value or ':' not in parent_value:
+        return render(request, "partials/_file_editor_file_select.html", {
+            'files': [],
+            'parent_type': None,
+        })
+
+    parent_type, parent_id = parent_value.split(':', 1)
+    model = get_media_file_parent_model(parent_type)
+    parent = get_object_or_404(model, pk=parent_id)
+
+    if parent_type == "solution":
+        files = parent.solution_files.all()
+    else:
+        files = parent.files.all()
+
+    # Filter to only text-editable files
+    editable_files = [f for f in files if f.is_text_editable]
+
+    # Auto-select if only one file
+    auto_select_file = editable_files[0] if len(editable_files) == 1 else None
+
+    context = {
+        'files': editable_files,
+        'parent_type': parent_type,
+        'auto_select_file': auto_select_file,
+    }
+    return render(request, "partials/_file_editor_file_select.html", context)
+
+
+@require_GET
+@staff_member_required
+def file_editor_load_content(request):
+    """
+    HTMX endpoint returning the editor partial with file content.
+    """
+    file_value = request.GET.get('file')
+    if not file_value or ':' not in file_value:
+        return render(request, "partials/_file_editor_content.html", {'file': None})
+
+    parent_type, file_pk = file_value.split(':', 1)
+    model = get_media_file_model(parent_type)
+    file = get_object_or_404(model, pk=file_pk)
+
+    if not file.is_text_editable:
+        return render(request, "partials/_file_editor_content.html", {'file': None})
+
+    try:
+        file.file.open('r')
+        content = file.file.read()
+        file.file.close()
+
+        if isinstance(content, bytes):
+            content = content.decode('utf-8')
+
+        context = {
+            'file': file,
+            'content': content,
+            'parent_type': parent_type,
+        }
+        return render(request, "partials/_file_editor_content.html", context)
+    except Exception:
+        return render(request, "partials/_file_editor_content.html", {'file': None})
+
+
+@require_POST
+@staff_member_required
+def file_save_content(request, parent_type, pk):
+    """
+    Save edited content back to file.
+    """
+    from django.core.files.base import ContentFile
+    from puzzlehunt.utils import invalidate_template_cache
+
+    model = get_media_file_model(parent_type)
+    file = get_object_or_404(model, pk=pk)
+
+    if not file.is_text_editable:
+        return JsonResponse({'error': 'Not a text-editable file'}, status=400)
+
+    content = request.POST.get('content', '')
+
+    with file.file.open('wb') as f:
+        f.write(content.encode('utf-8'))
+    file.save()
+
+    # Manually invalidate template cache for template files
+    if file.file.name.endswith('.tmpl') or file.file.name.endswith('.html'):
+        template_path = file.file.name.removeprefix("trusted/")
+        invalidate_template_cache(template_path)
+
+    return JsonResponse({
+        'success': True,
+        'saved_at': timezone.now().isoformat(),
+    })
