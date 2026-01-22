@@ -378,6 +378,12 @@ def hunt_leaderboard(request, hunt):
         config.TEAM_CUSTOM_DATA_TYPE == 'boolean'
     )
 
+    # Only split if there are teams in both categories
+    if split_leaderboard:
+        has_true_teams = base_teams.filter(custom_data="True").exists()
+        has_false_teams = base_teams.exclude(custom_data="True").exists()
+        split_leaderboard = has_true_teams and has_false_teams
+
     context = {
         'ruleset': ruleset,
         'hunt': hunt,
