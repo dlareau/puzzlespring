@@ -46,7 +46,7 @@
         {% if file.is_text_editable %}
         <a class="button is-small ml-1 is-info is-outlined has-tooltip-arrow has-tooltip-top"
            data-tooltip="Edit File"
-           href="{% url 'puzzlehunt:staff:file_editor' parent.hunt.id|default:parent.id %}?type={{ parent_type }}&file={{ file.id }}">
+           href="{% url 'puzzlehunt:staff:file_editor' parent.hunt.id|default:parent.id %}?type={{ parent_type }}&parent={{ parent.id }}&file={{ file.id }}">
           <i class="fa fa-lg fa-pencil" aria-hidden="true"></i>
         </a>
         {% else %}

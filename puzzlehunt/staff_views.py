@@ -1120,14 +1120,58 @@ def file_editor(request, hunt):
 
     # Check for pre-selected file from query params
     preselect_type = request.GET.get('type')
+    preselect_parent_pk = request.GET.get('parent')
     preselect_file_pk = request.GET.get('file')
 
     context = {
         'hunt': hunt,
         'hunts': hunts,
-        'preselect_type': preselect_type,
-        'preselect_file_pk': preselect_file_pk,
     }
+
+    # If preselect params provided, populate all dropdowns server-side
+    if preselect_type and preselect_parent_pk and preselect_file_pk:
+        # Populate puzzle/hunt select (same logic as file_editor_puzzle_list)
+        puzzles = hunt.puzzle_set.order_by('order_number').all()
+        puzzles_with_files = [
+            p for p in puzzles
+            if p.files.exists() and any(f.is_text_editable for f in p.files.all())
+        ]
+        hunt_has_files = hunt.files.exists() and any(f.is_text_editable for f in hunt.files.all())
+
+        context['puzzles'] = puzzles_with_files
+        context['hunt_has_files'] = hunt_has_files
+        context['selected_is_hunt'] = (preselect_type == "hunt")
+        if preselect_type == "puzzle":
+            context['selected_puzzle_pk'] = preselect_parent_pk
+
+        # Populate file select (same logic as file_editor_file_list)
+        model = get_media_file_parent_model(preselect_type)
+        parent = model.objects.filter(pk=preselect_parent_pk).first()
+        if parent:
+            if preselect_type == "solution":
+                files = parent.solution_files.all()
+            else:
+                files = parent.files.all()
+            editable_files = [f for f in files if f.is_text_editable]
+            context['files'] = editable_files
+            context['parent_type'] = preselect_type
+            context['selected_file_pk'] = int(preselect_file_pk)
+
+            # Load file content (same logic as file_editor_load_content)
+            file_model = get_media_file_model(preselect_type)
+            file_obj = file_model.objects.filter(pk=preselect_file_pk).first()
+            if file_obj and file_obj.is_text_editable:
+                try:
+                    file_obj.file.open('r')
+                    content = file_obj.file.read()
+                    file_obj.file.close()
+                    if isinstance(content, bytes):
+                        content = content.decode('utf-8')
+                    context['file'] = file_obj
+                    context['content'] = content
+                except Exception:
+                    pass
+
     return render(request, "staff_file_editor.html", context)
 
 

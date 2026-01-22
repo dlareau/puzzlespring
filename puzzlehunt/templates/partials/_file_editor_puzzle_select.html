@@ -6,10 +6,10 @@
           hx-trigger="change">
     <option value="">-- Select a puzzle --</option>
     {% if hunt_has_files %}
-    <option value="hunt:{{ hunt.pk }}">[Hunt Files]</option>
+    <option value="hunt:{{ hunt.pk }}" {% if selected_is_hunt %}selected{% endif %}>[Hunt Files]</option>
     {% endif %}
     {% for puzzle in puzzles %}
-    <option value="puzzle:{{ puzzle.pk }}">{{ puzzle.order_number }}. {{ puzzle.name }}</option>
+    <option value="puzzle:{{ puzzle.pk }}" {% if selected_puzzle_pk == puzzle.pk %}selected{% endif %}>{{ puzzle.order_number }}. {{ puzzle.name }}</option>
     {% endfor %}
     {% if not hunt_has_files and not puzzles %}
     <option value="" disabled>No editable files found</option>
@@ -17,6 +17,7 @@
   </select>
 </div>
 
+{% if not initial_render %}
 <div id="file-select-container" hx-swap-oob="true">
   <div class="select is-fullwidth">
     <select disabled>
@@ -28,3 +29,4 @@
 <div id="editor-outer-container" hx-swap-oob="true">
   {% include "partials/_file_editor_content.html" with file=None %}
 </div>
+{% endif %}

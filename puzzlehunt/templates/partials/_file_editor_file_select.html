@@ -5,24 +5,26 @@
           hx-trigger="change">
     <option value="">-- Select a file --</option>
     {% for file in files %}
-    <option value="{{ parent_type }}:{{ file.pk }}">{{ file.relative_name }}</option>
+    <option value="{{ parent_type }}:{{ file.pk }}" {% if selected_file_pk == file.pk %}selected{% endif %}>{{ file.relative_name }}</option>
     {% endfor %}
     {% if not files %}
     <option value="" disabled>No editable files found</option>
     {% endif %}
   </select>
 </div>
-{% if auto_select_file %}
-<script>
-  (function() {
-    const select = document.querySelector('#file-select-container select');
-    htmx.process(select);
-    select.value = '{{ parent_type }}:{{ auto_select_file.pk }}';
-    htmx.trigger(select, 'change');
-  })();
-</script>
-{% else %}
-<div id="editor-outer-container" hx-swap-oob="true">
-  {% include "partials/_file_editor_content.html" with file=None %}
-</div>
+{% if not initial_render %}
+  {% if auto_select_file %}
+  <script>
+    (function() {
+      const select = document.querySelector('#file-select-container select');
+      htmx.process(select);
+      select.value = '{{ parent_type }}:{{ auto_select_file.pk }}';
+      htmx.trigger(select, 'change');
+    })();
+  </script>
+  {% else %}
+  <div id="editor-outer-container" hx-swap-oob="true">
+    {% include "partials/_file_editor_content.html" with file=None %}
+  </div>
+  {% endif %}
 {% endif %}

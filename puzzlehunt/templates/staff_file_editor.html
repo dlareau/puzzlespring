@@ -21,7 +21,7 @@
             <select name="hunt_id"
                     hx-get="{% url 'puzzlehunt:staff:file_editor_puzzle_list' %}"
                     hx-target="#puzzle-select-container"
-                    hx-trigger="change, load">
+                    hx-trigger="change{% if puzzles is None %}, load{% endif %}">
               <option value="">-- Select a hunt --</option>
               {% for h in hunts %}
               <option value="{{ h.pk }}" {% if h.pk == hunt.pk %}selected{% endif %}>{{ h.name }}</option>
@@ -36,11 +36,15 @@
       <div class="field">
         <label class="label">Puzzle / Hunt Files</label>
         <div class="control" id="puzzle-select-container">
+          {% if puzzles is not None %}
+            {% include "partials/_file_editor_puzzle_select.html" with initial_render=True %}
+          {% else %}
           <div class="select is-fullwidth">
             <select disabled>
               <option>-- Select a hunt first --</option>
             </select>
           </div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -49,11 +53,15 @@
       <div class="field">
         <label class="label">File</label>
         <div class="control" id="file-select-container">
+          {% if files is not None %}
+            {% include "partials/_file_editor_file_select.html" with initial_render=True %}
+          {% else %}
           <div class="select is-fullwidth">
             <select disabled>
               <option>-- Select a puzzle first --</option>
             </select>
           </div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -135,6 +143,11 @@
         saveBtn.click();
       }
     }
+  });
+
+  // Initialize editor on page load if content is pre-selected
+  document.addEventListener('DOMContentLoaded', function() {
+    initializeEditor();
   });
 </script>
 {% endblock %}
