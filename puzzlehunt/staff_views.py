@@ -1111,66 +1111,98 @@ def config_tester(request, hunt):
     return render(request, "staff_config_tester.html", context)
 
 
+def _get_puzzles_with_editable_files(hunt):
+    """
+    Helper: Get puzzles with editable files and check if hunt has editable files.
+    Returns (puzzles_with_files, hunt_has_files).
+    """
+    puzzles = hunt.puzzle_set.order_by('order_number').all()
+    puzzles_with_files = [
+        p for p in puzzles
+        if (p.files.exists() and any(f.is_text_editable for f in p.files.all())) or
+           (p.solution_files.exists() and any(f.is_text_editable for f in p.solution_files.all()))
+    ]
+    hunt_has_files = hunt.files.exists() and any(f.is_text_editable for f in hunt.files.all())
+    return puzzles_with_files, hunt_has_files
+
+
+def _get_editable_files(parent_type, parent):
+    """
+    Helper: Get editable files for a parent (puzzle or hunt).
+    Returns list of editable files.
+    """
+    if parent_type == "solution":
+        files = parent.solution_files.all()
+    else:
+        files = parent.files.all()
+    return [f for f in files if f.is_text_editable]
+
+
+def _read_file_content(file_obj):
+    """
+    Helper: Read content from a file object.
+    Returns content string or None on error.
+    """
+    if not file_obj or not file_obj.is_text_editable:
+        return None
+    try:
+        file_obj.file.open('r')
+        content = file_obj.file.read()
+        file_obj.file.close()
+        if isinstance(content, bytes):
+            content = content.decode('utf-8')
+        return content
+    except Exception:
+        return None
+
+
 @staff_member_required
 def file_editor(request, hunt):
     """
     Main file editor page with three-panel selector and Ace editor.
     """
-    hunts = Hunt.objects.order_by('-start_date').all()
+    context = {
+        'hunt': hunt,
+        'hunts': Hunt.objects.order_by('-start_date').all(),
+    }
 
     # Check for pre-selected file from query params
     preselect_type = request.GET.get('type')
     preselect_parent_pk = request.GET.get('parent')
     preselect_file_pk = request.GET.get('file')
 
-    context = {
-        'hunt': hunt,
-        'hunts': hunts,
-    }
-
-    # If preselect params provided, populate all dropdowns server-side
     if preselect_type and preselect_parent_pk and preselect_file_pk:
-        # Populate puzzle/hunt select (same logic as file_editor_puzzle_list)
-        puzzles = hunt.puzzle_set.order_by('order_number').all()
-        puzzles_with_files = [
-            p for p in puzzles
-            if p.files.exists() and any(f.is_text_editable for f in p.files.all())
-        ]
-        hunt_has_files = hunt.files.exists() and any(f.is_text_editable for f in hunt.files.all())
-
-        context['puzzles'] = puzzles_with_files
-        context['hunt_has_files'] = hunt_has_files
-        context['selected_is_hunt'] = (preselect_type == "hunt")
-        if preselect_type == "puzzle":
-            context['selected_puzzle_pk'] = preselect_parent_pk
-
-        # Populate file select (same logic as file_editor_file_list)
         model = get_media_file_parent_model(preselect_type)
         parent = model.objects.filter(pk=preselect_parent_pk).first()
         if parent:
-            if preselect_type == "solution":
-                files = parent.solution_files.all()
+            # Build file_entries list with type metadata
+            file_entries = []
+            if preselect_type in ("puzzle", "solution"):
+                for f in _get_editable_files("puzzle", parent):
+                    file_entries.append({'file': f, 'file_type': 'puzzle'})
+                for f in _get_editable_files("solution", parent):
+                    file_entries.append({'file': f, 'file_type': 'solution'})
             else:
-                files = parent.files.all()
-            editable_files = [f for f in files if f.is_text_editable]
-            context['files'] = editable_files
-            context['parent_type'] = preselect_type
-            context['selected_file_pk'] = int(preselect_file_pk)
+                for f in _get_editable_files(preselect_type, parent):
+                    file_entries.append({'file': f, 'file_type': preselect_type})
 
-            # Load file content (same logic as file_editor_load_content)
             file_model = get_media_file_model(preselect_type)
             file_obj = file_model.objects.filter(pk=preselect_file_pk).first()
-            if file_obj and file_obj.is_text_editable:
-                try:
-                    file_obj.file.open('r')
-                    content = file_obj.file.read()
-                    file_obj.file.close()
-                    if isinstance(content, bytes):
-                        content = content.decode('utf-8')
-                    context['file'] = file_obj
-                    context['content'] = content
-                except Exception:
-                    pass
+            content = _read_file_content(file_obj)
+
+            puzzles, hunt_has_files = _get_puzzles_with_editable_files(hunt)
+            context.update({
+                'puzzles': puzzles,
+                'hunt_has_files': hunt_has_files,
+                'selected_is_hunt': preselect_type == "hunt",
+                'selected_puzzle_pk': preselect_parent_pk if preselect_type in ("puzzle", "solution") else None,
+                'file_entries': file_entries,
+                'selected_file_pk': int(preselect_file_pk),
+                'selected_file_type': preselect_type,
+                'file': file_obj if content else None,
+                'content': content,
+                'parent_type': preselect_type if content else None,
+            })
 
     return render(request, "staff_file_editor.html", context)
 
@@ -1190,18 +1222,12 @@ def file_editor_puzzle_list(request):
         })
 
     hunt = get_object_or_404(Hunt, pk=hunt_id)
-    puzzles = hunt.puzzle_set.order_by('order_number').all()
-
-    # Filter to only puzzles that have editable files
-    puzzles_with_files = []
-    for puzzle in puzzles:
-        if puzzle.files.exists() and any(f.is_text_editable for f in puzzle.files.all()):
-            puzzles_with_files.append(puzzle)
+    puzzles_with_files, hunt_has_files = _get_puzzles_with_editable_files(hunt)
 
     context = {
         'hunt': hunt,
         'puzzles': puzzles_with_files,
-        'hunt_has_files': hunt.files.exists() and any(f.is_text_editable for f in hunt.files.all()),
+        'hunt_has_files': hunt_has_files,
     }
     return render(request, "partials/_file_editor_puzzle_select.html", context)
 
@@ -1212,33 +1238,33 @@ def file_editor_file_list(request):
     """
     HTMX endpoint returning file select dropdown for a given puzzle or hunt.
     """
-    # Parse parent value (format: "type:id")
     parent_value = request.GET.get('parent')
     if not parent_value or ':' not in parent_value:
         return render(request, "partials/_file_editor_file_select.html", {
-            'files': [],
-            'parent_type': None,
+            'file_entries': [],
         })
 
     parent_type, parent_id = parent_value.split(':', 1)
     model = get_media_file_parent_model(parent_type)
     parent = get_object_or_404(model, pk=parent_id)
 
-    if parent_type == "solution":
-        files = parent.solution_files.all()
+    file_entries = []
+    if parent_type == "puzzle":
+        # Add puzzle files
+        for f in _get_editable_files("puzzle", parent):
+            file_entries.append({'file': f, 'file_type': 'puzzle'})
+        # Add solution files
+        for f in _get_editable_files("solution", parent):
+            file_entries.append({'file': f, 'file_type': 'solution'})
     else:
-        files = parent.files.all()
+        for f in _get_editable_files(parent_type, parent):
+            file_entries.append({'file': f, 'file_type': parent_type})
 
-    # Filter to only text-editable files
-    editable_files = [f for f in files if f.is_text_editable]
-
-    # Auto-select if only one file
-    auto_select_file = editable_files[0] if len(editable_files) == 1 else None
+    auto_select_entry = file_entries[0] if len(file_entries) == 1 else None
 
     context = {
-        'files': editable_files,
-        'parent_type': parent_type,
-        'auto_select_file': auto_select_file,
+        'file_entries': file_entries,
+        'auto_select_entry': auto_select_entry,
     }
     return render(request, "partials/_file_editor_file_select.html", context)
 
@@ -1255,27 +1281,18 @@ def file_editor_load_content(request):
 
     parent_type, file_pk = file_value.split(':', 1)
     model = get_media_file_model(parent_type)
-    file = get_object_or_404(model, pk=file_pk)
+    file_obj = get_object_or_404(model, pk=file_pk)
 
-    if not file.is_text_editable:
+    content = _read_file_content(file_obj)
+    if content is None:
         return render(request, "partials/_file_editor_content.html", {'file': None})
 
-    try:
-        file.file.open('r')
-        content = file.file.read()
-        file.file.close()
-
-        if isinstance(content, bytes):
-            content = content.decode('utf-8')
-
-        context = {
-            'file': file,
-            'content': content,
-            'parent_type': parent_type,
-        }
-        return render(request, "partials/_file_editor_content.html", context)
-    except Exception:
-        return render(request, "partials/_file_editor_content.html", {'file': None})
+    context = {
+        'file': file_obj,
+        'content': content,
+        'parent_type': parent_type,
+    }
+    return render(request, "partials/_file_editor_content.html", context)
 
 
 @require_POST

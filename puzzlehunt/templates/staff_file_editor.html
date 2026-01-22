@@ -53,7 +53,7 @@
       <div class="field">
         <label class="label">File</label>
         <div class="control" id="file-select-container">
-          {% if files is not None %}
+          {% if file_entries is not None %}
             {% include "partials/_file_editor_file_select.html" with initial_render=True %}
           {% else %}
           <div class="select is-fullwidth">

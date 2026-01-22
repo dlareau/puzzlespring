@@ -4,21 +4,24 @@
           hx-target="#editor-outer-container"
           hx-trigger="change">
     <option value="">-- Select a file --</option>
-    {% for file in files %}
-    <option value="{{ parent_type }}:{{ file.pk }}" {% if selected_file_pk == file.pk %}selected{% endif %}>{{ file.relative_name }}</option>
+    {% for entry in file_entries %}
+    <option value="{{ entry.file_type }}:{{ entry.file.pk }}"
+            {% if selected_file_pk == entry.file.pk and selected_file_type == entry.file_type %}selected{% endif %}>
+      {% if entry.file_type == "solution" %}[S] {% endif %}{{ entry.file.relative_name }}
+    </option>
     {% endfor %}
-    {% if not files %}
+    {% if not file_entries %}
     <option value="" disabled>No editable files found</option>
     {% endif %}
   </select>
 </div>
 {% if not initial_render %}
-  {% if auto_select_file %}
+  {% if auto_select_entry %}
   <script>
     (function() {
       const select = document.querySelector('#file-select-container select');
       htmx.process(select);
-      select.value = '{{ parent_type }}:{{ auto_select_file.pk }}';
+      select.value = '{{ auto_select_entry.file_type }}:{{ auto_select_entry.file.pk }}';
       htmx.trigger(select, 'change');
     })();
   </script>
