@@ -35,43 +35,33 @@
   <h1 style="text-align: center;"> Leaderboard - {{hunt.name}}</h1>
   <br>
   <br>
-  <table class="table is-striped is-size-7-mobile">
-    <tr>
-      <th>Rank</th>
-      {% if hunt.no_team_mode %}
-        <th>Player</th>
-      {% else %}
-        <th>Team</th>
-      {% endif %}
-      {% for rule in ruleset %}
-        {% if rule.visible %}
-          <th>{{ rule.display_name }}</th>
-        {% endif %}
-      {% endfor %}
-    </tr>
-    {% for team in team_data %}
-    <tr>
-      <td>{{ team.computed_rank }}</td>
-      <td class="team_name" style="word-break: break-word;">
-        {% if team.badges %}
-          {% for badge in team.badges %}
-            <span class="tag badge-tag mr-1 mb-1">{{ badge }}</span>
-          {% endfor %}
-        {% endif %}
-        {{team.name}}
-      </td>
-      {% for rule in ruleset %}
-        {% if rule.visible %}
-          {% get_attribute team rule.rule_type as val %}
-          {% if rule.is_time %}
-            <td>{{ val|date:"M dS, h:i a" }}</td>
-          {% else %}
-            <td>{{ val }}</td>
-          {% endif %}
-        {% endif %}
-      {% endfor %}
-    </tr>
-    {% endfor %}
-  </table>
+  {% if split_leaderboard %}
+    <div x-data="{ activeTab: 'all' }">
+      <div class="tabs is-boxed">
+        <ul>
+          <li :class="{ 'is-active': activeTab === 'all' }">
+            <a @click.prevent="activeTab = 'all'">All Teams</a>
+          </li>
+          <li :class="{ 'is-active': activeTab === 'true' }">
+            <a @click.prevent="activeTab = 'true'">{{ custom_data_name }}: Yes</a>
+          </li>
+          <li :class="{ 'is-active': activeTab === 'false' }">
+            <a @click.prevent="activeTab = 'false'">{{ custom_data_name }}: No</a>
+          </li>
+        </ul>
+      </div>
+      <div x-show="activeTab === 'all'">
+        {% include "partials/_leaderboard_table.html" with teams=team_data %}
+      </div>
+      <div x-show="activeTab === 'true'">
+        {% include "partials/_leaderboard_table.html" with teams=team_data_true %}
+      </div>
+      <div x-show="activeTab === 'false'">
+        {% include "partials/_leaderboard_table.html" with teams=team_data_false %}
+      </div>
+    </div>
+  {% else %}
+    {% include "partials/_leaderboard_table.html" with teams=team_data %}
+  {% endif %}
 </div>
 {% endblock content %}

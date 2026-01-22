@@ -1,0 +1,51 @@
+{% comment %}
+@template: _leaderboard_table.html
+@description: Reusable leaderboard table partial for displaying team rankings.
+@context:
+  teams: List of Team objects with computed_rank attribute
+  ruleset: List of LeaderboardRule objects defining the columns and ranking rules
+  hunt: The Hunt object being displayed
+{% endcomment %}
+
+{% if teams %}
+  <table class="table is-striped is-size-7-mobile">
+    <tr>
+      <th>Rank</th>
+      {% if hunt.no_team_mode %}
+        <th>Player</th>
+      {% else %}
+        <th>Team</th>
+      {% endif %}
+      {% for rule in ruleset %}
+        {% if rule.visible %}
+          <th>{{ rule.display_name }}</th>
+        {% endif %}
+      {% endfor %}
+    </tr>
+    {% for team in teams %}
+    <tr>
+      <td>{{ team.computed_rank }}</td>
+      <td class="team_name" style="word-break: break-word;">
+        {% if team.badges %}
+          {% for badge in team.badges %}
+            <span class="tag badge-tag mr-1 mb-1">{{ badge }}</span>
+          {% endfor %}
+        {% endif %}
+        {{team.name}}
+      </td>
+      {% for rule in ruleset %}
+        {% if rule.visible %}
+          {% get_attribute team rule.rule_type as val %}
+          {% if rule.is_time %}
+            <td>{{ val|date:"M dS, h:i a" }}</td>
+          {% else %}
+            <td>{{ val }}</td>
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+{% else %}
+  <p class="has-text-centered has-text-grey">No teams to display</p>
+{% endif %}

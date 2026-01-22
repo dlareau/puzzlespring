@@ -226,7 +226,8 @@ CONSTANCE_CONFIG = {
     'TEAM_CUSTOM_DATA_NAME': ('', 'The name of the team custom data field'),
     'TEAM_CUSTOM_DATA_DESCRIPTION': ('', 'The description of the team custom data field'),
     'TEAM_CUSTOM_DATA_TYPE': ('text', 'The type of the team custom data field', 'team_data_type'),
-    
+    'SPLIT_LEADERBOARD_BY_CUSTOM_DATA': (False, "If enabled and TEAM_CUSTOM_DATA_TYPE is boolean,\n the leaderboard will show separate tabs"),
+
     # Hunt Display Settings
     'SINGLE_HUNT_MODE': (False, 'If enabled, only one hunt will be visible and accessible'), # Not yet implemented
     'STYLE_INFO_PAGES_WITH_HUNT_CSS': (False, 'If enabled, info pages like leaderboard and updates will use the hunt CSS'),

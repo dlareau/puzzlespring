@@ -326,15 +326,10 @@ def hunt_view(request, hunt):
         return render(request, f"hunt/{hunt.pk}/template.html", context)
 
 
-def hunt_leaderboard(request, hunt):
-    ruleset = hunt.teamrankingrule_set.order_by("rule_order").all()
-
-    teams = hunt.team_set.exclude(playtester=True)
-    for rule in ruleset:
-        teams = rule.annotate_query(teams)
-
+def _process_teams_for_leaderboard(teams_queryset, ruleset):
+    """Helper function to process teams and calculate rankings."""
     # Sort teams based on the ruleset
-    teams_sorted = teams.order_by(*[rule.ordering_parameter for rule in ruleset]).all()
+    teams_sorted = teams_queryset.order_by(*[rule.ordering_parameter for rule in ruleset]).all()
 
     processed_teams = []
     last_team_values = None
@@ -367,11 +362,41 @@ def hunt_leaderboard(request, hunt):
             if team.computed_rank == last_rank_value:
                 team.computed_rank = "-"
 
+    return processed_teams
+
+
+def hunt_leaderboard(request, hunt):
+    ruleset = hunt.teamrankingrule_set.order_by("rule_order").all()
+
+    base_teams = hunt.team_set.exclude(playtester=True)
+    for rule in ruleset:
+        base_teams = rule.annotate_query(base_teams)
+
+    # Check if we should split the leaderboard by custom data
+    split_leaderboard = (
+        config.SPLIT_LEADERBOARD_BY_CUSTOM_DATA and
+        config.TEAM_CUSTOM_DATA_TYPE == 'boolean'
+    )
+
     context = {
-        'team_data': processed_teams,
         'ruleset': ruleset,
         'hunt': hunt,
+        'split_leaderboard': split_leaderboard,
     }
+
+    if split_leaderboard:
+        # Process all three team lists
+        context['team_data'] = _process_teams_for_leaderboard(base_teams, ruleset)
+        context['team_data_true'] = _process_teams_for_leaderboard(
+            base_teams.filter(custom_data="True"), ruleset
+        )
+        context['team_data_false'] = _process_teams_for_leaderboard(
+            base_teams.exclude(custom_data="True"), ruleset
+        )
+        context['custom_data_name'] = config.TEAM_CUSTOM_DATA_NAME or "Custom Field"
+    else:
+        context['team_data'] = _process_teams_for_leaderboard(base_teams, ruleset)
+
     return render(request, 'leaderboard.html', context)
 
 
