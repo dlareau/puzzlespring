@@ -25,3 +25,12 @@ def basic_user():
         email="test@example.com",
         password="testpass123"
     )
+
+@pytest.fixture
+def staff_user():
+    """A staff user fixture with admin privileges."""
+    return User.objects.create_user(
+        email="staff@example.com",
+        password="testpass123",
+        is_staff=True
+    )
