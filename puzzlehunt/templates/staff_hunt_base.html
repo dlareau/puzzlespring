@@ -112,13 +112,13 @@
               Hunt Setup
             </p>
             <ul class="menu-list">
-              <li><a class="{% active_page request "hunt_template" %}"
-                     href="{% url 'puzzlehunt:staff:hunt_template' hunt.id %}">
-                Hunt Template
-              </a></li>
               <li><a class="{% active_page request "hunt_puzzles" %}"
                      href="{% url 'puzzlehunt:staff:hunt_puzzles' hunt.id %}">
                 Puzzles
+              </a></li>
+              <li><a class="{% active_page request "hunt_template" %}"
+                     href="{% url 'puzzlehunt:staff:hunt_template' hunt.id %}">
+                Hunt Template
               </a></li>
               <li><a class="{% active_page request "hunt_config" %}"
               href="{% url 'puzzlehunt:staff:hunt_config' hunt.id %}">
