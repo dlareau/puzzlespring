@@ -589,7 +589,7 @@ class Puzzle(models.Model):
 
 
 def get_round_template_path(instance, filename):
-    return f"trusted/round/{instance.pk}/template.html"
+    return f"trusted/hunt/{instance.hunt.pk}/rounds/{instance.pk}/template.html"
 
 
 class Round(models.Model):
@@ -1601,7 +1601,7 @@ class EventManager(models.Manager):
                 hunt = team.hunt
             case Event.EventType.ROUND_UNLOCK:  # related object roundStatus
                 timestamp = related_object.unlock_time
-                round = related_object.round
+                extra_data = related_object.round.name
                 team = related_object.team
                 hunt = team.hunt
             case Event.EventType.HINT_REQUEST:  # related object hint
@@ -1645,7 +1645,6 @@ class EventManager(models.Manager):
             "type": event_type,
             "team_id": team.pk if team else None,
             "puzzle_id": puzzle.pk if puzzle else None,
-            "round_id": round.pk if round else None,
         }
         send_event("staff", "events", event_metadata)
 
@@ -1658,7 +1657,6 @@ class EventManager(models.Manager):
             hunt=hunt,
             team=team,
             puzzle=puzzle,
-            round=round,
         )
 
         from .notifications import send_event_notifications
@@ -1727,12 +1725,6 @@ class Event(models.Model):
         blank=True,
         null=True,
         help_text="The puzzle associated with this event, if applicable")
-    round = models.ForeignKey(
-        Round,
-        on_delete=models.CASCADE,
-        blank=True,
-        null=True,
-        help_text="The round associated with this event, if applicable")
 
     objects = EventManager()
 
@@ -1826,7 +1818,7 @@ class Event(models.Model):
             case Event.EventType.PUZZLE_UNLOCK:
                 return f"<b>{ self.team.name }</b> has unlocked <b>{ self.puzzle.name }</b>."
             case Event.EventType.ROUND_UNLOCK:
-                return f"<b>{ self.team.name }</b> has unlocked round <b>{ self.round.name }</b>."
+                return f"<b>{ self.team.name }</b> has unlocked round <b>{ self.related_data }</b>."
             case Event.EventType.HINT_REQUEST:
                 return f"<b>{ self.team.name }</b> has requested a { self.related_data if self.related_data != '{}' else ''} hint for <b>{ self.puzzle.name }</b>."
             case Event.EventType.HINT_RESPONSE:
@@ -1850,7 +1842,7 @@ class Event(models.Model):
             case Event.EventType.PUZZLE_UNLOCK:
                 return f"Your team has unlocked { self.puzzle.name }."
             case Event.EventType.ROUND_UNLOCK:
-                return f"Your team has unlocked round { self.round.name }."
+                return f"Your team has unlocked round { self.related_data }."
             case Event.EventType.HINT_REQUEST:
                 return f"Your team has requested a hint for { self.puzzle.name }."
             case Event.EventType.HINT_RESPONSE:
