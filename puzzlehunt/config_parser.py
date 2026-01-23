@@ -1,5 +1,6 @@
 from pypeg2 import parse, re, attr, List, csl, some, maybe_some, comment_sh
 from datetime import timedelta
+from collections import defaultdict
 
 # Regexes
 time_delta = re.compile(r"\d?\d:\d\d")
@@ -9,8 +10,15 @@ time_unit = re.compile(r"MINUTES?|HOURS?")
 point_unit = re.compile(r"POINTS?")
 hint_unit = re.compile(r"HINTS?")
 badge_unit = re.compile(r"BADGE")
+round_order = re.compile(r"[0-9]+")
 
 # Object grammar classes
+class RoundNum:
+    grammar = "R", attr("order", round_order)
+
+class RoundUnlock:
+    grammar = attr("round", RoundNum), "UNLOCK"
+
 class PuzzleID:
     grammar = "P", attr("id", puzzle_id)
 
@@ -38,14 +46,14 @@ class NumPuzzleHints:
 class Badge:
     grammar = '"', attr("text", re.compile(r'[^"]*')), '"', attr("unit", badge_unit)
 
-PointInTime = [TimeSinceStart, PuzzleSolve, PuzzleUnlock]
+PointInTime = [TimeSinceStart, PuzzleSolve, PuzzleUnlock, RoundUnlock]
 
 
 # Unlockables
 class UnlockableList(List):
-    grammar = "[", csl([PuzzleID, NumPoints, NumHints, Badge]), "]"
+    grammar = "[", csl([PuzzleID, RoundNum, NumPoints, NumHints, Badge]), "]"
 
-Unlockable = [UnlockableList, PuzzleID, NumPoints, NumHints, NumPuzzleHints, Badge]
+Unlockable = [UnlockableList, PuzzleID, RoundNum, NumPoints, NumHints, NumPuzzleHints, Badge]
 
 
 # Single-use rules
@@ -56,7 +64,7 @@ class Or(List): pass
 class DelayedAction: pass
 class ConditionalDelayedAction: pass
 
-SingleUseRuleItems = PointInTime + [PuzzleID, NumPoints, SomeOf, Or, And, Parenthesized,
+SingleUseRuleItems = PointInTime + [PuzzleID, RoundNum, NumPoints, SomeOf, Or, And, Parenthesized,
                                     ConditionalDelayedAction, DelayedAction]
 
 Parenthesized.grammar = "(", attr("item", SingleUseRuleItems), ")"
@@ -153,21 +161,24 @@ def preprocess_config(config_str, puzzle_ids, order_to_id):
     return '\n'.join(expanded_lines)
 
 
-def parse_config(config_str, puzzle_ids, order_to_id):
+def parse_config(config_str, puzzle_ids, order_to_id, round_order_numbers):
     """
-    Parse a config string and validate puzzle IDs and check for circular dependencies.
+    Parse a config string and validate puzzle IDs, round references and check for circular dependencies.
 
     Args:
         config_str: The configuration string to parse
         puzzle_ids: Set of valid puzzle IDs to check against
         order_to_id: Dict mapping order_number (int) to puzzle_id (str)
+        round_order_numbers: Set of valid round order numbers to check against
 
     Raises:
-        ValueError: If an invalid puzzle ID is referenced or circular dependencies are found
+        ValueError: If an invalid puzzle ID or round is referenced or circular dependencies are found
     """
+    # ================= Preprocessing =================
     # Preprocess to expand P# order refs, PX, and list patterns
     config_str = preprocess_config(config_str, puzzle_ids, order_to_id)
 
+    # ================= Parsing =================
     # Check that the config string is valid
     try:
         config = parse(config_str.upper(), ConfigFile, comment=comment_sh)
@@ -202,76 +213,70 @@ def parse_config(config_str, puzzle_ids, order_to_id):
         error_msg = f"Syntax error in configuration {context}"
         raise ValueError(error_msg)
 
+    # ================= Dependency Graph Building =================
     # Build dependency graph
-    dependencies = {}
-    
-    def add_dependency(puzzle_id, depends_on):
-        if puzzle_id not in dependencies:
-            dependencies[puzzle_id] = set()
-        dependencies[puzzle_id].add(depends_on)
-    
-    def check_cycles(puzzle_id, visited=None, path=None):
-        if visited is None:
-            visited = set()
-        if path is None:
-            path = []
-            
-        visited.add(puzzle_id)
-        path.append(puzzle_id)
-        
-        if puzzle_id in dependencies:
-            for dep in dependencies[puzzle_id]:
-                if dep in path:
-                    cycle = path[path.index(dep):] + [dep]
-                    raise ValueError(f"Circular dependency detected: {' -> '.join('P' + id for id in cycle)}")
-                if dep not in visited:
-                    check_cycles(dep, visited, path)
-        
-        path.pop()
-    
-    # Collect dependencies and validate puzzle IDs
+    dependencies = defaultdict(set)
     referenced_ids = set()
+    referenced_rounds = set()
+
+    # Check rule conditions and build dependency graph
+    def collect_dependencies(rule_item, target_puzzles, target_rounds):
+        dep_node = None  # The node that targets depend on
+
+        if isinstance(rule_item, PuzzleID):
+            referenced_ids.add(rule_item.id)
+            dep_node = f"P{rule_item.id}"
+        elif isinstance(rule_item, (PuzzleSolve, PuzzleUnlock)):
+            referenced_ids.add(rule_item.puzzle.id)
+            dep_node = f"P{rule_item.puzzle.id}"
+        elif isinstance(rule_item, RoundNum):
+            referenced_rounds.add(rule_item.order)
+            dep_node = f"R{rule_item.order}"
+        elif isinstance(rule_item, RoundUnlock):
+            referenced_rounds.add(rule_item.round.order)
+            dep_node = f"R{rule_item.round.order}"
+        elif isinstance(rule_item, (And, Or, SomeOf)):
+            for item in rule_item:
+                if not isinstance(item, str):
+                    collect_dependencies(item, target_puzzles, target_rounds)
+        elif isinstance(rule_item, Parenthesized):
+            collect_dependencies(rule_item.item, target_puzzles, target_rounds)
+        elif isinstance(rule_item, ConditionalTimeInterval):
+            collect_dependencies(rule_item.condition, target_puzzles, target_rounds)
+        elif isinstance(rule_item, DelayedAction):
+            collect_dependencies(rule_item.start_time, target_puzzles, target_rounds)
+        elif isinstance(rule_item, ConditionalDelayedAction):
+            collect_dependencies(rule_item.action, target_puzzles, target_rounds)
+            collect_dependencies(rule_item.condition, target_puzzles, target_rounds)
+
+        if dep_node:
+            for target in target_puzzles:
+                dependencies[f"P{target.id}"].add(dep_node)
+            for target in target_rounds:
+                dependencies[f"R{target.order}"].add(dep_node)
+
+    # Collect dependencies and validate puzzle IDs and round references
     for rule in config:
-        # Get the puzzle being unlocked
+        puzzle_unlockables = []
+        round_unlockables = []
+
+        # Get the puzzle/round being unlocked
         if isinstance(rule.unlockable, List):
-            unlockables = [item for item in rule.unlockable if isinstance(item, PuzzleID)]
+            puzzle_unlockables = [item for item in rule.unlockable if isinstance(item, PuzzleID)]
+            round_unlockables = [item for item in rule.unlockable if isinstance(item, RoundNum)]
         elif isinstance(rule.unlockable, PuzzleID):
-            unlockables = [rule.unlockable]
-        # elif isinstance(rule.unlockable, NumPuzzleHints):
-        #     unlockables = [rule.unlockable.puzzle]
-        else:
-            unlockables = []
-            
-        for unlockable in unlockables:
+            puzzle_unlockables = [rule.unlockable]
+        elif isinstance(rule.unlockable, RoundNum):
+            round_unlockables = [rule.unlockable]
+
+        for unlockable in puzzle_unlockables:
             referenced_ids.add(unlockable.id)
-            
-        # Check rule conditions and build dependency graph
-        def collect_dependencies(rule_item, target_puzzles):
-            if isinstance(rule_item, PuzzleID):
-                referenced_ids.add(rule_item.id)
-                for target in target_puzzles:
-                    add_dependency(target.id, rule_item.id)
-            elif isinstance(rule_item, (PuzzleSolve, PuzzleUnlock)):
-                referenced_ids.add(rule_item.puzzle.id)
-                for target in target_puzzles:
-                    add_dependency(target.id, rule_item.puzzle.id)
-            elif isinstance(rule_item, (And, Or, SomeOf)):
-                for item in rule_item:
-                    if not isinstance(item, str):
-                        collect_dependencies(item, target_puzzles)
-            elif isinstance(rule_item, Parenthesized):
-                collect_dependencies(rule_item.item, target_puzzles)
-            elif isinstance(rule_item, ConditionalTimeInterval):
-                collect_dependencies(rule_item.condition, target_puzzles)
-            elif isinstance(rule_item, DelayedAction):
-                # DelayedAction's start_time could reference a puzzle
-                collect_dependencies(rule_item.start_time, target_puzzles)
-            elif isinstance(rule_item, ConditionalDelayedAction):
-                collect_dependencies(rule_item.action, target_puzzles)
-                collect_dependencies(rule_item.condition, target_puzzles)
-        
-        collect_dependencies(rule.rule, unlockables)
+        for unlockable in round_unlockables:
+            referenced_rounds.add(unlockable.order)
+
+        collect_dependencies(rule.rule, puzzle_unlockables, round_unlockables)
     
+    # ================= Item Validation =================
     # Check for invalid puzzle IDs if puzzle_ids was provided
     if puzzle_ids is not None:
         referenced_ids = {rid.upper() for rid in referenced_ids}
@@ -279,55 +284,88 @@ def parse_config(config_str, puzzle_ids, order_to_id):
         invalid_ids = referenced_ids - valid_ids
         if invalid_ids:
             raise ValueError(f"Config references non-existent puzzle IDs: {', '.join(sorted(invalid_ids))}")
-    
+
+    # Check for invalid round references if round_order_numbers was provided
+    if round_order_numbers is not None:
+        invalid_rounds = referenced_rounds - set(str(r) for r in round_order_numbers)
+        if invalid_rounds:
+            raise ValueError(f"Config references non-existent rounds: {', '.join('R' + r for r in sorted(invalid_rounds))}")
+
+    # ================= Cycle Checking =================
+    def check_cycles(node_id, visited=None, path=None):
+        if visited is None:
+            visited = set()
+        if path is None:
+            path = []
+
+        visited.add(node_id)
+        path.append(node_id)
+
+        if node_id in dependencies:
+            for dep in dependencies[node_id]:
+                if dep in path:
+                    cycle = path[path.index(dep):] + [dep]
+                    raise ValueError(f"Circular dependency detected: {' -> '.join(cycle)}")
+                if dep not in visited:
+                    check_cycles(dep, visited, path)
+
+        path.pop()
+
     # Check for cycles in the dependency graph
-    for puzzle_id in dependencies:
-        check_cycles(puzzle_id)
+    for node_id in dependencies:
+        check_cycles(node_id)
     
     return config
 
 
-def check_rule(rule, puzzle_status_dict, time, points, current_time=None):
+def check_rule(rule, puzzle_status_dict, round_status_dict, time, points, current_time):
     # Handle string inputs (like parentheses and commas)
     if isinstance(rule, str):
         return True
 
     match rule:
         case Parenthesized():
-            return check_rule(rule.item, puzzle_status_dict, time, points, current_time)
+            return check_rule(rule.item, puzzle_status_dict, round_status_dict, time, points, current_time)
 
         case And():
             # Get all items that aren't strings (skip parentheses, AND, commas)
             subrules = [r for r in rule if not isinstance(r, str)]
-            return all(check_rule(subrule, puzzle_status_dict, time, points, current_time) for subrule in subrules)
+            return all(check_rule(subrule, puzzle_status_dict, round_status_dict, time, points, current_time) for subrule in subrules)
 
         case Or():
             # Get all items that aren't strings (skip parentheses, OR, commas)
             subrules = [r for r in rule if not isinstance(r, str)]
-            return any(check_rule(subrule, puzzle_status_dict, time, points, current_time) for subrule in subrules)
+            return any(check_rule(subrule, puzzle_status_dict, round_status_dict, time, points, current_time) for subrule in subrules)
 
         case SomeOf():
             # Get the number and the list of items
             num = rule.num
             # Get all items that aren't strings (skip OF, parentheses, commas)
             subrules = [r for r in rule if not isinstance(r, str) and not isinstance(r, int)]
-            return sum(1 for r in subrules if check_rule(r, puzzle_status_dict, time, points, current_time)) >= int(num)
+            return sum(1 for r in subrules if check_rule(r, puzzle_status_dict, round_status_dict, time, points, current_time)) >= int(num)
 
         case PuzzleID():
-            return rule.id in puzzle_status_dict and puzzle_status_dict[rule.id].solve_time is not None
+            return rule.id in puzzle_status_dict and puzzle_status_dict[rule.id]['solve_time'] is not None
 
         case TimeSinceStart():
             parts = rule.time.split(":")
             return time >= timedelta(hours=int(parts[0]), minutes=int(parts[1]))
 
         case PuzzleSolve():
-            return rule.puzzle.id in puzzle_status_dict and puzzle_status_dict[rule.puzzle.id].solve_time is not None
+            return rule.puzzle.id in puzzle_status_dict and puzzle_status_dict[rule.puzzle.id]['solve_time'] is not None
 
         case PuzzleUnlock():
-            return rule.puzzle.id in puzzle_status_dict and puzzle_status_dict[rule.puzzle.id].unlock_time is not None
+            return rule.puzzle.id in puzzle_status_dict and puzzle_status_dict[rule.puzzle.id]['unlock_time'] is not None
 
         case NumPoints():
             return points >= int(rule.points)
+
+        case RoundNum():
+            # RoundNum as a condition means "round is unlocked"
+            return round_status_dict is not None and rule.order in round_status_dict
+
+        case RoundUnlock():
+            return round_status_dict is not None and rule.round.order in round_status_dict
 
         case DelayedAction():
             if current_time is None:
@@ -343,10 +381,13 @@ def check_rule(rule, puzzle_status_dict, time, points, current_time=None):
                     trigger_time = hunt_start + timedelta(hours=int(parts[0]), minutes=int(parts[1]))
                 case PuzzleSolve():
                     if rule.start_time.puzzle.id in puzzle_status_dict:
-                        trigger_time = puzzle_status_dict[rule.start_time.puzzle.id].solve_time
+                        trigger_time = puzzle_status_dict[rule.start_time.puzzle.id]['solve_time']
                 case PuzzleUnlock():
                     if rule.start_time.puzzle.id in puzzle_status_dict:
-                        trigger_time = puzzle_status_dict[rule.start_time.puzzle.id].unlock_time
+                        trigger_time = puzzle_status_dict[rule.start_time.puzzle.id]['unlock_time']
+                case RoundUnlock():
+                    if round_status_dict is not None and rule.start_time.round.order in round_status_dict:
+                        trigger_time = round_status_dict[rule.start_time.round.order]['unlock_time']
 
             if trigger_time is None:
                 return False
@@ -362,16 +403,16 @@ def check_rule(rule, puzzle_status_dict, time, points, current_time=None):
 
         case ConditionalDelayedAction():
             # First check if the condition is met
-            if not check_rule(rule.condition, puzzle_status_dict, time, points, current_time):
+            if not check_rule(rule.condition, puzzle_status_dict, round_status_dict, time, points, current_time):
                 return False
             # Then check if the delayed action triggers
-            return check_rule(rule.action, puzzle_status_dict, time, points, current_time)
+            return check_rule(rule.action, puzzle_status_dict, round_status_dict, time, points, current_time)
 
         case _:
             raise ValueError(f"Unknown rule type: {type(rule)} - {rule}")
 
 
-def get_multi_use_count(rule, puzzle_status_dict, start_time, current_time, points):
+def get_multi_use_count(rule, puzzle_status_dict, round_status_dict, start_time, current_time, points):
     """Helper function to determine how many times a multi-use rule should be applied"""
     time_elapsed = current_time - start_time
     match rule:
@@ -382,7 +423,7 @@ def get_multi_use_count(rule, puzzle_status_dict, start_time, current_time, poin
             # Convert total timedelta to minutes
             total_minutes = int(time_elapsed.total_seconds() / 60)
             return total_minutes // interval
-            
+
         case TimeIntervalAfter():
             new_start_time = None
             match rule.start_time:
@@ -391,39 +432,42 @@ def get_multi_use_count(rule, puzzle_status_dict, start_time, current_time, poin
                     new_start_time = start_time + timedelta(hours=int(parts[0]), minutes=int(parts[1]))
                 case PuzzleSolve():
                     if rule.start_time.puzzle.id in puzzle_status_dict:
-                        new_start_time = puzzle_status_dict[rule.start_time.puzzle.id].solve_time
+                        new_start_time = puzzle_status_dict[rule.start_time.puzzle.id]['solve_time']
                 case PuzzleUnlock():
                     if rule.start_time.puzzle.id in puzzle_status_dict:
-                        new_start_time = puzzle_status_dict[rule.start_time.puzzle.id].unlock_time
+                        new_start_time = puzzle_status_dict[rule.start_time.puzzle.id]['unlock_time']
+                case RoundUnlock():
+                    if round_status_dict is not None and rule.start_time.round.order in round_status_dict:
+                        new_start_time = round_status_dict[rule.start_time.round.order]['unlock_time']
 
-            
             # If we can't find a start time, return 0
             if new_start_time is None:
                 return 0
-            
-            return get_multi_use_count(rule.interval, puzzle_status_dict, new_start_time, current_time, points)
-            
+
+            return get_multi_use_count(rule.interval, puzzle_status_dict, round_status_dict, new_start_time, current_time, points)
+
         case ConditionalTimeInterval():
-            if not check_rule(rule.condition, puzzle_status_dict, time_elapsed, points, current_time):
+            if not check_rule(rule.condition, puzzle_status_dict, round_status_dict, time_elapsed, points, current_time):
                 return 0
-            return get_multi_use_count(rule.interval, puzzle_status_dict, start_time, current_time, points)
-            
+            return get_multi_use_count(rule.interval, puzzle_status_dict, round_status_dict, start_time, current_time, points)
+
         case LimitedTimeInterval():
-            return min(get_multi_use_count(rule.interval, puzzle_status_dict, start_time, current_time, points), int(rule.limit))
-            
+            return min(get_multi_use_count(rule.interval, puzzle_status_dict, round_status_dict, start_time, current_time, points), int(rule.limit))
+
         case _:
             # Single use rules
-            return 1 if check_rule(rule, puzzle_status_dict, time_elapsed, points, current_time) else 0
+            return 1 if check_rule(rule, puzzle_status_dict, round_status_dict, time_elapsed, points, current_time) else 0
 
 
-def process_config_rules(rules, puzzle_statuses, start_time, current_time):
+def process_config_rules(rules, puzzle_statuses, round_statuses, start_time, current_time):
     points = 0
     hints = 0
     unlocked_puzzles = set()
+    unlocked_rounds = set()
     processed_rules = set()
     puzzle_hints = {}  # Maps puzzle IDs to number of hints
     earned_badges = []  # Track earned badges
-    
+
     def process_reward(rule, rule_value, item_type, value, puzzle_id=None):
         rule_id = (str(rule.rule), item_type, value, puzzle_id)
         if rule_id not in processed_rules:
@@ -432,7 +476,14 @@ def process_config_rules(rules, puzzle_statuses, start_time, current_time):
             return reward, True
         return 0, False
 
-    puzzle_status_dict = {status.puzzle_id: status for status in puzzle_statuses}
+    puzzle_status_dict = {
+        status.puzzle_id: {'solve_time': status.solve_time, 'unlock_time': status.unlock_time}
+        for status in puzzle_statuses
+    }
+    round_status_dict = {
+        str(status.round.order_number): {'unlock_time': status.unlock_time}
+        for status in round_statuses
+    }
     time_elapsed = current_time - start_time
 
     # Keep processing rules until no new changes occur
@@ -442,12 +493,12 @@ def process_config_rules(rules, puzzle_statuses, start_time, current_time):
         for rule in rules:
             # Calculate rule value once
             if isinstance(rule.rule, (TimeInterval, TimeIntervalAfter, ConditionalTimeInterval, LimitedTimeInterval)):
-                rule_value = get_multi_use_count(rule.rule, puzzle_status_dict, start_time, current_time, points)
+                rule_value = get_multi_use_count(rule.rule, puzzle_status_dict, round_status_dict, start_time, current_time, points)
                 rule_applies = rule_value > 0
             else:
-                rule_applies = check_rule(rule.rule, puzzle_status_dict, time_elapsed, points, current_time)
+                rule_applies = check_rule(rule.rule, puzzle_status_dict, round_status_dict, time_elapsed, points, current_time)
                 rule_value = 1 if rule_applies else 0
-                
+
             if rule_applies:
                 unlockables = [rule.unlockable] if not isinstance(rule.unlockable, List) else rule.unlockable
                 for item in unlockables:
@@ -455,6 +506,14 @@ def process_config_rules(rules, puzzle_statuses, start_time, current_time):
                         case PuzzleID():
                             if item.id not in unlocked_puzzles:
                                 unlocked_puzzles.add(item.id)
+                                if item.id not in puzzle_status_dict:
+                                    puzzle_status_dict[item.id] = {'solve_time': None, 'unlock_time': current_time}
+                                changed = True
+                        case RoundNum():
+                            if item.order not in unlocked_rounds:
+                                unlocked_rounds.add(item.order)
+                                if item.order not in round_status_dict:
+                                    round_status_dict[item.order] = {'unlock_time': current_time}
                                 changed = True
                         case NumPoints():
                             reward, was_changed = process_reward(rule, rule_value, "points", item.points)
@@ -476,4 +535,4 @@ def process_config_rules(rules, puzzle_statuses, start_time, current_time):
                                 earned_badges.append(badge_text)
                                 changed = True
 
-    return unlocked_puzzles, points, hints, puzzle_hints, earned_badges
+    return unlocked_puzzles, unlocked_rounds, points, hints, puzzle_hints, earned_badges

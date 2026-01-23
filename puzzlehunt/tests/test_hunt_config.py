@@ -1,10 +1,28 @@
 from unittest.mock import patch
 import pytest
 from django.utils import timezone
-from puzzlehunt.models import Puzzle, Team, PuzzleStatus
+from puzzlehunt.models import Puzzle, Team, PuzzleStatus, Round, RoundStatus
 from django.core.exceptions import ValidationError
 
 pytestmark = pytest.mark.django_db
+
+@pytest.fixture
+def hunt_with_puzzles_and_rounds(basic_hunt):
+    """A fixture that includes both puzzles AND rounds for testing round-related functionality."""
+    # Create rounds
+    rounds = [
+        Round.objects.create(hunt=basic_hunt, name=f"Round {i}", order_number=i)
+        for i in range(1, 3)
+    ]
+    # Create puzzles, some assigned to rounds
+    puzzles = [
+        Puzzle.objects.create(
+            hunt=basic_hunt, name=f"Puzzle {i}", answer="ANSWER",
+            order_number=i, id=f"{i}", round=rounds[0] if i <= 2 else None
+        ) for i in range(1, 4)
+    ]
+    return basic_hunt, puzzles, rounds
+
 
 @pytest.fixture
 def hunt_with_puzzles(basic_hunt):
@@ -1229,3 +1247,514 @@ def test_puzzle_order_ref_in_list(hunt_with_puzzles):
         status.mark_solved()
         team.process_unlocks()
         assert team.points == 5 * (i + 1)
+
+
+# ==================== ROUND LOGIC TESTS ====================
+
+# 1. Basic Round Unlock Tests
+
+def test_round_unlock_at_start(hunt_with_puzzles_and_rounds):
+    """Test that R1 unlocks immediately when hunt starts with 0 POINTS rule"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    R1 <= 0 POINTS
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # Round 1 should be unlocked
+    unlocked_rounds = team.unlocked_rounds()
+    assert len(unlocked_rounds) == 1
+    assert unlocked_rounds[0].order_number == 1
+
+
+def test_round_unlock_on_puzzle_solve(hunt_with_puzzles_and_rounds):
+    """Test that R2 unlocks after solving P1"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    R1 <= 0 POINTS
+    P1 <= R1 UNLOCK
+    R2 <= P1
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # Initially only R1 should be unlocked
+    unlocked_rounds = team.unlocked_rounds()
+    assert len(unlocked_rounds) == 1
+    assert unlocked_rounds[0].order_number == 1
+
+    # Solve P1
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    status.mark_solved()
+    team.process_unlocks()
+
+    # Now R2 should also be unlocked
+    unlocked_rounds = team.unlocked_rounds()
+    assert len(unlocked_rounds) == 2
+    assert sorted([r.order_number for r in unlocked_rounds]) == [1, 2]
+
+
+def test_round_unlock_on_points(hunt_with_puzzles_and_rounds):
+    """Test that R2 unlocks after accumulating points from solving puzzles"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    # Use P3 which has no round (not gated), and R1 to unlock P1
+    config = """
+    R1 <= 0 POINTS
+    P1 <= R1 UNLOCK
+    P3 <= 0 POINTS
+    5 POINTS <= P1
+    5 POINTS <= P3
+    R2 <= 10 POINTS
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # Initially R1 is unlocked but R2 is not (need 10 points)
+    unlocked_rounds = team.unlocked_rounds()
+    assert len(unlocked_rounds) == 1
+    assert unlocked_rounds[0].order_number == 1
+
+    # Solve P1 to get 5 points
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[0])
+    status.mark_solved()
+    team.process_unlocks()
+    assert team.points == 5
+    assert len(team.unlocked_rounds()) == 1
+
+    # Solve P3 to get 10 points total
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[2])
+    status.mark_solved()
+    team.process_unlocks()
+    assert team.points == 10
+
+    # Now R2 should be unlocked
+    unlocked_rounds = team.unlocked_rounds()
+    assert len(unlocked_rounds) == 2
+    assert sorted([r.order_number for r in unlocked_rounds]) == [1, 2]
+
+
+# 2. Puzzle Unlock with Round Conditions
+
+def test_puzzle_unlock_requires_round(hunt_with_puzzles_and_rounds):
+    """Test that P1 unlocks when R1 is unlocked"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    R1 <= 0 POINTS
+    P1 <= R1 UNLOCK
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # R1 is unlocked, so P1 should be unlocked (it's in R1)
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 1
+    assert unlocked[0].id == "1"
+
+
+def test_puzzle_unlock_requires_round_chained(hunt_with_puzzles_and_rounds):
+    """Test chain reaction: R1 -> P1 -> P2"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    R1 <= 0 POINTS
+    P1 <= R1 UNLOCK
+    P2 <= P1 UNLOCK
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # All should be unlocked in the chain: R1 -> P1 -> P2
+    unlocked_rounds = team.unlocked_rounds()
+    assert len(unlocked_rounds) == 1
+
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 2
+    assert sorted([p.id for p in unlocked]) == ["1", "2"]
+
+
+# 3. Round Gating Tests
+
+def test_round_gating_blocks_puzzle(hunt_with_puzzles_and_rounds):
+    """Test that P1 does NOT unlock because its round is not unlocked"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    # P1 is in Round 1, but R1 is never unlocked
+    config = """
+    P1 <= 0 POINTS
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # P1 should NOT unlock because R1 is not unlocked (P1 is in R1)
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 0
+
+
+def test_round_gating_allows_puzzle_after_round_unlock(hunt_with_puzzles_and_rounds):
+    """Test that P1 unlocks because R1 is also unlocked"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    R1 <= 0 POINTS
+    P1 <= 0 POINTS
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # P1 should unlock because R1 is also unlocked
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 1
+    assert unlocked[0].id == "1"
+
+
+def test_puzzle_without_round_not_gated(hunt_with_puzzles_and_rounds):
+    """Test that P3 (which has no round) unlocks regardless of round status"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    # P3 has no round assigned
+    config = """
+    P3 <= 0 POINTS
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # P3 should unlock because it has no round
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 1
+    assert unlocked[0].id == "3"
+
+
+# 4. Rewards for Round Unlock
+
+def test_points_for_round_unlock(hunt_with_puzzles_and_rounds):
+    """Test that team gets points when R1 unlocks"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    R1 <= 0 POINTS
+    10 POINTS <= R1 UNLOCK
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # Team should have 10 points from R1 unlocking
+    assert team.points == 10
+
+
+def test_hints_for_round_unlock(hunt_with_puzzles_and_rounds):
+    """Test that team gets hints when R1 unlocks"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    R1 <= 0 POINTS
+    2 HINTS <= R1 UNLOCK
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # Team should have 2 hints from R1 unlocking
+    assert team.num_available_hints == 2
+
+
+# 5. Round in Lists
+
+def test_multiple_rounds_in_list(hunt_with_puzzles_and_rounds):
+    """Test that both rounds unlock at start"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    [R1, R2] <= 0 POINTS
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # Both rounds should be unlocked
+    unlocked_rounds = team.unlocked_rounds()
+    assert len(unlocked_rounds) == 2
+    assert sorted([r.order_number for r in unlocked_rounds]) == [1, 2]
+
+
+def test_mixed_puzzle_and_round_in_list(hunt_with_puzzles_and_rounds):
+    """Test that both P3 and R1 unlock at start"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    [P3, R1] <= 0 POINTS
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # R1 should be unlocked
+    unlocked_rounds = team.unlocked_rounds()
+    assert len(unlocked_rounds) == 1
+    assert unlocked_rounds[0].order_number == 1
+
+    # P3 should be unlocked (no round, so not gated)
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 1
+    assert unlocked[0].id == "3"
+
+
+# 6. Round Conditions in Complex Rules
+
+def test_round_in_and_condition(hunt_with_puzzles_and_rounds):
+    """Test that P1 requires both R1 unlock AND points"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    R1 <= 0 POINTS
+    P3 <= 0 POINTS
+    5 POINTS <= P3
+    P1 <= (R1 UNLOCK AND 5 POINTS)
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # P1 should not unlock yet (R1 is unlocked but no points)
+    unlocked = team.unlocked_puzzles()
+    assert "1" not in [p.id for p in unlocked]
+
+    # Solve P3 to get 5 points
+    status = PuzzleStatus.objects.get(team=team, puzzle=puzzles[2])
+    status.mark_solved()
+    team.process_unlocks()
+
+    # Now P1 should be unlocked (R1 unlocked AND 5 points)
+    unlocked = team.unlocked_puzzles()
+    assert "1" in [p.id for p in unlocked]
+
+
+def test_round_in_or_condition(hunt_with_puzzles_and_rounds):
+    """Test that P3 unlocks if either R1 or 10 points"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    P3 <= (R1 UNLOCK OR 10 POINTS)
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # P3 should not unlock (R1 not unlocked and no points)
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 0
+
+    # Update config to unlock R1
+    config2 = """
+    R1 <= 0 POINTS
+    P3 <= (R1 UNLOCK OR 10 POINTS)
+    """
+    hunt.config = config2
+    hunt.full_clean()
+    hunt.save()
+
+    team2 = Team.objects.create(name="Test Team 2", hunt=hunt)
+    team2.process_unlocks()
+
+    # P3 should unlock via R1 UNLOCK
+    unlocked = team2.unlocked_puzzles()
+    assert len(unlocked) == 1
+    assert unlocked[0].id == "3"
+
+
+def test_round_in_some_of(hunt_with_puzzles_and_rounds):
+    """Test that P3 unlocks when 2 of 3 conditions met"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    # P3 has no round so it's not gated; it should unlock when 2 of 3 conditions are met
+    config = """
+    R1 <= 0 POINTS
+    R2 <= R1 UNLOCK
+    P3 <= 2 OF (R1 UNLOCK, R2 UNLOCK, 10 POINTS)
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # R1 and R2 are both unlocked immediately (chained), so 2 of 3 conditions met
+    # P3 should unlock
+    unlocked_rounds = team.unlocked_rounds()
+    assert len(unlocked_rounds) == 2
+
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 1
+    assert unlocked[0].id == "3"
+
+
+# 7. Delayed Actions with Rounds
+
+def test_delayed_action_after_round_unlock(hunt_with_puzzles_and_rounds):
+    """Test that P1 unlocks 30 minutes after R1 unlocks"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    R1 <= 0 POINTS
+    P1 <= 30 MINUTES AFTER R1 UNLOCK
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    current_time = timezone.now()
+
+    # Initial unlock at current_time
+    with patch.object(timezone, 'now', return_value=current_time):
+        team.process_unlocks()
+
+    # R1 should be unlocked, but P1 should not (not 30 minutes yet)
+    assert len(team.unlocked_rounds()) == 1
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 0
+
+    # After 29 minutes: P1 should still not unlock
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(minutes=29)):
+        team.process_unlocks()
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 0
+
+    # After 30 minutes: P1 should unlock
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(minutes=30)):
+        team.process_unlocks()
+    unlocked = team.unlocked_puzzles()
+    assert len(unlocked) == 1
+    assert unlocked[0].id == "1"
+
+
+def test_time_interval_after_round_unlock(hunt_with_puzzles_and_rounds):
+    """Test that hints are granted every hour after R1 unlocks"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    R1 <= 0 POINTS
+    1 HINT <= EVERY 1 HOUR AFTER R1 UNLOCK
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    current_time = timezone.now()
+
+    # Initial unlock
+    with patch.object(timezone, 'now', return_value=current_time):
+        team.process_unlocks()
+    assert team.num_available_hints == 0
+
+    # After 1 hour: 1 hint
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=1)):
+        team.process_unlocks()
+    assert team.num_available_hints == 1
+
+    # After 2 hours: 2 hints
+    with patch.object(timezone, 'now', return_value=current_time + timezone.timedelta(hours=2)):
+        team.process_unlocks()
+    assert team.num_available_hints == 2
+
+
+# 8. Chained Round Unlocks
+
+def test_chained_round_unlocks(hunt_with_puzzles_and_rounds):
+    """Test that R2 unlocks immediately when R1 unlocks (same processing loop)"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    R1 <= 0 POINTS
+    R2 <= R1 UNLOCK
+    """
+    hunt.config = config
+    hunt.full_clean()
+    hunt.save()
+
+    team = Team.objects.create(name="Test Team", hunt=hunt)
+    team.process_unlocks()
+
+    # Both R1 and R2 should be unlocked in the same processing loop
+    unlocked_rounds = team.unlocked_rounds()
+    assert len(unlocked_rounds) == 2
+    assert sorted([r.order_number for r in unlocked_rounds]) == [1, 2]
+
+
+# 9. Validation Tests
+
+def test_invalid_round_reference(hunt_with_puzzles_and_rounds):
+    """Test that referencing a non-existent round raises ValidationError"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    R99 <= 0 POINTS
+    """
+    with pytest.raises(ValidationError) as exc_info:
+        hunt.config = config
+        hunt.full_clean()
+    assert "config" in exc_info.value.message_dict
+
+
+def test_circular_dependency_with_rounds(hunt_with_puzzles_and_rounds):
+    """Test circular dependency: R1 -> P1 -> R1"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    R1 <= P1
+    P1 <= R1 UNLOCK
+    """
+    with pytest.raises(ValidationError) as exc_info:
+        hunt.config = config
+        hunt.full_clean()
+    assert "config" in exc_info.value.message_dict
+
+
+def test_circular_dependency_rounds_only(hunt_with_puzzles_and_rounds):
+    """Test circular dependency: R1 -> R2 -> R1"""
+    hunt, puzzles, rounds = hunt_with_puzzles_and_rounds
+    config = """
+    R1 <= R2 UNLOCK
+    R2 <= R1 UNLOCK
+    """
+    with pytest.raises(ValidationError) as exc_info:
+        hunt.config = config
+        hunt.full_clean()
+    assert "config" in exc_info.value.message_dict

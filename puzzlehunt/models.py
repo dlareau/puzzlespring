@@ -410,7 +410,8 @@ class Hunt(models.Model):
                 puzzles = self.puzzle_set.values_list('id', 'order_number')
                 puzzle_ids = set(p[0] for p in puzzles)
                 order_to_id = {p[1]: p[0] for p in puzzles}
-                parse_config(self.config, puzzle_ids, order_to_id)
+                round_order_numbers = set(self.round_set.values_list('order_number', flat=True))
+                parse_config(self.config, puzzle_ids, order_to_id, round_order_numbers)
             except Exception as e:
                 raise ValidationError({'config': [str(e)]})
 
@@ -924,8 +925,8 @@ class Team(models.Model):
 
     def process_unlocks(self, parsed_config=None):
         """
-        Calculate what puzzles, points, hints, and badges this team has unlocked based on the hunt config.
-        
+        Calculate what puzzles, rounds, points, hints, and badges this team has unlocked based on the hunt config.
+
         Returns:
             tuple: (set of unlocked puzzle IDs, total points, total hints)
         """
@@ -936,43 +937,77 @@ class Team(models.Model):
         else:
             start_time = hunt.start_date
             end_time = hunt.end_date
-        
+
         if not self.hunt.config or timezone.now() < start_time or timezone.now() > end_time:
             return
-        
+
         if parsed_config:
             config_rules = parsed_config
         else:
             puzzles = hunt.puzzle_set.values_list('id', 'order_number')
             puzzle_ids = set(p[0] for p in puzzles)
             order_to_id = {p[1]: p[0] for p in puzzles}
+            round_order_numbers = set(hunt.round_set.values_list('order_number', flat=True))
             try:
                 # Parse the config and process unlocks
-                config_rules = parse_config(self.hunt.config, puzzle_ids, order_to_id)
+                config_rules = parse_config(self.hunt.config, puzzle_ids, order_to_id, round_order_numbers)
             except Exception as e:
                 # Log the error if config parsing fails
                 logger.error(f"Error processing hunt config: {e}")
                 return
-            
+
         puzzle_statuses = self.puzzlestatus_set.all()
-        unlocked_puzzles, points, hints, puzzle_hints, earned_badges = process_config_rules(
+        round_statuses = self.roundstatus_set.all()
+        unlocked_puzzles, unlocked_rounds, points, hints, puzzle_hints, earned_badges = process_config_rules(
             config_rules,
             puzzle_statuses,
+            round_statuses,
             start_time,
-            timezone.now()
+            timezone.now(),
         )
-        
+
+        # Unlock new rounds first (they gate puzzles)
+        current_round_orders = set(str(r.order_number) for r in self.unlocked_rounds())
+        rounds_to_add = unlocked_rounds - current_round_orders
+
+        if rounds_to_add:
+            # Fetch all rounds to add in one query
+            rounds_by_order = {
+                str(r.order_number): r
+                for r in Round.objects.filter(hunt=hunt, order_number__in=[int(o) for o in rounds_to_add])
+            }
+            for order_num in rounds_to_add:
+                RoundStatus.objects.create(
+                    team=self,
+                    round=rounds_by_order[order_num],
+                    unlock_time=timezone.now()
+                )
+            # Update current_round_orders so gating check works without extra queries
+            current_round_orders.update(rounds_to_add)
+
         # Unlock new puzzles
         current_unlocks = set(self.unlocked_puzzles().values_list('id', flat=True))
         puzzles_to_add = unlocked_puzzles - current_unlocks
-        
-        for puzzle_id in puzzles_to_add:
-            new_status = PuzzleStatus.objects.create(
-                team=self,
-                puzzle_id=puzzle_id,
-                unlock_time=timezone.now()
-            )
-        
+
+        if puzzles_to_add:
+            # Fetch all puzzles to add in one query, with their rounds
+            puzzles_by_id = {
+                p.id: p
+                for p in Puzzle.objects.filter(pk__in=puzzles_to_add).select_related('round')
+            }
+            for puzzle_id in puzzles_to_add:
+                puzzle = puzzles_by_id[puzzle_id]
+                # Check round gating - skip if puzzle's round is not unlocked yet
+                if puzzle.round is not None:
+                    if str(puzzle.round.order_number) not in current_round_orders:
+                        continue  # Skip - round not unlocked yet
+
+                PuzzleStatus.objects.create(
+                    team=self,
+                    puzzle_id=puzzle_id,
+                    unlock_time=timezone.now()
+                )
+
         for puzzle_id, num_hints in puzzle_hints.items():
             try:
                 status = PuzzleStatus.objects.get(team=self, puzzle_id=puzzle_id)
@@ -983,7 +1018,7 @@ class Team(models.Model):
                     num_available_hints=F('num_available_hints') + num_hints - F('num_total_hints_earned'),
                     num_total_hints_earned=num_hints
                 )
-    
+
         updated = False
         # Update points
         if points != self.points:

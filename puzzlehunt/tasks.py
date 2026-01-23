@@ -45,9 +45,10 @@ def check_team_unlocks():
             puzzles = team.hunt.puzzle_set.values_list('id', 'order_number')
             puzzle_ids = set(p[0] for p in puzzles)
             order_to_id = {p[1]: p[0] for p in puzzles}
+            round_order_numbers = set(team.hunt.round_set.values_list('order_number', flat=True))
             try:
                 # Parse the config and process unlocks
-                config_rules = parse_config(team.hunt.config, puzzle_ids, order_to_id)
+                config_rules = parse_config(team.hunt.config, puzzle_ids, order_to_id, round_order_numbers)
             except Exception as e:
                 # Log the error if config parsing fails
                 logger.error(f"Error processing hunt config: {e}")
