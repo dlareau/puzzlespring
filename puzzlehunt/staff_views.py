@@ -1035,6 +1035,9 @@ def config_tester(request, hunt):
     puzzle_ids = set(str(p.id) for p in puzzles)
     order_to_id = {p.order_number: str(p.id) for p in puzzles}
 
+    rounds = hunt.round_set.order_by('order_number').all()
+    round_order_numbers = set(r.order_number for r in rounds)
+
     # Parse simulated time offset from URL params as integer minutes (default: 0)
     time_offset_mins = int(request.GET.get('t', 0))
     simulated_time = hunt.start_date + timedelta(minutes=time_offset_mins)
@@ -1065,6 +1068,7 @@ def config_tester(request, hunt):
 
     # Parse and process config rules
     unlocked_puzzles = set()
+    unlocked_rounds = set()
     points = 0
     hints = 0
     puzzle_hints = {}
@@ -1073,31 +1077,70 @@ def config_tester(request, hunt):
 
     if hunt.config and hunt.config.strip():
         try:
-            config_rules = parse_config(hunt.config, puzzle_ids, order_to_id)
-            unlocked_puzzles, points, hints, puzzle_hints, earned_badges = process_config_rules(
+            config_rules = parse_config(hunt.config, puzzle_ids, order_to_id, round_order_numbers)
+            unlocked_puzzles, unlocked_rounds, points, hints, puzzle_hints, earned_badges = process_config_rules(
                 config_rules,
                 mock_statuses,
+                [],  # Empty list - rounds only unlock via config rules
                 hunt.start_date,
                 simulated_time
             )
         except Exception as e:
             parse_error = str(e)
 
-    # Build puzzle data for template
-    puzzle_data = []
+    # Build puzzle data grouped by round
+    round_to_puzzles = {}
+    no_round_puzzles = []
+
     for puzzle in puzzles:
         pid = str(puzzle.id)
-        puzzle_data.append({
+        puzzle_unlocked_by_config = pid in unlocked_puzzles
+        round_is_unlocked = puzzle.round is None or str(puzzle.round.order_number) in unlocked_rounds
+
+        # Determine puzzle status: unlocked, gated (unlocked but round locked), or locked
+        if puzzle_unlocked_by_config and round_is_unlocked:
+            status = 'unlocked'
+        elif puzzle_unlocked_by_config and not round_is_unlocked:
+            status = 'gated'
+        else:
+            status = 'locked'
+
+        puzzle_info = {
             'puzzle': puzzle,
             'is_solved': pid in solved_puzzle_ids,
-            'is_unlocked': pid in unlocked_puzzles,
+            'is_unlocked': status == 'unlocked',
+            'is_gated': status == 'gated',
+            'status': status,
             'solve_time_mins': solve_times_mins.get(pid),
             'puzzle_hints': puzzle_hints.get(pid, 0),
+        }
+        if puzzle.round:
+            if puzzle.round.id not in round_to_puzzles:
+                round_to_puzzles[puzzle.round.id] = {
+                    'round': puzzle.round,
+                    'is_unlocked': str(puzzle.round.order_number) in unlocked_rounds,
+                    'puzzles': []
+                }
+            round_to_puzzles[puzzle.round.id]['puzzles'].append(puzzle_info)
+        else:
+            no_round_puzzles.append(puzzle_info)
+
+    # Order rounds and build final structure
+    grouped_data = []
+    if no_round_puzzles:
+        grouped_data.append({
+            'round': None,
+            'is_unlocked': True,  # No round = always accessible
+            'puzzles': no_round_puzzles
         })
+
+    for round_obj in rounds:
+        if round_obj.id in round_to_puzzles:
+            grouped_data.append(round_to_puzzles[round_obj.id])
 
     context = {
         'hunt': hunt,
-        'puzzle_data': puzzle_data,
+        'grouped_data': grouped_data,
         'time_offset_mins': time_offset_mins,
         'simulated_time': simulated_time,
         'points': points,
@@ -1106,6 +1149,8 @@ def config_tester(request, hunt):
         'parse_error': parse_error,
         'num_unlocked': len(unlocked_puzzles),
         'num_solved': len(solved_puzzle_ids),
+        'num_rounds_unlocked': len(unlocked_rounds),
+        'num_rounds': len(rounds),
     }
 
     return render(request, "staff_config_tester.html", context)
