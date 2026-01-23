@@ -379,6 +379,16 @@ class Hunt(models.Model):
         """ A boolean indicating whether the hunt is in no team mode """
         return self.team_size_limit == 1
 
+    @property
+    def rounds(self):
+        """Return rounds ordered by order_number"""
+        return self.round_set.order_by('order_number')
+
+    @property
+    def has_rounds(self):
+        """Return True if hunt has any rounds"""
+        return self.round_set.exists()
+
     def __str__(self):
         if self.is_current_hunt:
             return self.name + " (c)"
@@ -434,6 +444,7 @@ class Hunt(models.Model):
     
     def reset(self):
         PuzzleStatus.objects.filter(team__hunt=self).delete()
+        RoundStatus.objects.filter(team__hunt=self).delete()
         Submission.objects.filter(puzzle__hunt=self).delete()
         Hint.objects.filter(puzzle__hunt=self).delete()
         self.update_set.all().delete()
@@ -464,6 +475,12 @@ class Puzzle(models.Model):
         Hunt,
         on_delete=models.CASCADE,
         help_text="The hunt that this puzzle is a part of")
+    round = models.ForeignKey(
+        'Round',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        help_text="The round that this puzzle belongs to (optional)")
     name = models.CharField(
         max_length=200,
         help_text="The name of the puzzle as it will be seen by hunt participants")
@@ -564,6 +581,91 @@ class Puzzle(models.Model):
     def __str__(self):
         return f"{self.id} - {self.name}"
 
+    def clean(self):
+        """Validates the puzzle model"""
+        if self.round and self.round.hunt != self.hunt:
+            raise ValidationError({'round': "Puzzle's round must belong to the same hunt as the puzzle."})
+        super().clean()
+
+
+def get_round_template_path(instance, filename):
+    return f"trusted/round/{instance.pk}/template.html"
+
+
+class Round(models.Model):
+    """A class representing a round (grouping of puzzles) within a hunt"""
+
+    hunt = models.ForeignKey(
+        Hunt,
+        on_delete=models.CASCADE,
+        help_text="The hunt that this round is a part of")
+    name = models.CharField(
+        max_length=255,
+        help_text="The name of the round as it will be seen by hunt participants")
+    order_number = models.IntegerField(
+        help_text="The number of the round within the hunt, for sorting purposes")
+    template_file = models.FileField(
+        upload_to=get_round_template_path,
+        storage=OverwriteStorage(),
+        blank=True,
+        null=True,
+    )
+    extra_data = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="A misc. field for any extra data to be stored with the round.")
+
+    class Meta:
+        unique_together = [['hunt', 'order_number']]
+        ordering = ['hunt', 'order_number']
+
+    def __str__(self):
+        return f"{self.name} ({self.hunt.name})"
+
+    def check_access(self, user):
+        """Check if user can view this round"""
+        if self.hunt.is_public or user.is_staff:
+            return True
+        team = self.hunt.team_from_user(user)
+        if team is None:
+            return False
+        return self in team.round_statuses.filter(roundstatus__unlock_time__isnull=False)
+
+    @property
+    def puzzles(self):
+        """Return puzzles in this round, ordered by order_number"""
+        return self.puzzle_set.order_by('order_number')
+
+
+class RoundStatus(models.Model):
+    """A class representing the status of a round for a team"""
+
+    class Meta:
+        verbose_name_plural = "round statuses"
+        unique_together = ('round', 'team',)
+
+    round = models.ForeignKey(
+        Round,
+        on_delete=models.CASCADE,
+        help_text="The round this status is for")
+    team = models.ForeignKey(
+        'Team',
+        on_delete=models.CASCADE,
+        help_text="The team that this round status is for")
+    unlock_time = models.DateTimeField(
+        help_text="The time this round was unlocked for this team")
+
+    def __str__(self):
+        return f"{self.team.short_name} - {self.round.name}"
+
+    def save(self, *args, **kwargs):
+        is_new = not bool(self.pk)
+        super().save(*args, **kwargs)
+        if is_new:
+            transaction.on_commit(lambda: send_event(f"team-{self.team.pk}", f"huntUpdate", "round_unlock"))
+            transaction.on_commit(lambda: send_notification(f"You have unlocked round: {self.round.name}", self.team))
+            Event.objects.create_event(Event.EventType.ROUND_UNLOCK, self, user=None)
+
 
 class PrepuzzleManager(models.Manager):
     def get_by_natural_key(self, name):
@@ -652,6 +754,11 @@ class Team(models.Model):
         blank=True,
         through="PuzzleStatus",
         help_text="The statuses of puzzles the team has unlocked")
+    round_statuses = models.ManyToManyField(
+        'Round',
+        blank=True,
+        through="RoundStatus",
+        help_text="The statuses of rounds the team has unlocked")
     hunt = models.ForeignKey(
         Hunt,
         on_delete=models.CASCADE,
@@ -746,6 +853,14 @@ class Team(models.Model):
     def solved_metas(self):
         """Get all solved meta puzzles for the team."""
         return Puzzle.objects.filter(puzzlestatus__team=self, puzzlestatus__solve_time__isnull=False, type=Puzzle.PuzzleType.META_PUZZLE)
+
+    def unlocked_rounds(self):
+        """Get all unlocked rounds for the team."""
+        return Round.objects.filter(roundstatus__team=self, roundstatus__unlock_time__isnull=False)
+
+    def is_round_unlocked(self, round):
+        """Check if a specific round is unlocked for this team."""
+        return RoundStatus.objects.filter(team=self, round=round).exists()
 
     def hints_open_for_puzzle(self, puzzle):
         """ Takes a puzzle and returns whether the team is allowed to view the hints page for that puzzle """    
@@ -1465,6 +1580,7 @@ class EventManager(models.Manager):
         extra_data = related_data if related_data else dict()
         team = None
         puzzle = None
+        round = None
         hunt = None
         match event_type:
             case Event.EventType.PUZZLE_SUBMISSION:  # related object submission
@@ -1481,6 +1597,11 @@ class EventManager(models.Manager):
             case Event.EventType.PUZZLE_UNLOCK:  # related object puzzleStatus
                 timestamp = related_object.unlock_time
                 puzzle = related_object.puzzle
+                team = related_object.team
+                hunt = team.hunt
+            case Event.EventType.ROUND_UNLOCK:  # related object roundStatus
+                timestamp = related_object.unlock_time
+                round = related_object.round
                 team = related_object.team
                 hunt = team.hunt
             case Event.EventType.HINT_REQUEST:  # related object hint
@@ -1524,6 +1645,7 @@ class EventManager(models.Manager):
             "type": event_type,
             "team_id": team.pk if team else None,
             "puzzle_id": puzzle.pk if puzzle else None,
+            "round_id": round.pk if round else None,
         }
         send_event("staff", "events", event_metadata)
 
@@ -1536,6 +1658,7 @@ class EventManager(models.Manager):
             hunt=hunt,
             team=team,
             puzzle=puzzle,
+            round=round,
         )
 
         from .notifications import send_event_notifications
@@ -1550,6 +1673,7 @@ class Event(models.Model):
         PUZZLE_SUBMISSION = 'PSUB', 'Submission'
         PUZZLE_SOLVE = 'PSOL', 'Solve'
         PUZZLE_UNLOCK = 'PUNL', 'Unlock'
+        ROUND_UNLOCK = 'ROU', 'Round Unlock'
         HINT_REQUEST = 'HREQ', 'Hint Request'
         HINT_RESPONSE = 'HRES', 'Hint Response'
         HINT_REFUND = 'HREF', 'Hint Refund'
@@ -1563,10 +1687,10 @@ class Event(models.Model):
 
     queue_types = [EventType.PUZZLE_SUBMISSION, EventType.PUZZLE_SOLVE, EventType.PUZZLE_UNLOCK,
                    EventType.HINT_REQUEST, EventType.HINT_RESPONSE, EventType.HINT_REFUND,
-                   EventType.FINISH_HUNT, EventType.TEAM_JOIN]
+                   EventType.FINISH_HUNT, EventType.TEAM_JOIN, EventType.ROUND_UNLOCK]
     public_types = [EventType.PUZZLE_SUBMISSION, EventType.PUZZLE_SOLVE, EventType.PUZZLE_UNLOCK,
                     EventType.HINT_REQUEST, EventType.HINT_RESPONSE, EventType.HINT_REFUND,
-                    EventType.FINISH_HUNT, EventType.UPDATE]
+                    EventType.FINISH_HUNT, EventType.UPDATE, EventType.ROUND_UNLOCK]
 
     # Every event has a user, a team, and a hunt, some have a puzzle
     # (Except update which doesn't have a team)
@@ -1603,6 +1727,12 @@ class Event(models.Model):
         blank=True,
         null=True,
         help_text="The puzzle associated with this event, if applicable")
+    round = models.ForeignKey(
+        Round,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        help_text="The round associated with this event, if applicable")
 
     objects = EventManager()
 
@@ -1615,6 +1745,8 @@ class Event(models.Model):
                 return PuzzleStatus.objects.get(pk=self.related_object_id)
             case Event.EventType.PUZZLE_UNLOCK:
                 return PuzzleStatus.objects.get(pk=self.related_object_id)
+            case Event.EventType.ROUND_UNLOCK:
+                return RoundStatus.objects.get(pk=self.related_object_id)
             case Event.EventType.HINT_REQUEST:
                 return Hint.objects.get(pk=self.related_object_id)
             case Event.EventType.HINT_RESPONSE:
@@ -1642,6 +1774,8 @@ class Event(models.Model):
                 return "#079103"
             case Event.EventType.PUZZLE_UNLOCK:
                 return "#a3c7ff"
+            case Event.EventType.ROUND_UNLOCK:
+                return "#b8d4ff"
             case Event.EventType.HINT_REQUEST:
                 return "#f5b78a"
             case Event.EventType.HINT_RESPONSE:
@@ -1667,6 +1801,8 @@ class Event(models.Model):
                 return "fa-puzzle-piece"
             case Event.EventType.PUZZLE_UNLOCK:
                 return "fa-unlock"
+            case Event.EventType.ROUND_UNLOCK:
+                return "fa-folder-open"
             case Event.EventType.HINT_REQUEST:
                 return "fa-question"
             case Event.EventType.HINT_RESPONSE:
@@ -1689,6 +1825,8 @@ class Event(models.Model):
                 return f"<b>{ self.team.name }</b> has solved <b>{ self.puzzle.name }</b>!"
             case Event.EventType.PUZZLE_UNLOCK:
                 return f"<b>{ self.team.name }</b> has unlocked <b>{ self.puzzle.name }</b>."
+            case Event.EventType.ROUND_UNLOCK:
+                return f"<b>{ self.team.name }</b> has unlocked round <b>{ self.round.name }</b>."
             case Event.EventType.HINT_REQUEST:
                 return f"<b>{ self.team.name }</b> has requested a { self.related_data if self.related_data != '{}' else ''} hint for <b>{ self.puzzle.name }</b>."
             case Event.EventType.HINT_RESPONSE:
@@ -1711,6 +1849,8 @@ class Event(models.Model):
                 return f"Your team has solved { self.puzzle.name }!"
             case Event.EventType.PUZZLE_UNLOCK:
                 return f"Your team has unlocked { self.puzzle.name }."
+            case Event.EventType.ROUND_UNLOCK:
+                return f"Your team has unlocked round { self.round.name }."
             case Event.EventType.HINT_REQUEST:
                 return f"Your team has requested a hint for { self.puzzle.name }."
             case Event.EventType.HINT_RESPONSE:
