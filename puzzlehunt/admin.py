@@ -104,6 +104,7 @@ class PuzzleAdminForm(forms.ModelForm):
         if self.instance.pk:
             self.fields["main_file"].queryset = self.instance.files.all()
             self.fields["main_solution_file"].queryset = self.instance.solution_files.all()
+            self.fields["round"].queryset = Round.objects.filter(hunt=self.instance.hunt)
 
     def clean(self):
         data = self.cleaned_data
