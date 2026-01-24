@@ -785,9 +785,6 @@ def hunt_puzzles(request, hunt):
         hunt (Hunt): The hunt instance for which to display puzzles
     """
     puzzles = list(hunt.puzzle_set.order_by('order_number').all())
-    for i, puzzle in enumerate(puzzles):
-        puzzle.has_gap = (puzzles[i].order_number - puzzles[i-1].order_number > 1) if i != 0 else False
-
     context = {'hunt': hunt, 'puzzles': puzzles}
     return render(request, "staff_hunt_puzzles.html", context)
 

@@ -35,7 +35,14 @@
 
 
 {% block staff_content %}
-<div id="config-tester-content">
+<div id="config-tester-content"
+     hx-trigger="recalculate"
+     hx-get=""
+     hx-target="this"
+     hx-select="#config-tester-content > *"
+     hx-swap="morph:innerHTML"
+     hx-sync="this:replace"
+     hx-ext="alpine-morph">
 <style>
   .solve-time-input {
     width: 80px;
@@ -54,7 +61,7 @@
   }
 </style>
 
-<div x-data="configTester()" class="columns is-multiline" hx-ext="alpine-morph">
+<div x-data="configTester()" class="columns is-multiline">
   <!-- Time Control Section -->
   <div class="column is-12">
     <div class="box">
@@ -339,11 +346,11 @@ function configTester() {
 
       history.replaceState(null, '', '?' + params.toString());
 
-      htmx.ajax('GET', '?' + params.toString(), {
-        target: '#config-tester-content',
-        select: '#config-tester-content > *',
-        swap: 'morph:innerHTML'
-      });
+      // Update the hx-get attribute and trigger the request
+      // hx-sync="this:replace" will cancel any in-flight request
+      const target = document.querySelector('#config-tester-content');
+      target.setAttribute('hx-get', '?' + params.toString());
+      htmx.trigger(target, 'recalculate');
     }
   }
 }
