@@ -778,14 +778,31 @@ def hunt_puzzles(request, hunt):
     """
     View function to display puzzles for the current hunt.
 
-    This view fetches puzzles for a given hunt.
+    This view fetches puzzles for a given hunt, grouped by round if rounds exist.
     The puzzles are then rendered in the 'staff_hunt_puzzles.html' template.
 
     Args:
         hunt (Hunt): The hunt instance for which to display puzzles
     """
     puzzles = list(hunt.puzzle_set.order_by('order_number').all())
-    context = {'hunt': hunt, 'puzzles': puzzles}
+    rounds = list(hunt.round_set.order_by('order_number').all())
+
+    # Group puzzles by round as list of (round, puzzles) tuples
+    round_puzzle_groups = []
+    puzzles_no_round = []
+    for round_obj in rounds:
+        round_puzzles = [p for p in puzzles if p.round_id == round_obj.id]
+        if round_puzzles:
+            round_puzzle_groups.append((round_obj, round_puzzles))
+    puzzles_no_round = [p for p in puzzles if p.round_id is None]
+
+    context = {
+        'hunt': hunt,
+        'puzzles': puzzles,
+        'has_rounds': len(rounds) > 0,
+        'round_puzzle_groups': round_puzzle_groups,
+        'puzzles_no_round': puzzles_no_round,
+    }
     return render(request, "staff_hunt_puzzles.html", context)
 
 

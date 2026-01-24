@@ -1,0 +1,89 @@
+{% comment %}
+@template: partials/_staff_puzzle_box.html
+@description: A single puzzle box for the staff puzzles page
+@context:
+  puzzle: The Puzzle object to display
+{% endcomment %}
+{% if puzzle.has_gap %}
+  <hr class="has-background-grey" style="height:1px">
+{% endif %}
+<div class="box p-4">
+  <div class="columns is-multiline" x-data="{fileModal: false}">
+    <div class="column is-narrow has-text-grey">
+      <div>#{{ puzzle.order_number }}</div>
+      <div>ID: {{ puzzle.id }}</div>
+      {% if puzzle.type == puzzle.PuzzleType.STANDARD_PUZZLE %}
+        <span class="tag is-primary">Standard</span>
+      {% elif puzzle.type == puzzle.PuzzleType.META_PUZZLE %}
+        <span class="tag is-warning">Meta</span>
+      {% elif puzzle.type == puzzle.PuzzleType.FINAL_PUZZLE %}
+        <span class="tag is-danger">Final</span>
+      {% elif puzzle.type == puzzle.PuzzleType.NON_PUZZLE %}
+        <span class="tag is-info">Non-Puzzle</span>
+      {% endif %}
+    </div>
+    <div class="column">
+      <h3 class="is-size-4">{{ puzzle.name }}</h3>
+    </div>
+    <div class="column is-narrow">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+        <button class="button" @click="fileModal = true">
+          <span class="icon is-small">
+            <i class="fa fa-folder-open"></i>
+          </span>
+          <span>Files</span>
+        </button>
+        <a href="{% url 'admin:puzzlehunt_puzzle_change' puzzle.id %}" class="button">
+          <span class="icon is-small">
+            <i class="fa fa-pencil"></i>
+          </span>
+          <span>Edit</span>
+        </a>
+        <a href="{% url 'puzzlehunt:puzzle_view' puzzle.pk %}" class="button">
+          <span class="icon is-small">
+            <i class="fa fa-eye"></i>
+          </span>
+          <span>Preview</span>
+        </a>
+        <div x-data="{showAnswer: false}" style="position: relative;">
+          <button class="button is-fullwidth"
+                  :class="showAnswer && 'is-danger is-light'"
+                  @click="showAnswer = !showAnswer;">
+            <span class="icon is-small">
+              <i class="fa fa-key"></i>
+            </span>
+            <span>Answer</span>
+          </button>
+          <div x-show="showAnswer" x-cloak
+               style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); z-index: 10; margin-top: 0.25rem;"
+               @click.outside="showAnswer = false">
+            <span class="tag is-danger is-medium">{{ puzzle.answer }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- File Management Modal -->
+    <div class="modal" :class="fileModal && 'is-active'" x-cloak @keydown.escape.window="fileModal = false">
+      <div class="modal-background" @click="fileModal = false"></div>
+      <div class="modal-card" style="width: 95vw; max-height: 90vh;">
+        <header class="modal-card-head">
+          <p class="modal-card-title">{{ puzzle.name }} - File Management</p>
+          <button class="delete" aria-label="close" @click="fileModal = false"></button>
+        </header>
+        <section class="modal-card-body" style="min-height: 300px;">
+          <!-- Puzzle Files Section -->
+          <h4 class="title is-5">Puzzle Files</h4>
+          {% with parent=puzzle parent_type='puzzle'%}
+            {% include 'partials/_staff_file_list.html' %}
+          {% endwith %}
+
+          <!-- Solution Files Section -->
+          <h4 class="title is-5 mt-5">Solution Files</h4>
+          {% with parent=puzzle parent_type='solution'%}
+            {% include 'partials/_staff_file_list.html' %}
+          {% endwith %}
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
