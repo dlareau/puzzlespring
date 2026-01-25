@@ -18,7 +18,7 @@ from django_sendfile import sendfile
 from constance import config
 
 from .forms import AnswerForm
-from .models import Puzzle, Submission, Prepuzzle, Hint, PuzzleStatus, Update
+from .models import Puzzle, Submission, Prepuzzle, Hint, PuzzleStatus, Update, Round
 from .utils import get_media_file_model
 
 import logging
@@ -102,6 +102,63 @@ def puzzle_solution(request, pk):
         response = render(request, puzzle.main_solution_file.file.name.removeprefix("trusted/"), context)
         response['X-Robots-Tag'] = 'noindex'
         return response
+
+
+def round_view(request, hunt, order_number):
+    """
+    A view to render round templates. Does permission checks and determines which puzzles
+    within the round to display, then renders the appropriate template.
+    """
+
+    try:
+        round = Round.objects.get(hunt=hunt, order_number=order_number)
+    except Round.DoesNotExist:
+        round = None
+
+    # Check access - return same error for non-existent and no access
+    has_access = round is not None and round.check_access(request.user)
+
+    if not has_access:
+        if request.user.is_authenticated:
+            return render(request, 'access_error.html', {'reason': "round"})
+        else:
+            return redirect('%s?next=%s' % (reverse_lazy(settings.LOGIN_URL), request.path))
+    
+
+    # Get puzzles in this round based on access level
+    team = hunt.team_from_user(request.user)
+    puzzle_list = []
+
+    if hunt.is_public or request.user.is_staff:
+        puzzle_list = round.puzzles
+    elif team and team.playtest_happening:
+        puzzle_list = team.puzzle_statuses.filter(round=round)
+    elif hunt.is_open:
+        if team is None or team.hunt != hunt:
+            return render(request, 'access_error.html', {'reason': "team"})
+        else:
+            puzzle_list = team.puzzle_statuses.filter(round=round)
+
+    puzzles = sorted(puzzle_list, key=lambda p: p.order_number)
+
+    if team is None:
+        solved = []
+    else:
+        solved = team.puzzle_statuses.filter(puzzlestatus__solve_time__isnull=False, round=round)
+
+    context = {
+        'round': round,
+        'hunt': hunt,
+        'puzzles': puzzles,
+        'team': team,
+        'solved': solved
+    }
+
+    if round.template_file is None or round.template_file == "":
+        return render(request, 'round_non_template.html', context)
+    else:
+        # Template stored at: trusted/hunt/{hunt.pk}/rounds/{round.pk}/template.html
+        return render(request, f"hunt/{hunt.pk}/rounds/{round.pk}/template.html", context)
 
 
 @require_POST
@@ -318,7 +375,16 @@ def hunt_view(request, hunt):
         solved = []
     else:
         solved = team.puzzle_statuses.filter(puzzlestatus__solve_time__isnull=False)
-    context = {'hunt': hunt, 'puzzles': puzzles, 'team': team, 'solved': solved}
+
+    # Get unlocked rounds for context
+    rounds = []
+    if hunt.has_rounds:
+        if hunt.is_public or request.user.is_staff:
+            rounds = list(hunt.rounds)
+        elif team is not None:
+            rounds = list(team.unlocked_rounds())
+
+    context = {'hunt': hunt, 'puzzles': puzzles, 'team': team, 'solved': solved, 'rounds': rounds}
 
     if hunt.template_file is None or hunt.template_file == "":
         return render(request, 'hunt_non_template.html', context)

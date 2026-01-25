@@ -1,0 +1,72 @@
+{% extends "hunt_base.html" %}
+
+{% comment %}
+@template: round_non_template.html
+@description: Displays a simple list view of all puzzles in a round with their solve status and answers.
+@extends: hunt_base.html
+@blocks:
+  content_wrapper: Displays round title, hunt name, team name, and puzzle list table
+@context:
+  round: The current Round object
+  hunt: The current Hunt object
+  team: The current Team object
+  puzzles: List of Puzzle objects in the round
+  solved: List of puzzles that have been solved by the team
+{% endcomment %}
+
+{% block content_wrapper %}
+  <div id="huntContent" class="bulma">
+    <section class="section">
+      <div class="container">
+        <h1 class="title">{{ round.name }}</h1>
+        <h2 class="subtitle">{{ hunt.name }}</h2>
+        {% if team %}
+          <p class="mb-4">Team: {{ team.name }}</p>
+        {% endif %}
+
+        <table class="table is-fullwidth is-striped">
+          <thead>
+            <tr>
+              <th>Puzzle Name</th>
+              <th>Status</th>
+              <th>Answer</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for puzzle in puzzles %}
+              <tr>
+                <td>
+                  <a href="{% url 'puzzlehunt:puzzle_view' puzzle.pk %}">{{ puzzle.name }}</a>
+                </td>
+                <td>
+                  {% if puzzle in solved %}
+                    <span class="tag is-success">Solved</span>
+                  {% else %}
+                    <span class="tag is-danger">Unsolved</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if puzzle in solved %}
+                    {{ puzzle.answer }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="3">No puzzles available in this round yet.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <div class="mt-4">
+          <a href="{% url 'puzzlehunt:hunt_view' hunt.pk %}" class="button is-link">
+            Back to Hunt
+          </a>
+        </div>
+      </div>
+    </section>
+  </div>
+{% endblock content_wrapper %}

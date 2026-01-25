@@ -19,7 +19,18 @@
       <div class="container">
         <h1 class="title">{{ hunt.name }}</h1>
         <h2 class="subtitle">Team: {{ team.name }}</h2>
-        
+
+        {% if rounds %}
+          <h3 class="title is-5 mt-5">Rounds</h3>
+          <div class="buttons mb-4">
+            {% for round in rounds %}
+              <a href="{% url 'puzzlehunt:round_view' hunt.pk round.order_number %}" class="button is-primary is-outlined">
+                {{ round.name }}
+              </a>
+            {% endfor %}
+          </div>
+        {% endif %}
+
         <table class="table is-fullwidth is-striped">
           <thead>
             <tr>

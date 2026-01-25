@@ -50,6 +50,7 @@ urlpatterns = [
     path('hunt/<hunt:hunt>/updates/', hunt_views.hunt_updates, name='hunt_updates'),
     path('hunt/<hunt:hunt>/prepuzzle/', hunt_views.hunt_prepuzzle, name='hunt_prepuzzle'),
     path('hunt/<hunt:hunt>/info/', hunt_views.hunt_info, name='hunt_info'),
+    path('hunt/<hunt:hunt>/round/<int:order_number>/view/', hunt_views.round_view, name='round_view'),
 
     # Prepuzzles
     path('prepuzzle/<int:pk>/view/', hunt_views.prepuzzle_view, name='prepuzzle_view'),
