@@ -54,7 +54,8 @@ urlpatterns = [
     # Prepuzzles
     path('prepuzzle/<int:pk>/view/', hunt_views.prepuzzle_view, name='prepuzzle_view'),
     path('prepuzzle/<int:pk>/submit/', hunt_views.prepuzzle_submit, name='prepuzzle_submit'),
-    # Legacy route for old prepuzzles
+    # Legacy routes for old prepuzzles
+    path('prepuzzle/<int:pk>/', hunt_views.prepuzzle_view, name='prepuzzle_view_old'),
     path('prepuzzle/<int:pk>/check/', hunt_views.prepuzzle_check, name='prepuzzle_check'),
 
     # SSE Endpoints
