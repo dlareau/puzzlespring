@@ -15,7 +15,7 @@ from puzzlehunt import models
 from django.core.files import File
 from django_eventstream.channelmanager import DefaultChannelManager
 from .models import PuzzleFile, SolutionFile, HuntFile, PrepuzzleFile, Puzzle, Hunt, Prepuzzle, Team, TeamRankingRule, \
-    CannedHint, Response, Hint, Update, PuzzleStatus, Submission, User
+    CannedHint, Response, Hint, Update, PuzzleStatus, Submission, User, Round, RoundStatus
 from django.core.files.storage import default_storage
 
 
@@ -196,6 +196,7 @@ def create_hunt_export_zip(hunt, zip_path, include_activity=False):
             models_to_export = {
                 'hunt.json': Hunt.objects.filter(pk=hunt.pk),
                 'ranking_rules.json': TeamRankingRule.objects.filter(hunt=hunt),
+                'rounds.json': Round.objects.filter(hunt=hunt),
                 'puzzles.json': Puzzle.objects.filter(hunt=hunt),
                 'puzzle_files.json': PuzzleFile.objects.filter(parent__hunt=hunt).select_related('parent'),
                 'solution_files.json': SolutionFile.objects.filter(parent__hunt=hunt).select_related('parent'),
@@ -212,6 +213,7 @@ def create_hunt_export_zip(hunt, zip_path, include_activity=False):
                     'hints.json': Hint.objects.filter(puzzle__hunt=hunt).select_related('puzzle', 'team', 'team__hunt'),
                     'updates.json': Update.objects.filter(hunt=hunt).select_related('hunt', 'puzzle'),
                     'puzzle_statuses.json': PuzzleStatus.objects.filter(puzzle__hunt=hunt).select_related('puzzle', 'team', 'team__hunt'),
+                    'round_statuses.json': RoundStatus.objects.filter(round__hunt=hunt).select_related('round', 'team', 'team__hunt'),
                     'submissions.json': Submission.objects.filter(puzzle__hunt=hunt).select_related('puzzle', 'team', 'team__hunt', 'puzzle__hunt'),
                 }
                 models_to_export.update(activity_models)
@@ -240,6 +242,11 @@ def create_hunt_export_zip(hunt, zip_path, include_activity=False):
                 zip_file.write(hunt.template_file.path, 'files/template.html')
             if hunt.info_page_file:
                 zip_file.write(hunt.info_page_file.path, 'files/info_page.html')
+
+            # Export round template files
+            for round_obj in hunt.round_set.all():
+                if round_obj.template_file:
+                    zip_file.write(round_obj.template_file.path, f'files/round/{round_obj.order_number}/template.html')
             
             # Export hunt files
             for file in hunt.files.all():
@@ -291,6 +298,7 @@ def validate_hunt_zip(zip_path: str | Path, include_activity: bool = False) -> N
         'file_references.json',
         'hunt.json',
         'ranking_rules.json',
+        'rounds.json',
         'puzzles.json',
         'puzzle_files.json',
         'solution_files.json',
@@ -306,6 +314,7 @@ def validate_hunt_zip(zip_path: str | Path, include_activity: bool = False) -> N
         'hints.json',
         'updates.json',
         'puzzle_statuses.json',
+        'round_statuses.json',
         'submissions.json'
     }
 
@@ -382,7 +391,21 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                 with zip_file.open('files/info_page.html') as f:
                     new_hunt.info_page_file.save('info_page.html', File(f))
 
-            # 2. Import puzzles without file references
+            # 2. Import rounds (must be before puzzles since puzzles may reference rounds)
+            rounds = {}
+            for obj in serializers.deserialize('json', zip_file.read('rounds.json')):
+                round_obj = obj.object
+                round_obj.hunt = new_hunt
+                round_obj.save()
+                rounds[round_obj.order_number] = round_obj
+
+                # Import round template file if present
+                round_template_path = f'files/round/{round_obj.order_number}/template.html'
+                if round_template_path in zip_file.namelist():
+                    with zip_file.open(round_template_path) as f:
+                        round_obj.template_file.save('template.html', File(f))
+
+            # 3. Import puzzles without file references
             puzzles = {}
             for obj in serializers.deserialize('json', zip_file.read('puzzles.json')):
                 puzzle = obj.object
@@ -392,18 +415,18 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                 puzzle.save()
                 puzzles[puzzle.id] = puzzle
 
-            # Only set config after puzzles are created
+            # Only set config after puzzles and rounds are created
             new_hunt.config = config
             new_hunt.save()
 
-            # 3. Import prepuzzles without file references
+            # 4. Import prepuzzles without file references
             for obj in serializers.deserialize('json', zip_file.read('prepuzzles.json')):
                 prepuzzle = obj.object
                 prepuzzle.hunt = new_hunt
                 prepuzzle.main_file = None  # Will be set later
                 prepuzzle.save()
 
-            # 4. Import all files and create file objects
+            # 5. Import all files and create file objects
             # Track specific files we need later
             hunt_css_file = None
             prepuzzle_main_file = None
@@ -467,17 +490,18 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                 else:
                     print(f"Prepuzzle file {file_obj.relative_name} not found in zip")
 
-            # 5. Import remaining models that don't need special handling
+            # 6. Import remaining models that don't need special handling
             for filename in ['responses.json', 'canned_hints.json', 'ranking_rules.json']:
                 for obj in serializers.deserialize('json', zip_file.read(filename)):
                     obj.save()
 
-            # 6. Import activity data if requested
+            # 7. Import activity data if requested
             if include_activity:
                 activity_order = [
                     'teams.json',  # Teams depend on Hunt
                     'updates.json',  # Updates depend on Hunt and optionally Puzzle
                     'puzzle_statuses.json',  # PuzzleStatus depends on Team and Puzzle
+                    'round_statuses.json',  # RoundStatus depends on Team and Round
                     'submissions.json',  # Submissions depend on Team and Puzzle
                     'hints.json'  # Hints depend on Team and Puzzle
                 ]
@@ -485,7 +509,7 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                     for obj in serializers.deserialize('json', zip_file.read(filename)):
                         obj.save()
 
-            # 7. Restore file references
+            # 8. Restore file references
             # Update hunt file references
             hunt_refs = file_references['hunt']
             if hunt_refs['css_file']:

@@ -593,8 +593,15 @@ def get_round_template_path(instance, filename):
     return f"trusted/hunt/{instance.hunt.pk}/rounds/{instance.pk}/template.html"
 
 
+class RoundManager(models.Manager):
+    def get_by_natural_key(self, hunt_name, hunt_start_date, order_number):
+        return self.get(hunt__name=hunt_name, hunt__start_date=hunt_start_date, order_number=order_number)
+
+
 class Round(models.Model):
     """A class representing a round (grouping of puzzles) within a hunt"""
+
+    objects = RoundManager()
 
     hunt = models.ForeignKey(
         Hunt,
@@ -637,9 +644,20 @@ class Round(models.Model):
         """Return puzzles in this round, ordered by order_number"""
         return self.puzzle_set.order_by('order_number')
 
+    def natural_key(self):
+        return self.hunt.natural_key() + (self.order_number,)
+
+
+class RoundStatusManager(models.Manager):
+    def get_by_natural_key(self, hunt_name, hunt_start_date, round_order, team_join_code):
+        round_obj = Round.objects.get_by_natural_key(hunt_name, hunt_start_date, round_order)
+        return self.get(round=round_obj, team__join_code=team_join_code, team__hunt__name=hunt_name, team__hunt__start_date=hunt_start_date)
+
 
 class RoundStatus(models.Model):
     """A class representing the status of a round for a team"""
+
+    objects = RoundStatusManager()
 
     class Meta:
         verbose_name_plural = "round statuses"
@@ -666,6 +684,9 @@ class RoundStatus(models.Model):
             transaction.on_commit(lambda: send_event(f"team-{self.team.pk}", f"huntUpdate", "round_unlock"))
             transaction.on_commit(lambda: send_notification(f"You have unlocked round: {self.round.name}", self.team))
             Event.objects.create_event(Event.EventType.ROUND_UNLOCK, self, user=None)
+
+    def natural_key(self):
+        return self.round.natural_key() + (self.team.join_code,)
 
 
 class PrepuzzleManager(models.Manager):
