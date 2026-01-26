@@ -274,7 +274,9 @@ def parse_config(config_str, puzzle_ids, order_to_id):
     
     # Check for invalid puzzle IDs if puzzle_ids was provided
     if puzzle_ids is not None:
-        invalid_ids = referenced_ids - set(str(pid) for pid in puzzle_ids)
+        referenced_ids = {rid.upper() for rid in referenced_ids}
+        valid_ids = {pid.upper() for pid in puzzle_ids}
+        invalid_ids = referenced_ids - valid_ids
         if invalid_ids:
             raise ValueError(f"Config references non-existent puzzle IDs: {', '.join(sorted(invalid_ids))}")
     
