@@ -27,7 +27,6 @@ The recommended approach is to focus on data setup before styling:
 2. Configure core settings and functionality
 3. Add puzzle content and files
 4. Apply custom styling and templates
-// TODO: come back and see if this order is correct
 
 This approach allows you to iterate on the hunt's appearance once all the fundamental pieces are in place. Don't worry if you're unsure about exact puzzle details - everything can be modified later.
 
@@ -251,7 +250,27 @@ The system checks submissions against these patterns in order. If no pattern mat
 
 ## Hints and Hint Management
 
-PuzzleSpring provides a flexible hint system with multiple configuration options and management tools.
+PuzzleSpring provides a flexible hint system with multiple configuration options and management tools. All hint settings are configured in the Django Admin under the hunt's "Hint Behaviour" section.
+
+### Earning Hints
+
+Teams earn hints through the hunt configuration language. See the [Hunt Configuration Language](../technical-reference/hunt-config-language.md) reference for details on hint allocation rules such as:
+
+```
+# Give 2 hints every 30 minutes
+2 HINTS <= EVERY 30 MINUTES
+
+# Give 1 puzzle specific hint 30 minutes after unlocking a puzzle
+1 PX HINT <= 30 MINUTES AFTER PX UNLOCK
+```
+
+### Hint Lockout
+
+The **Hint Lockout** setting controls how long teams must wait after unlocking a puzzle before they can request hints. This prevents teams from immediately using hints on newly unlocked puzzles.
+
+- Configured on the Hunt in Django Admin
+- Value is in minutes (default: 60 minutes)
+- Set to 0 to disable the lockout
 
 ### Hint Types
 
@@ -266,6 +285,20 @@ PuzzleSpring provides a flexible hint system with multiple configuration options
    - Automatically revealed in order
    - No staff intervention needed
    - Configurable per puzzle
+
+### Creating Canned Hints
+
+To add canned hints to a puzzle:
+
+1. Go to Django Admin > Puzzles
+2. Select the puzzle you want to add hints to
+3. Scroll down to the "Canned Hints" section
+4. For each hint, enter:
+   - **Order**: The sequence in which hints are revealed (lower numbers first)
+   - **Text**: The hint content shown to teams
+5. Click "Save"
+
+Teams will see canned hints revealed in order as they spend hints on the puzzle.
 
 ### Hint Pools
 
@@ -317,8 +350,21 @@ When using both pools, configure how hints are allocated:
    - Canned hints use puzzle pool
    - Custom hints use global pool
 
+## Hunt Information Page
+
 Below the template and CSS file section, there is an option to upload an Info Page file. This file, which can be a Django template, serves as the hunt's general information page. It typically contains details such as an FAQ and other relevant information. This page is generally accessible before the hunt begins.
 
-At the bottom of the Hunt page, there is a section for Team Ranking Rules. This determines the leaderboard order and is also used in various places throughout the site to visualize team standings. You can choose an ordering method and specify whether each ranking statistic should be visible on the leaderboard.
+## Team Ranking Rules
 
-Beyond setting up your hunt, you can also configure general site settings. The most notable site-wide configuration is the addition of Info Pages. These are extra informational pages, such as resources or FAQs, that appear in the top navigation bar. You can create them through the Django admin in the Info Page section. Here, you can define the URL, title, and content of each page. The content can be a Django template, allowing for dynamic rendering.
+At the bottom of the Hunt admin page, configure Team Ranking Rules to control the leaderboard order and team standings display. You can choose an ordering method and specify whether each ranking statistic should be visible on the leaderboard.
+
+## Site-Wide Info Pages
+
+Beyond hunt-specific settings, you can create site-wide Info Pages that appear in the top navigation bar. These are useful for resources, FAQs, or other static content.
+
+To create an Info Page:
+
+1. Go to Django Admin > Info Pages
+2. Click "Add Info Page"
+3. Configure the URL, title, and content
+4. The content field supports Django template syntax for dynamic rendering

@@ -33,7 +33,7 @@ Environment variables can be set in multiple ways, including directly in your sy
 {: .note }
 > Avoid using these characters in your database password: colon (`:`), at symbol (`@`), forward slash (`/`), percent sign (`%`), backslash (`\`), and quotation marks (`"` and `'`). These characters can cause connection string parsing issues.
 
-- `DATABASE_URL`: TThe complete database connection URL. If not specified, it will be constructed automatically using the `DB_PASSWORD` value in the format `postgres://puzzlehunt:${DB_PASSWORD}@db/puzzlehunt`.
+- `DATABASE_URL`: The complete database connection URL. If not specified, it will be constructed automatically using the `DB_PASSWORD` value in the format `postgres://puzzlehunt:${DB_PASSWORD}@db/puzzlehunt`.
 
     *Required: No • Type: String • Example: "postgres://puzzlehunt:password@db/puzzlehunt"*
 

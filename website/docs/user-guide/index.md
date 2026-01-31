@@ -6,7 +6,7 @@ nav_order: 3
 
 # User Guide
 
-A guide for users of PuzzleSpring.
+This section covers configuration options and common usage patterns for running puzzle hunts with PuzzleSpring.
 
 ## Quick Links
 

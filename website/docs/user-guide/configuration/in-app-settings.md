@@ -1,13 +1,13 @@
 ---
 layout: default
-title: In App Settings
+title: In-App Settings
 parent: Configuration
 nav_order: 1
 ---
 
-# In App Settings
+# In-App Settings
 
-Information about the settings available in the app.
+PuzzleSpring provides configurable settings that can be modified through the Django admin interface without code changes or restarts.
 
 ## Modifying Settings
 

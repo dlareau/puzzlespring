@@ -7,11 +7,11 @@ nav_order: 5
 
 # Puzzle Content Creation
 
-PuzzleSpring provides a flexible puzzle rendering system that allows you to create puzzles in a number of different ways.
+PuzzleSpring provides a flexible puzzle rendering system that supports multiple content formats.
 
-## Puzzle File management
+## Puzzle File Management
 
-In the staff interface, you can upload multiple files for each puzzle. After expanding the file list for a puzzle, you can click the "Upload File" button to upload a new file.
+The staff interface allows you to upload multiple files for each puzzle. After expanding the file list for a puzzle, click the "Upload File" button to upload a new file.
 
 If you upload a zip file, the contents of the zip file will be extracted and all files contained in the zip file will be added to the puzzle. At the moment this is the only way to create a directory structure within the puzzle files. If the file is not a zip file, it will be added to the puzzle as a single file.
 
@@ -42,7 +42,7 @@ When using an HTML page for a puzzle, it is recommended to use relative links fo
 
 Template puzzles are the most complex but also the most flexible type of puzzle. They are rendered using a Django template that has access to the puzzle data. This will be done if the "main file" for a puzzle is a file with a `.tmpl` extension. 
 
-The template file is entirely yours to customize, however that also means there isn't any content inlcuded by default. This means you are responsible for which template your puzzle inherits from, and all other parts of a normal puzzle page such as the answer submission form, links to hints, and updates. Consider looking the existing templates for inspiration.
+The template file is entirely yours to customize, however that also means there isn't any content included by default. This means you are responsible for which template your puzzle inherits from, and all other parts of a normal puzzle page such as the answer submission form, links to hints, and updates. Consider looking the existing templates for inspiration.
 
 The template is rendered with the following context:
 

@@ -7,9 +7,11 @@ nav_order: 2
 
 # Staff Actions
 
-## Add pre-puzzlespring hunts to archive
+This page documents common administrative tasks and how to perform them in PuzzleSpring.
 
-PuzzleSpring allows you to add information about hunts that were run before you started using PuzzleSpring. These display-only hunts appear in the archive but don't have playable puzzles.
+## Add Pre-PuzzleSpring Hunts to Archive
+
+PuzzleSpring allows you to add information about hunts that were run before you started using the platform. These display-only hunts appear in the archive but don't have playable puzzles.
 
 ### Adding a Display-Only Hunt
 
@@ -26,7 +28,7 @@ PuzzleSpring allows you to add information about hunts that were run before you 
 
 The hunt will now appear in the archive alongside your regular PuzzleSpring hunts, but without playable content.
 
-## Set up external authentication
+## Set Up External Authentication
 
 PuzzleSpring supports various external authentication providers through Django Allauth, allowing users to log in using their existing accounts from services like Google, GitHub, or Facebook.
 
@@ -56,7 +58,7 @@ For all providers, you'll need to configure the redirect URI as:
 `https://your-domain.com/accounts/provider/login/callback/`
 (Replace "provider" with the specific provider name like "google" or "github")
 
-## Manually unlock a puzzle
+## Manually Unlock a Puzzle
 
 Sometimes you may need to manually unlock puzzles for teams, such as when bypassing normal unlock rules for testing or helping teams that encounter issues.
 
@@ -72,7 +74,7 @@ Sometimes you may need to manually unlock puzzles for teams, such as when bypass
    - Leave "Solve time" blank
 5. Click "Save"
 
-## Make a new info page
+## Create an Info Page
 
 Info pages are static content pages that appear in the navigation bar and provide additional information to users, such as rules, resources, or FAQs.
 
@@ -90,7 +92,7 @@ Info pages are static content pages that appear in the navigation bar and provid
 
 The new info page will immediately appear in the navigation bar and be accessible to users.
 
-## Reset a user's password
+## Reset a User's Password
 
 As an administrator, you may need to help users who have forgotten their passwords or are having trouble accessing their accounts.
 
@@ -109,7 +111,7 @@ As an administrator, you may need to help users who have forgotten their passwor
 - Encourage users to use the "Forgot Password" link on the login page when possible
 - For security reasons, consider having users change their password again after they log in with an admin-set password
 
-## Import/Export a hunt
+## Import/Export a Hunt
 
 PuzzleSpring provides robust functionality for exporting and importing hunts, allowing you to back up hunt data, transfer hunts between instances, or create templates for future hunts.
 
@@ -180,7 +182,7 @@ If you encounter issues during import:
 {: .warning }
 > Importing a hunt with activity data will create duplicate teams if teams with the same names already exist. Use this option with caution.
 
-## Set up a playtest team
+## Set Up a Playtest Team
 
 PuzzleSpring includes special functionality for playtest teams, allowing them to access hunts before the official start date. This feature is essential for testing puzzles and hunt mechanics prior to public release.
 
@@ -230,9 +232,9 @@ Staff can monitor playtest teams through the standard staff interfaces:
 > Playtest teams can be identified in the admin interface and staff pages by the "Playtester" flag on their team record.
 
 
-## Send an update about the hunt or a specific puzzle
+## Send an Update
 
-To send create an update about the hunt or a specific puzzle:
+To create an update about the hunt or a specific puzzle:
 
 1. Log in with a staff or superuser account
 2. Navigate to the Django Admin interface at `/admin/`
@@ -251,7 +253,7 @@ When an update is created, it will:
 - Be visible to teams who have unlocked the associated puzzle (if puzzle-specific)
 
 
-## Reset the database
+## Reset the Database
 
 There are several methods to reset or reinitialize the database in PuzzleSpring, depending on your specific needs.
 
