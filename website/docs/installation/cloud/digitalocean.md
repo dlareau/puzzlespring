@@ -1,8 +1,8 @@
 ---
 layout: default
-title: Setting up PuzzleSpring on DigitalOcean
-parent: Getting Started
-nav_order: 7
+title: DigitalOcean
+parent: Installation
+nav_order: 5
 ---
 
 # Setting up PuzzleSpring on DigitalOcean
@@ -193,4 +193,3 @@ If you encounter issues not covered in this guide:
 
 - Check the [PuzzleSpring documentation](https://www.puzzlespring.com/docs)
 - Look for similar issues in the [GitHub repository](https://github.com/dlareau/puzzlespring/issues)
-

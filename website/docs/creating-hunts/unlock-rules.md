@@ -1,13 +1,13 @@
 ---
 layout: default
-title: Hunt Configuration Language
-parent: Technical Reference
-nav_order: 4
+title: Unlock Rules
+parent: Creating Hunts
+nav_order: 3
 ---
 
-# Hunt Configuration Language
+# Unlock Rules
 
-The Hunt Configuration Language is a domain-specific language used by PuzzleSpring to define puzzle unlocking rules, point rewards, and hint allocations in a puzzle hunt. This document describes the syntax and usage of the language.
+The Hunt Configuration Language is a domain-specific language used by PuzzleSpring to define puzzle unlocking rules, point rewards, and hint allocations in a puzzle hunt.
 
 ## Quick Start
 
@@ -164,6 +164,13 @@ You can also add conditions:
 # Give a hint 30 minutes after P1 solve, but only if team has 10 points
 1 HINT <= 30 MINUTES AFTER P1 SOLVE IF 10 POINTS
 ```
+
+## Best Practices
+
+- Plan puzzle dependencies carefully
+- Consider multiple paths to progress
+- Balance point requirements
+- Test unlocking sequences thoroughly using the [Config Tester](../running-hunts/staff-tools.html#config-tester)
 
 ## Formal Grammar
 

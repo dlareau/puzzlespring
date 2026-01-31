@@ -1,14 +1,21 @@
-## EC2 Setup Guide
+---
+layout: default
+title: AWS EC2
+parent: Installation
+nav_order: 4
+---
+
+# AWS EC2 Setup Guide
 
 PuzzleSpring can be deployed on Amazon EC2 instances for production environments. This guide covers the basic steps to set up PuzzleSpring on an EC2 instance.
 
-### Prerequisites
+## Prerequisites
 
 - An AWS account with EC2 access
 - Basic familiarity with AWS services
 - A domain name (optional, but recommended)
 
-### Step 1: Launch an EC2 Instance
+## Step 1: Launch an EC2 Instance
 
 1. Log in to the AWS Management Console and navigate to EC2
 2. Click "Launch Instance"
@@ -28,13 +35,13 @@ PuzzleSpring can be deployed on Amazon EC2 instances for production environments
    - Allow HTTPS (port 443)
 8. Review and launch with your key pair
 
-### Step 2: Connect to Your Instance
+## Step 2: Connect to Your Instance
 
 ```bash
 ssh -i /path/to/your-key.pem ec2-user@your-instance-public-dns
 ```
 
-### Step 3: Install Docker and Docker Compose
+## Step 3: Install Docker and Docker Compose
 
 For Amazon Linux 2:
 ```bash
@@ -74,12 +81,12 @@ sudo apt install docker-compose -y
 exit
 ```
 
-### Step 4: Set Up Domain and SSL (Optional)
+## Step 4: Set Up Domain and SSL (Optional)
 
 1. Point your domain to your EC2 instance's public IP
 2. The built-in Caddy server will automatically obtain SSL certificates
 
-### Step 5: Deploy PuzzleSpring
+## Step 5: Deploy PuzzleSpring
 
 ```bash
 # Clone the repository
@@ -101,14 +108,14 @@ nano .env  # Edit with your settings
 docker-compose up -d
 ```
 
-### Step 6: Initial Setup
+## Step 6: Initial Setup
 
 ```bash
 # Run the initial setup
 docker-compose exec app python manage.py initial_setup
 ```
 
-### Additional Considerations
+## Additional Considerations
 
 - For larger hunts, consider scaling up your EC2 instance
 - Use an Elastic IP to maintain a consistent public IP address

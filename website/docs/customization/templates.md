@@ -1,8 +1,8 @@
 ---
 layout: default
 title: Templates
-parent: Technical Reference
-nav_order: 3
+parent: Customization
+nav_order: 1
 ---
 
 # Templates
@@ -111,15 +111,21 @@ _Template Blocks:_
 
 ### <u>hunt_info_base.html</u>
 
-_Description:_ Base template for hunt information pages with a centered content layout.
+_Description:_ Base template for hunt information pages with a centered content layout. Optionally applies hunt CSS.
 
 
 _Extends:_ info_base.html
 
 
+_Context Variables:_
+
+- `hunt`: The Hunt object (optional, will fall back to current hunt)
+
+
 _Template Blocks:_
 
 - `title`: Sets page title to "Hunt Details"
+- `includes`: Conditionally includes hunt CSS based on STYLE_INFO_PAGES_WITH_HUNT_CSS setting
 - `content_wrapper`: Provides a centered content layout with specific width
 - `content`: Block for hunt information content
 
@@ -211,7 +217,7 @@ _Template Blocks:_
 _Description:_ Displays a leaderboard of teams for a specific hunt with customizable ranking rules.
 
 
-_Extends:_ info_base.html
+_Extends:_ hunt_info_base.html
 
 
 _Context Variables:_
@@ -431,7 +437,7 @@ _Extends:_ staff_hunt_base.html
 
 _Context Variables:_
 
-- `chart_rows`: List of earliest solve data for each puzzle
+- `stats_puzzles`: List of puzzles with statistics including first solve info
 - `chart_solves_data`: Data for puzzle solve status chart
 - `chart_submissions_data`: Data for puzzle submissions chart
 - `chart_hints_data`: Data for hints per puzzle chart
@@ -442,7 +448,33 @@ _Context Variables:_
 _Template Blocks:_
 
 - `extra_head`: Adds Google Charts loader
-- `staff_content`: Displays charts and earliest solves table
+- `staff_content`: Displays charts and puzzle statistics tables
+
+
+
+### <u>staff_config_tester.html</u>
+
+_Description:_ Interface for testing hunt configuration without creating actual team data.
+
+
+_Extends:_ staff_hunt_base.html
+
+
+_Context Variables:_
+
+- `hunt`: The current Hunt object
+- `puzzle_data`: List of dicts with puzzle info and simulated state
+- `time_offset_mins`: Current simulated time offset in minutes (integer)
+- `simulated_time`: Absolute simulated datetime
+- `points`: Accumulated points
+- `hints`: Accumulated hints
+- `earned_badges`: List of earned badge texts
+- `parse_error`: Config parse error message if any
+
+
+_Template Blocks:_
+
+- `staff_content`: Displays time controls, results summary, and puzzle state table
 
 
 
@@ -537,7 +569,7 @@ _Template Blocks:_
 
 ### <u>staff_hunt_puzzles.html</u>
 
-_Description:_ Staff interface for managing and viewing puzzle statistics and files.
+_Description:_ Staff interface for managing puzzle files.
 
 
 _Extends:_ staff_hunt_base.html
@@ -546,7 +578,6 @@ _Extends:_ staff_hunt_base.html
 _Context Variables:_
 
 - `puzzles`: List of all Puzzle objects in the hunt
-- `num_teams`: Total number of teams in the hunt
 
 
 _Template Blocks:_
@@ -596,6 +627,45 @@ _Template Blocks:_
 
 
 
+### <u>staff_index.html</u>
+
+_Description:_ Dashboard/home page for staff members showing hunt status and quick links.
+
+
+_Extends:_ staff_hunt_base.html
+
+
+_Context Variables:_
+
+- `hunt`: The current Hunt object being managed
+- `team_count`: Number of teams registered for the current hunt
+
+
+_Template Blocks:_
+
+- `staff_content`: Main content area with hunt status and quick links
+
+
+
+### <u>staff_participant_info.html</u>
+
+_Description:_ Staff interface for viewing participant information.
+
+
+_Extends:_ staff_hunt_base.html
+
+
+_Context Variables:_
+
+- `hunt`: The current Hunt object
+
+
+_Template Blocks:_
+
+- `staff_content`: Displays participant information interface
+
+
+
 ### <u>staff_progress.html</u>
 
 _Description:_ Displays a real-time progress board showing teams' puzzle solving status, hints, and submissions using DataTables.
@@ -616,26 +686,6 @@ _Template Blocks:_
 
 - `includes`: Adds DataTables and other required CSS/JS files
 - `staff_content`: Displays the progress board with team and puzzle data
-
-
-
-### <u>staff_search.html</u>
-
-_Description:_ Provides a search interface for staff to find users and teams.
-
-
-_Extends:_ staff_hunt_base.html
-
-
-_Context Variables:_
-
-- `hunt`: The current Hunt object
-- `query`: The current search query
-
-
-_Template Blocks:_
-
-- `staff_content`: Displays search input and results area
 
 
 
@@ -689,7 +739,7 @@ _Template Blocks:_
 _Description:_ Displays a list of hunt updates and announcements in chronological order.
 
 
-_Extends:_ info_base.html
+_Extends:_ hunt_info_base.html
 
 
 _Context Variables:_
@@ -811,6 +861,19 @@ _Context Variables:_
 
 
 
+### <u>_leaderboard_table.html</u>
+
+_Description:_ Reusable leaderboard table partial for displaying team rankings.
+
+
+_Context Variables:_
+
+- `teams`: List of Team objects with computed_rank attribute
+- `ruleset`: List of LeaderboardRule objects defining the columns and ranking rules
+- `hunt`: The Hunt object being displayed
+
+
+
 ### <u>_message_update_user_form.html</u>
 
 _Description:_ Displays user form updates with messages and user display information.
@@ -879,6 +942,8 @@ _Context Variables:_
 
 - `parent`: The parent object (Puzzle or Hunt) owning the files
 - `parent_type`: String indicating the type of parent ('puzzle', 'solution', or 'hunt')
+- `swapped_pk`: Optional - The primary key of a file that was just replaced
+- `uploaded_pks`: Optional - The primary keys of files that were just uploaded
 
 
 

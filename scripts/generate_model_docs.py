@@ -21,8 +21,8 @@ def generate_model_docs():
         "---",
         "layout: default",
         "title: Data Model",
-        "parent: Technical Reference",
-        "nav_order: 2",
+        "parent: Reference",
+        "nav_order: 1",
         "---",
         "",
         "# Data Model",
@@ -51,7 +51,7 @@ def generate_model_docs():
         output.append("")
     
     # Write to file
-    docs_path = "website/docs/technical-reference/data-model.md"
+    docs_path = "website/docs/reference/data-model.md"
     os.makedirs(os.path.dirname(docs_path), exist_ok=True)
     with open(docs_path, "w") as f:
         f.write("\n".join(output))

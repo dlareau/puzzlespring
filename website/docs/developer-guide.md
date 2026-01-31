@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Developer Guide
-nav_order: 4
+nav_order: 9
 ---
 
 # Developer Guide
@@ -36,7 +36,9 @@ nav_order: 4
 
 ## Development Setup
 
-For now, please refer to the [Quick Start Guide](/docs/getting-started/quickstart.html) and [Installation Guide](/docs/getting-started/installation.html) for basic setup instructions.
+For setup instructions, please refer to:
+- [Quickstart](installation/quickstart.html) - Get up and running quickly
+- [Production Deployment](installation/production.html) - Detailed deployment guide
 
 ## Coming Soon
 

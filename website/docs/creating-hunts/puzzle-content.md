@@ -1,17 +1,36 @@
 ---
 layout: default
-title: Puzzle Content Creation
-parent: Getting Started
-nav_order: 5
+title: Puzzle Content
+parent: Creating Hunts
+nav_order: 2
 ---
 
-# Puzzle Content Creation
+# Puzzle Content
 
-PuzzleSpring provides a flexible puzzle rendering system that supports multiple content formats.
+This guide covers uploading and managing puzzle content files in PuzzleSpring.
 
-## Puzzle File Management
+## File Management Interface
 
-The staff interface allows you to upload multiple files for each puzzle. After expanding the file list for a puzzle, click the "Upload File" button to upload a new file.
+Access the file management interface through:
+
+1. Navigate to **Staff > Puzzles** in the sidebar
+2. Find the puzzle you want to manage
+3. Click the **Files** button to open the file management modal
+
+The modal displays two sections:
+- **Puzzle Files** - Files shown while solving the puzzle
+- **Solution Files** - Files shown after the puzzle is solved
+
+For each file, you can:
+- Upload new files
+- Replace existing files
+- Set as main/CSS file (toggle switch)
+- Download files
+- Preview files
+
+## Uploading Files
+
+In the file management modal, click the "Upload File" button in either the Puzzle Files or Solution Files section to upload a new file.
 
 If you upload a zip file, the contents of the zip file will be extracted and all files contained in the zip file will be added to the puzzle. At the moment this is the only way to create a directory structure within the puzzle files. If the file is not a zip file, it will be added to the puzzle as a single file.
 
@@ -20,27 +39,26 @@ At the moment, new files cannot have the same name as an existing file. If you t
 
 Among the files you have uploaded, you can set the "main file" for a puzzle. This is the file that will be displayed in the puzzle page according to the puzzle type logic described below.
 
+{: .note }
+When linking to files from HTML or templates, use relative paths. For puzzle files, use the `puzzle_static` template tag.
+
 ## Puzzle Types
 
-PuzzleSpring supports three different types of puzzles, ranging from simple to complex:
+PuzzleSpring supports three different types of puzzle content, ranging from simple to complex:
 
-1. **PDF Puzzle** - A PDF file that is displayed directly in the puzzle page.
-2. **HTML Puzzle** - A fully custom HTML page that is displayed in the puzzle page.
-3. **Template Puzzle** - A puzzle that is rendered using a Django template.
-
-## PDF Puzzles
+### PDF Puzzles
 
 PDF puzzles are the simplest type of puzzle. They are a PDF file that is displayed directly in the puzzle page. This will automatically be done if the "main file" for a puzzle is a PDF.
 
-## HTML Puzzles
+### HTML Puzzles
 
 HTML puzzles are a fully custom HTML page that is displayed on the puzzle page below the answer submission form. This type of puzzle is more flexible than a PDF puzzle, but less flexible than a template puzzle. This will be done if the "main file" for a puzzle is a file with a `.html` extension.
 
 When using an HTML page for a puzzle, it is recommended to use relative links for images and other resources. This allows you to do rough prototyping on your local machine before uploading to the server.
 
-## Template Puzzles
+### Template Puzzles
 
-Template puzzles are the most complex but also the most flexible type of puzzle. They are rendered using a Django template that has access to the puzzle data. This will be done if the "main file" for a puzzle is a file with a `.tmpl` extension. 
+Template puzzles are the most complex but also the most flexible type of puzzle. They are rendered using a Django template that has access to the puzzle data. This will be done if the "main file" for a puzzle is a file with a `.tmpl` extension.
 
 The template file is entirely yours to customize, however that also means there isn't any content included by default. This means you are responsible for which template your puzzle inherits from, and all other parts of a normal puzzle page such as the answer submission form, links to hints, and updates. Consider looking the existing templates for inspiration.
 
@@ -53,5 +71,19 @@ The template is rendered with the following context:
 - `submissions`: A list of submissions made by the team for the puzzle.
 - `updates`: A list of updates related to the puzzle.
 
+## File Organization
 
+Each puzzle can have two sets of files:
 
+1. **Puzzle Files**:
+   - Main puzzle content (HTML, PDF, or template)
+   - Supporting files (images, stylesheets, scripts)
+   - Accessible while solving the puzzle
+
+2. **Solution Files**:
+   - Solution content (HTML, PDF, or template)
+   - Supporting files for the solution
+   - Only accessible after solving the puzzle
+
+{: .note }
+PuzzleSpring automatically protects puzzle files from being accessed before the related puzzle is unlocked.

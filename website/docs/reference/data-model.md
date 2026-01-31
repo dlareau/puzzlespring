@@ -1,8 +1,8 @@
 ---
 layout: default
 title: Data Model
-parent: Technical Reference
-nav_order: 2
+parent: Reference
+nav_order: 1
 ---
 
 # Data Model
@@ -97,6 +97,7 @@ Fields:
 - `hint_lockout` (IntegerField): Time (in minutes) teams must wait before a hint can be used on a newly unlocked puzzle
 - `css_file` (ForeignKey): No description available
 - `config` (TextField): Configuration for puzzle, point and hint unlocking rules
+- `ratelimit_override` (CharField): Override default answer submission rate limit (format: X/YZ, e.g. 3/5m)
 - `hint_pool_type` (CharField): Which hint pools are available in this hunt
 - `canned_hint_policy` (CharField): How canned hints interact with custom hints
 - `hint_pool_allocation` (CharField): How hints are allocated between puzzle and global pools when both exist
@@ -178,6 +179,7 @@ Fields:
 - `allow_non_alphanumeric` (BooleanField): Allow for full unicode in answer submissions (rather than just A-Z and 0-9)
 - `main_file` (ForeignKey): No description available
 - `main_solution_file` (ForeignKey): No description available
+- `ratelimit_override` (CharField): Override hunt's rate limit (format: X/YZ, e.g. 3/5m)
 
 ## PuzzleFile Model
 
@@ -233,6 +235,7 @@ Fields:
 - `puzzle` (ForeignKey): The puzzle that this submission is in response to
 - `modified_time` (DateTimeField): Last date/time of response modification
 - `user` (ForeignKey): The user who created the submission
+- `matched_response` (ForeignKey): The custom Response that matched this submission (if any)
 
 ## Team Model
 
@@ -250,6 +253,7 @@ Fields:
 - `num_available_hints` (IntegerField): The number of hints the team currently has available to use
 - `num_total_hints_earned` (IntegerField): The total number of hints this team has earned through config rules
 - `points` (IntegerField): The total number of points this team has earned through config rules
+- `badges` (JSONField): List of badge texts earned by this team
 - `puzzle_statuses` (ManyToManyField): The statuses of puzzles the team has unlocked
 - `members` (ManyToManyField): Members of this team
 

@@ -66,8 +66,8 @@ def generate_template_docs():
         "---",
         "layout: default",
         "title: Templates",
-        "parent: Technical Reference",
-        "nav_order: 3",
+        "parent: Customization",
+        "nav_order: 1",
         "---",
         "",
         "# Templates",
@@ -149,7 +149,7 @@ def generate_template_docs():
                 output.append("")
     
     # Write to file
-    docs_path = "website/docs/technical-reference/templates.md"
+    docs_path = "website/docs/customization/templates.md"
     os.makedirs(os.path.dirname(docs_path), exist_ok=True)
     with open(docs_path, "w") as f:
         f.write("\n".join(output))

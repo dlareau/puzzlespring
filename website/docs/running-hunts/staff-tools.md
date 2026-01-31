@@ -1,8 +1,8 @@
 ---
 layout: default
 title: Staff Tools
-parent: Usage
-nav_order: 3
+parent: Running Hunts
+nav_order: 2
 ---
 
 # Staff Tools

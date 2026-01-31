@@ -1,13 +1,23 @@
 ---
 layout: default
-title: API Reference
-parent: Technical Reference
-nav_order: 1
+title: API
+parent: Reference
+nav_order: 2
 ---
 
 # API Reference
 
 This document describes the available API endpoints in PuzzleSpring.
+
+## Base
+
+### <u>view</u>
+
+_Description:_ Provide a redirect on any GET request.
+
+_URL Patterns:_
+- `hunt/<hunt:hunt>/`
+- `puzzle/<str:pk>/`
 
 ## Hunt Views
 
@@ -87,6 +97,7 @@ _Parameters:_
 _Description:_ No description available.
 
 _URL Patterns:_
+- `prepuzzle/<int:pk>/`
 - `prepuzzle/<int:pk>/view/`
 
 _Parameters:_
@@ -271,10 +282,31 @@ _URL Patterns:_
 
 ### <u>charts</u>
 
-_Description:_ No description available.
+_Description:_ View function to display charts for the current hunt.
 
 _URL Patterns:_
 - `staff/hunt/<hunt-fallback:hunt>/charts/`
+
+_Parameters:_
+- `hunt`: any
+
+### <u>config_tester</u>
+
+_Description:_ View for testing hunt configuration without creating actual team data.
+Simulates puzzle unlocks based on provided solved states and time.
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/config-tester/`
+
+_Parameters:_
+- `hunt`: any
+
+### <u>download_emails</u>
+
+_Description:_ Generate and download a CSV file with participant emails from non-playtester teams.
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/download-emails/`
 
 _Parameters:_
 - `hunt`: any
@@ -350,6 +382,37 @@ _Parameters:_
 - `parent_type`: any
 - `pk`: any
 
+### <u>file_editor</u>
+
+_Description:_ Main file editor page with three-panel selector and Ace editor.
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/file-editor/`
+
+_Parameters:_
+- `hunt`: any
+
+### <u>file_editor_file_list</u>
+
+_Description:_ HTMX endpoint returning file select dropdown for a given puzzle or hunt.
+
+_URL Patterns:_
+- `staff/file-editor/file-list/`
+
+### <u>file_editor_load_content</u>
+
+_Description:_ HTMX endpoint returning the editor partial with file content.
+
+_URL Patterns:_
+- `staff/file-editor/load-content/`
+
+### <u>file_editor_puzzle_list</u>
+
+_Description:_ HTMX endpoint returning puzzle select dropdown for a given hunt.
+
+_URL Patterns:_
+- `staff/file-editor/puzzle-list/`
+
 ### <u>file_replace</u>
 
 _Description:_ Replace a file with a new upload.
@@ -362,6 +425,17 @@ Args:
 
 _URL Patterns:_
 - `staff/<str:parent_type>/file/<str:pk>/replace/`
+
+_Parameters:_
+- `parent_type`: any
+- `pk`: any
+
+### <u>file_save_content</u>
+
+_Description:_ Save edited content back to file.
+
+_URL Patterns:_
+- `staff/file/<str:parent_type>/<int:pk>/save/`
 
 _Parameters:_
 - `parent_type`: any
@@ -387,13 +461,14 @@ _Parameters:_
 
 ### <u>file_upload</u>
 
-_Description:_ Upload a new file.
+_Description:_ Upload one or more new files.
 
-This view function uploads a new file and associates it with a parent object.
+This view function uploads one or more files and associates them with a parent object.
+It can handle both single file uploads and multiple file uploads.
 
 Args:
     parent_type (str): The type of the parent (e.g., 'solution', 'hunt').
-    pk (int): The primary key of the parent object to which the file will be associated.
+    pk (int): The primary key of the parent object to which the files will be associated.
 
 _URL Patterns:_
 - `staff/<str:parent_type>/<str:pk>/files/upload/`
@@ -507,7 +582,7 @@ _Parameters:_
 
 _Description:_ View function to display puzzles for the current hunt.
 
-This view fetches and annotates puzzles for a given hunt.
+This view fetches puzzles for a given hunt.
 The puzzles are then rendered in the 'staff_hunt_puzzles.html' template.
 
 Args:
@@ -568,6 +643,16 @@ _URL Patterns:_
 _Parameters:_
 - `hunt`: any
 
+### <u>participant_info</u>
+
+_Description:_ View function to display participant information for the current hunt.
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/participant_info/`
+
+_Parameters:_
+- `hunt`: any
+
 ### <u>preview_template</u>
 
 _Description:_ No description available.
@@ -616,7 +701,7 @@ _Parameters:_
 
 ### <u>staff_base</u>
 
-_Description:_ No description available.
+_Description:_ View function for the staff dashboard/index page.
 
 _URL Patterns:_
 - `staff/`

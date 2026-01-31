@@ -1,11 +1,11 @@
 ---
 layout: default
-title: Quick Start Guide
-parent: Getting Started
+title: Quickstart
+parent: Installation
 nav_order: 1
 ---
 
-# Quick Start Guide
+# Quickstart
 
 This guide will help you get PuzzleSpring up and running quickly to see the app in action.
 
@@ -49,5 +49,3 @@ This guide will help you get PuzzleSpring up and running quickly to see the app 
 
 {: .note }
 > You may see an invalid certificate warning while developing locally. It is safe to click through it.
-
-

@@ -7,28 +7,53 @@ nav_order: 1
 # PuzzleSpring Documentation
 
 {: .warning }
-> **Work in Progress**  
+> **Work in Progress**
 > This documentation is currently under active development. Some sections may be incomplete or subject to change.
 
+Welcome to the PuzzleSpring documentation. PuzzleSpring is a Django-based puzzle hunt hosting platform for organizing competitive puzzle-solving competitions with team collaboration, real-time updates, and automated answer checking.
 
-Welcome to the PuzzleSpring documentation. This site contains comprehensive guides and information about the project.
+## Get Started
 
-## Documentation Sections
+### Installing PuzzleSpring
 
-### Getting Started
-- [Quick Start](getting-started/quickstart.html)
-- [Installation](getting-started/installation.html)
+Set up the server and configure your instance.
 
-### User Guide
-- [Configuration](user-guide/configuration)
-- [Usage](user-guide/usage)
+[Installation Guide](installation/){: .btn .btn-primary }
 
-### Technical Reference
-- [API Reference](technical-reference/api-reference.html)
-- [Data Model](technical-reference/data-model.html)
-- [Templates](technical-reference/templates.html)
+Perfect for **server administrators** who need to deploy and configure PuzzleSpring.
 
-### Additional Resources
-- [Developer Guide](developer-guide.html)
-- [Contributing](contributing.html)
-- [FAQ](faq.html) 
+---
+
+### Creating Your First Hunt
+
+Build puzzles, configure unlocking rules, and prepare content.
+
+[Creating Hunts](creating-hunts/){: .btn .btn-primary }
+
+Perfect for **hunt organizers** who need to set up puzzles and configure hunt mechanics.
+
+---
+
+### Running a Live Hunt
+
+Manage teams, respond to hints, and monitor progress.
+
+[Running Hunts](running-hunts/){: .btn .btn-primary }
+
+Perfect for **hunt staff** who need to manage teams and respond to participants during a hunt.
+
+---
+
+## Additional Resources
+
+### [Customization](customization/)
+Customize templates, add custom files, and create info pages.
+
+### [Reference](reference/)
+Technical documentation for developers including data models and API endpoints.
+
+### [Contributing](contributing.html)
+Guidelines for contributing to PuzzleSpring.
+
+### [FAQ](faq.html)
+Frequently asked questions.

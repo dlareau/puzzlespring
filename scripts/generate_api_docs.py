@@ -54,9 +54,9 @@ def generate_api_docs():
     output.extend([
         "---",
         "layout: default",
-        "title: API Reference",
-        "parent: Technical Reference",
-        "nav_order: 1",
+        "title: API",
+        "parent: Reference",
+        "nav_order: 2",
         "---",
         "",
         "# API Reference",
@@ -123,7 +123,7 @@ def generate_api_docs():
                 output.append("")
 
     # Write to file
-    docs_path = "website/docs/technical-reference/api-reference.md"
+    docs_path = "website/docs/reference/api.md"
     os.makedirs(os.path.dirname(docs_path), exist_ok=True)
     with open(docs_path, "w") as f:
         f.write("\n".join(output))
