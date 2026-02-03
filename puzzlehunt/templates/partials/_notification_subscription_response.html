@@ -1,0 +1,18 @@
+{% comment %}
+@template: _notification_subscription_response.html
+@description: HTMX response wrapper that includes main content and OOB swaps.
+@context:
+  subscription: The NotificationSubscription object
+  event_type_choices: List of tuples containing event type choices
+  template: The inner template to render ('view' or 'edit')
+{% endcomment %}
+
+{% if template == 'view' %}
+    {% include "partials/_notification_subscription_view.html" %}
+{% else %}
+    {% include "partials/_notification_subscription_edit.html" %}
+{% endif %}
+
+{% comment %} OOB swaps {% endcomment %}
+{% include "components/_message_container.html" %}
+{% include "partials/_notification_subscription_header.html" %}

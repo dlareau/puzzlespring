@@ -1,0 +1,78 @@
+{% comment %}
+@template: _notification_subscription_edit.html
+@description: Edit form for a notification subscription within the accordion.
+@context:
+  subscription: The NotificationSubscription object
+  event_type_choices: List of tuples containing event type choices
+{% endcomment %}
+
+<form hx-post="{% url 'puzzlehunt:notification_edit' subscription.pk %}"
+      hx-target="#subscription-content-{{ subscription.pk }}"
+      hx-swap="innerHTML">
+    <div class="columns">
+        <div class="column">
+            <div class="field">
+                <label class="label is-small">Destination</label>
+                <div class="control">
+                    <input class="input"
+                           type="text"
+                           name="destination"
+                           value="{{ subscription.destination|default:'' }}"
+                           placeholder="Enter destination (webhook URL, etc.)">
+                </div>
+            </div>
+        </div>
+        <div class="column is-narrow">
+            <div class="field">
+                <label class="label is-small">Status</label>
+                <div class="control" style="padding-top: 0.5rem;">
+                    <label class="checkbox">
+                        <input type="checkbox"
+                               name="active"
+                               {% if subscription.active %}checked{% endif %}>
+                        Active
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="field">
+        <label class="label is-small">Event Types</label>
+        <div class="control">
+            <div class="is-flex is-flex-wrap-wrap" style="gap: 1rem;">
+                {% for choice in event_type_choices %}
+                    <label class="checkbox">
+                        <input type="checkbox"
+                               name="event_types"
+                               value="{{ choice.0 }}"
+                               {% if choice.0 in subscription.event_types_list %}checked{% endif %}>
+                        {{ choice.1 }}
+                    </label>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-4">
+
+    <div class="field is-grouped is-grouped-right">
+        <div class="control">
+            <button type="button"
+                    class="button is-small"
+                    hx-get="{% url 'puzzlehunt:notification_edit' subscription.pk %}?cancel=true"
+                    hx-target="#subscription-content-{{ subscription.pk }}"
+                    hx-swap="innerHTML">
+                Cancel
+            </button>
+        </div>
+        <div class="control">
+            <button type="submit" class="button is-success is-small">
+                <span class="icon is-small">
+                    <i class="fa fa-check"></i>
+                </span>
+                <span>Save Changes</span>
+            </button>
+        </div>
+    </div>
+</form>

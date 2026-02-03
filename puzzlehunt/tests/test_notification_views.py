@@ -128,25 +128,6 @@ def test_notification_delete_unauthorized(client, notification_subscription):
     assert response.status_code == 302
     assert NotificationSubscription.objects.filter(pk=notification_subscription.pk).exists()
 
-def test_notification_toggle_success(client, basic_user, notification_subscription):
-    """Test toggling a notification subscription's active status."""
-    client.force_login(basic_user)
-    url = reverse('puzzlehunt:notification_toggle', args=[notification_subscription.pk])
-    initial_active = notification_subscription.active
-    
-    response = client.post(url, HTTP_HX_REQUEST='true')
-    assert response.status_code == 200
-    notification_subscription.refresh_from_db()
-    assert notification_subscription.active != initial_active
-
-def test_notification_toggle_unauthorized(client, notification_subscription):
-    """Test that users can't toggle other users' subscriptions."""
-    url = reverse('puzzlehunt:notification_toggle', args=[notification_subscription.pk])
-    response = client.post(url)
-    assert response.status_code == 302
-    notification_subscription.refresh_from_db()
-    assert notification_subscription.active  # Should remain unchanged
-
 def test_notification_view_htmx(client, basic_user, notification_subscription):
     """Test that HTMX requests return partial templates."""
     client.force_login(basic_user)
@@ -163,14 +144,6 @@ def test_notification_delete_htmx(client, basic_user, notification_subscription)
     response = client.delete(url, HTTP_HX_REQUEST='true')
     assert response.status_code == 200
     assert 'notification_table.html' in [t.name for t in response.templates]
-
-def test_notification_toggle_htmx(client, basic_user, notification_subscription):
-    """Test that HTMX toggle requests return updated toggle partial."""
-    client.force_login(basic_user)
-    url = reverse('puzzlehunt:notification_toggle', args=[notification_subscription.pk])
-    response = client.post(url, HTTP_HX_REQUEST='true')
-    assert response.status_code == 200
-    assert 'partials/_notification_active_toggle.html' in [t.name for t in response.templates]
 
 def test_notification_delete_permission_denied(client, basic_user, notification_subscription, django_user_model):
     """Test that users get a 403 when trying to delete other users' subscriptions."""
@@ -190,25 +163,6 @@ def test_notification_delete_permission_denied(client, basic_user, notification_
     assert response.status_code == 403
     assert NotificationSubscription.objects.filter(pk=other_subscription.pk).exists()
 
-def test_notification_toggle_permission_denied(client, basic_user, notification_subscription, django_user_model):
-    """Test that users get a 403 when trying to toggle other users' subscriptions."""
-    client.force_login(basic_user)
-    # Create a different user and their subscription
-    other_user = django_user_model.objects.create_user(email='other2@example.com', password='password123')
-    other_subscription = NotificationSubscription.objects.create(
-        user=other_user,  # Use the other user here
-        platform=notification_subscription.platform,
-        hunt=notification_subscription.hunt,
-        event_types=notification_subscription.event_types,
-        destination=notification_subscription.destination,
-        active=True
-    )
-    url = reverse('puzzlehunt:notification_toggle', args=[other_subscription.pk])
-    response = client.post(url, HTTP_HX_REQUEST='true')
-    assert response.status_code == 403
-    other_subscription.refresh_from_db()
-    assert other_subscription.active  # Should remain unchanged
-
 def test_notification_delete_non_htmx(client, basic_user, notification_subscription):
     """Test that non-HTMX delete requests redirect to notification view."""
     client.force_login(basic_user)
@@ -218,13 +172,127 @@ def test_notification_delete_non_htmx(client, basic_user, notification_subscript
     assert response.url == reverse('puzzlehunt:notification_view')
     assert not NotificationSubscription.objects.filter(pk=notification_subscription.pk).exists()
 
-def test_notification_toggle_non_htmx(client, basic_user, notification_subscription):
-    """Test that non-HTMX toggle requests redirect to notification view."""
+# Tests for notification_edit view
+
+def test_notification_edit_get(client, basic_user, notification_subscription):
+    """Test GET request to show edit form."""
     client.force_login(basic_user)
-    url = reverse('puzzlehunt:notification_toggle', args=[notification_subscription.pk])
-    initial_active = notification_subscription.active
-    response = client.post(url)
-    assert response.status_code == 302
-    assert response.url == reverse('puzzlehunt:notification_view')
+    url = reverse('puzzlehunt:notification_edit', args=[notification_subscription.pk])
+    response = client.get(url)
+    assert response.status_code == 200
+    template_names = [t.name for t in response.templates]
+    assert 'partials/_notification_subscription_response.html' in template_names
+    assert 'partials/_notification_subscription_edit.html' in template_names
+
+
+def test_notification_edit_cancel_returns_view(client, basic_user, notification_subscription):
+    """Test GET request with cancel=true returns view partial."""
+    client.force_login(basic_user)
+    url = reverse('puzzlehunt:notification_edit', args=[notification_subscription.pk])
+    response = client.get(url + '?cancel=true')
+    assert response.status_code == 200
+    template_names = [t.name for t in response.templates]
+    assert 'partials/_notification_subscription_response.html' in template_names
+    assert 'partials/_notification_subscription_view.html' in template_names
+
+
+def test_notification_edit_post_valid(client, basic_user, notification_subscription):
+    """Test POST request to update subscription with valid data."""
+    client.force_login(basic_user)
+    url = reverse('puzzlehunt:notification_edit', args=[notification_subscription.pk])
+    new_destination = 'https://discord.com/api/webhooks/999999999/newwebhooktoken1234567890'
+    new_event_types = [Event.EventType.HINT_REQUEST, Event.EventType.HINT_RESPONSE]
+    response = client.post(url, {
+        'destination': new_destination,
+        'event_types': new_event_types,
+        'active': 'on'
+    })
+    assert response.status_code == 200
+    template_names = [t.name for t in response.templates]
+    assert 'partials/_notification_subscription_response.html' in template_names
+    assert 'partials/_notification_subscription_view.html' in template_names
     notification_subscription.refresh_from_db()
-    assert notification_subscription.active != initial_active
+    assert notification_subscription.destination == new_destination
+    assert set(notification_subscription.event_types_list) == set(new_event_types)
+    assert notification_subscription.active is True
+    messages = list(get_messages(response.wsgi_request))
+    assert any('updated' in str(m) for m in messages)
+
+
+def test_notification_edit_post_invalid_destination(client, basic_user, notification_subscription):
+    """Test POST request with invalid destination shows error."""
+    client.force_login(basic_user)
+    url = reverse('puzzlehunt:notification_edit', args=[notification_subscription.pk])
+    original_destination = notification_subscription.destination
+    response = client.post(url, {
+        'destination': 'not-a-valid-url',
+        'event_types': [Event.EventType.PUZZLE_SOLVE],
+        'active': 'on'
+    })
+    assert response.status_code == 200
+    template_names = [t.name for t in response.templates]
+    assert 'partials/_notification_subscription_response.html' in template_names
+    assert 'partials/_notification_subscription_edit.html' in template_names
+    notification_subscription.refresh_from_db()
+    assert notification_subscription.destination == original_destination  # Unchanged
+    messages = list(get_messages(response.wsgi_request))
+    assert any('error' in str(m).lower() or 'invalid' in str(m).lower() or 'url' in str(m).lower() for m in messages)
+
+
+def test_notification_edit_post_no_event_types(client, basic_user, notification_subscription):
+    """Test POST request with no event_types shows error."""
+    client.force_login(basic_user)
+    url = reverse('puzzlehunt:notification_edit', args=[notification_subscription.pk])
+    original_event_types = notification_subscription.event_types
+    response = client.post(url, {
+        'destination': notification_subscription.destination,
+        'active': 'on'
+    })  # No event_types
+    assert response.status_code == 200
+    template_names = [t.name for t in response.templates]
+    assert 'partials/_notification_subscription_response.html' in template_names
+    assert 'partials/_notification_subscription_edit.html' in template_names
+    notification_subscription.refresh_from_db()
+    assert notification_subscription.event_types == original_event_types  # Unchanged
+    messages = list(get_messages(response.wsgi_request))
+    assert any('select' in str(m).lower() for m in messages)
+
+
+def test_notification_edit_post_toggle_inactive(client, basic_user, notification_subscription):
+    """Test POST request can set subscription to inactive."""
+    client.force_login(basic_user)
+    assert notification_subscription.active is True
+    url = reverse('puzzlehunt:notification_edit', args=[notification_subscription.pk])
+    response = client.post(url, {
+        'destination': notification_subscription.destination,
+        'event_types': notification_subscription.event_types_list,
+        # 'active' not included = unchecked = False
+    })
+    assert response.status_code == 200
+    notification_subscription.refresh_from_db()
+    assert notification_subscription.active is False
+
+
+def test_notification_edit_permission_denied(client, basic_user, notification_subscription, django_user_model):
+    """Test that users can't edit other users' subscriptions."""
+    client.force_login(basic_user)
+    other_user = django_user_model.objects.create_user(email='other3@example.com', password='password123')
+    other_subscription = NotificationSubscription.objects.create(
+        user=other_user,
+        platform=notification_subscription.platform,
+        hunt=notification_subscription.hunt,
+        event_types=notification_subscription.event_types,
+        destination=notification_subscription.destination,
+        active=True
+    )
+    url = reverse('puzzlehunt:notification_edit', args=[other_subscription.pk])
+    response = client.get(url)
+    assert response.status_code == 403
+
+
+def test_notification_edit_unauthenticated(client, notification_subscription):
+    """Test that unauthenticated users are redirected."""
+    url = reverse('puzzlehunt:notification_edit', args=[notification_subscription.pk])
+    response = client.get(url)
+    assert response.status_code == 302
+    assert '/accounts/login/' in response.url

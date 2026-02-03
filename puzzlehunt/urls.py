@@ -111,7 +111,7 @@ urlpatterns = [
     # Notification management URLs
     path('notifications/', info_views.notification_view, name='notification_view'),
     path('notifications/<int:pk>/delete/', info_views.notification_delete, name='notification_delete'),
-    path('notifications/<int:pk>/toggle/', info_views.notification_toggle, name='notification_toggle'),
+    path('notifications/<int:pk>/edit/', info_views.notification_edit, name='notification_edit'),
 ]
 
 

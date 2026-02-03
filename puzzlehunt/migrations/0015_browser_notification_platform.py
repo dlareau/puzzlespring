@@ -4,12 +4,12 @@ from django.db import migrations, models
 
 
 def create_browser_platform(apps, schema_editor):
-    """Create the default Browser notification platform"""
+    """Create the default In-Site notification platform"""
     NotificationPlatform = apps.get_model('puzzlehunt', 'NotificationPlatform')
     NotificationPlatform.objects.get_or_create(
         type='BRWS',
         defaults={
-            'name': 'Browser Notifications',
+            'name': 'In-Site Notifications',
             'enabled': True,
             'config': {}
         }
@@ -17,7 +17,7 @@ def create_browser_platform(apps, schema_editor):
 
 
 def remove_browser_platform(apps, schema_editor):
-    """Remove the Browser notification platform"""
+    """Remove the In-Site notification platform"""
     NotificationPlatform = apps.get_model('puzzlehunt', 'NotificationPlatform')
     NotificationPlatform.objects.filter(type='BRWS').delete()
 

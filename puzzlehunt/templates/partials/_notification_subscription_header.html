@@ -1,0 +1,31 @@
+{% comment %}
+@template: _notification_subscription_header.html
+@description: Accordion header for a notification subscription card.
+@context:
+  subscription: The NotificationSubscription object
+{% endcomment %}
+
+<header class="card-header is-clickable"
+        id="subscription-header-{{ subscription.pk }}"
+        {% if request.htmx %}hx-swap-oob="true"{% endif %}
+        @click="expanded = !expanded">
+    <div class="card-header-title">
+        <div class="is-flex is-align-items-center" style="gap: 0.75rem;">
+            <span class="has-text-weight-semibold">{{ subscription.platform.name }}</span>
+            <span class="has-text-grey">·</span>
+            <span class="has-text-grey-dark">{{ subscription.hunt.name|default:"All Hunts" }}</span>
+            <span class="has-text-grey">·</span>
+            <span class="tag is-light">{{ subscription.event_types_list|length }} event{{ subscription.event_types_list|length|pluralize }}</span>
+            {% if subscription.active %}
+                <span class="tag is-success">Active</span>
+            {% else %}
+                <span class="tag is-warning">Paused</span>
+            {% endif %}
+        </div>
+    </div>
+    <button class="card-header-icon" aria-label="expand">
+        <span class="icon">
+            <i class="fa" :class="expanded ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+        </span>
+    </button>
+</header>

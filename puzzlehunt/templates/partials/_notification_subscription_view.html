@@ -1,0 +1,72 @@
+{% comment %}
+@template: _notification_subscription_view.html
+@description: Display view for a notification subscription's details within the accordion.
+@context:
+  subscription: The NotificationSubscription object
+  event_type_choices: List of tuples containing event type choices
+{% endcomment %}
+
+<div class="columns">
+    <div class="column">
+        <div class="field">
+            <label class="label is-small has-text-grey">Destination</label>
+            <div>
+                <code class="has-background-light px-2 py-1" style="border-radius: 4px; word-break: break-all;">
+                    {{ subscription.destination|default:"Not set" }}
+                </code>
+            </div>
+        </div>
+    </div>
+    <div class="column is-narrow">
+        <div class="field">
+            <label class="label is-small has-text-grey">Status</label>
+            <div>
+                {% if subscription.active %}
+                    <span class="tag is-success">Active</span>
+                {% else %}
+                    <span class="tag is-warning">Paused</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="field">
+    <label class="label is-small has-text-grey">Event Types</label>
+    <div class="tags">
+        {% for event_type in subscription.event_types_list %}
+            <span class="tag is-info has-text-black">
+                {% for choice in event_type_choices %}
+                    {% if choice.0 == event_type %}
+                        {{ choice.1 }}
+                    {% endif %}
+                {% endfor %}
+            </span>
+        {% empty %}
+            <span class="has-text-grey">None selected</span>
+        {% endfor %}
+    </div>
+</div>
+
+<hr class="my-4">
+
+<div class="is-flex is-justify-content-space-between">
+    <button class="button is-small"
+            hx-get="{% url 'puzzlehunt:notification_edit' subscription.pk %}"
+            hx-target="#subscription-content-{{ subscription.pk }}"
+            hx-swap="innerHTML">
+        <span class="icon is-small">
+            <i class="fa fa-pencil"></i>
+        </span>
+        <span>Edit</span>
+    </button>
+    <button class="button is-danger is-outlined is-small"
+            hx-delete="{% url 'puzzlehunt:notification_delete' subscription.pk %}"
+            hx-confirm="Are you sure you want to delete this notification subscription?"
+            hx-target="#notification-table">
+        <span class="icon is-small">
+            <i class="fa fa-trash"></i>
+        </span>
+        <span>Delete</span>
+    </button>
+</div>

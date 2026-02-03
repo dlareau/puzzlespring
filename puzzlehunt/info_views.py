@@ -1,14 +1,15 @@
 from django_ratelimit.decorators import ratelimit
 
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import QueryDict
-from django.core.exceptions import PermissionDenied
+from django.http import QueryDict, Http404
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_GET, require_POST
 from django.contrib import messages
 
 from .models import Hunt, Team, DisplayOnlyHunt, NotificationSubscription, Event
 from .forms import TeamForm, UserEditForm, NotificationSubscriptionForm
+from .notifications import NotificationHandler
 
 
 @require_GET
@@ -222,15 +223,64 @@ def notification_delete(request, pk):
 
 
 @login_required
-@require_POST
-def notification_toggle(request, pk):
+@require_http_methods(["GET", "POST"])
+def notification_edit(request, pk):
+    """Handle editing of notification subscription."""
     subscription = get_object_or_404(NotificationSubscription, pk=pk)
     if not (request.user.is_staff or request.user == subscription.user):
         raise PermissionDenied
 
-    subscription.active = not subscription.active
-    subscription.save()
-    
-    if request.htmx:
-        return render(request, "partials/_notification_active_toggle.html", {'subscription': subscription})
-    return redirect("puzzlehunt:notification_view")
+    event_type_choices = [(et.value, et.label) for et in Event.public_types]
+
+    context = {
+        'subscription': subscription,
+        'event_type_choices': event_type_choices,
+    }
+
+    if request.method == "GET":
+        # Check if this is a cancel request - return view partial
+        if request.GET.get('cancel'):
+            context['template'] = 'view'
+            return render(request, "partials/_notification_subscription_response.html", context)
+        # Return the edit form
+        context['template'] = 'edit'
+        return render(request, "partials/_notification_subscription_response.html", context)
+
+    elif request.method == "POST":
+        errors = []
+
+        # Validate and update destination
+        destination = request.POST.get('destination', '').strip()
+        handler = NotificationHandler.create_handler(subscription.platform)
+        try:
+            handler.validate_destination(destination)
+            subscription.destination = destination
+        except ValidationError as e:
+            errors.append(str(e.message))
+
+        # Validate and update event types
+        selected_types = request.POST.getlist('event_types')
+        if selected_types:
+            valid_types = [et.value for et in Event.public_types]
+            filtered_types = [t for t in selected_types if t in valid_types]
+            if filtered_types:
+                subscription.event_types = ','.join(filtered_types)
+            else:
+                errors.append("Please select at least one valid event type.")
+        else:
+            errors.append("Please select at least one event type.")
+
+        # Update active status
+        subscription.active = request.POST.get('active') == 'on'
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+            # Return edit form with errors
+            context['template'] = 'edit'
+            return render(request, "partials/_notification_subscription_response.html", context)
+
+        subscription.save()
+        messages.success(request, "Subscription updated successfully.")
+        context['template'] = 'view'
+        return render(request, "partials/_notification_subscription_response.html", context)

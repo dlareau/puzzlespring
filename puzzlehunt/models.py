@@ -1546,7 +1546,7 @@ class EventManager(models.Manager):
 
 class Event(models.Model):
     class EventType(models.TextChoices):
-        # Queue Types
+        # Common Types
         PUZZLE_SUBMISSION = 'PSUB', 'Submission'
         PUZZLE_SOLVE = 'PSOL', 'Solve'
         PUZZLE_UNLOCK = 'PUNL', 'Unlock'
@@ -1554,9 +1554,11 @@ class Event(models.Model):
         HINT_RESPONSE = 'HRES', 'Hint Response'
         HINT_REFUND = 'HREF', 'Hint Refund'
         FINISH_HUNT = 'FINH', 'Finish Hunt'
+
+        # Queue-only Types
         TEAM_JOIN = 'TMJH', 'Team Join'
 
-        # Non-queue Types
+        # Public-only Types
         UPDATE = 'UPDT', 'New Update'
 
     queue_types = [EventType.PUZZLE_SUBMISSION, EventType.PUZZLE_SOLVE, EventType.PUZZLE_UNLOCK,
