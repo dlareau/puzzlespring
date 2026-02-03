@@ -7,12 +7,12 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def notification_platform():
-    """A basic Discord notification platform fixture."""
+    """A basic Discord webhook notification platform fixture."""
     return NotificationPlatform.objects.create(
-        type=NotificationPlatform.PlatformType.DISCORD,
+        type=NotificationPlatform.PlatformType.WEBHOOK,
         name="Test Discord",
         enabled=True,
-        config={'webhook_url': 'https://discord.com/api/webhooks/test'}
+        config={'format': 'discord'}
     )
 
 @pytest.fixture

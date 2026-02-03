@@ -59,7 +59,7 @@ urlpatterns = [
     path('prepuzzle/<int:pk>/check/', hunt_views.prepuzzle_check, name='prepuzzle_check'),
 
     # SSE Endpoints
-    path('sse/team/<str:pk>/', events, {'format-channels': ['team-{pk}']}, name='team_events'),
+    path('sse/user/<str:pk>/', events, {'format-channels': ['user-{pk}']}, name='user_events'),
     path('sse/staff/', events, {'channels': ['staff']}, name='staff_events'),
 
 

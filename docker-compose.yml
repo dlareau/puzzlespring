@@ -58,6 +58,9 @@ services:
       - .:/code
       - static:/app/static
       - media:/app/media
+      - ./custom/static:/app/custom_static
+      - ./custom/templates:/app/custom_templates
+      - ./custom/config:/app/custom_config
     environment: *base_env
     depends_on:
       - db

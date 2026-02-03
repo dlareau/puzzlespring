@@ -43,28 +43,13 @@
     bulmaToast.setDefaults({
       duration: 5000,
       position: 'top-center',
-      dismissible: true, 
+      dismissible: true,
       animate: { in: 'fadeIn', out: 'fadeOut' },
     });
   </script>
   {% block live_updates %}
-    {% if team %}
-      <div
-        hx-ext="sse" 
-        {% if team %}
-          sse-connect="{% url 'puzzlehunt:team_events' team.pk %}"
-        {% endif %}
-      >
-        {% comment %} TODO: Uncomment this to enable full page hunt updates {% endcomment %}
-        {% comment %} <div
-          {% if team.pk and request.resolver_match.url_name == 'hunt_view' %}
-            hx-trigger="sse:huntUpdate"
-            hx-get="{{ request.path }}"
-            hx-select="#huntContent"
-            hx-swap="outerHTML"
-            hx-target="#huntContent"
-          {% endif %}
-        ></div> {% endcomment %}
+    {% if request.user.is_authenticated %}
+      <div hx-ext="sse" sse-connect="{% url 'puzzlehunt:user_events' request.user.pk %}">
         <div sse-swap="notification"></div>
       </div>
     {% endif %}

@@ -10,10 +10,10 @@
 
 {% load crispy_forms_tags %}
 {% load hunt_tags %}
-<div id="puzzle-infobox" 
-     class="columns is-centered is-multiline" 
-     hx-ext="sse" 
-     {% if team %} sse-connect="{% url 'puzzlehunt:team_events' team.pk %}" {% endif %}>
+<div id="puzzle-infobox"
+     class="columns is-centered is-multiline"
+     hx-ext="sse"
+     {% if request.user.is_authenticated %} sse-connect="{% url 'puzzlehunt:user_events' request.user.pk %}" {% endif %}>
   <div id="content-box" class="column has-background-light is-12-tablet is-11-desktop is-10-widescreen">
     <div class="has-text-centered mb-2 is-relative">
       <a href="{% hunt_back_url puzzle.hunt.pk %}" 

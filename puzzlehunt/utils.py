@@ -28,13 +28,12 @@ class PuzzlehuntChannelManager(DefaultChannelManager):
         if channel == "staff" and user.is_staff:
             return True
 
-        if channel.startswith('team'):
+        if channel.startswith('user-'):
             try:
-                team = models.Team.objects.get(pk=channel.split("-", 1)[1])
-            except models.Team.DoesNotExist:
+                user_id = int(channel.split("-", 1)[1])
+                return user.pk == user_id
+            except (ValueError, IndexError):
                 return False
-            if user in team.members.all():
-                return True
 
         # Default access is false
         return False

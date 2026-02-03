@@ -52,7 +52,7 @@ def protected_static(request, pk, file_path, base="puzzle", add_prefix=False):
 
 
 def puzzle_view(request, pk):
-    puzzle = get_object_or_404(Puzzle, pk=pk)
+    puzzle = get_object_or_404(Puzzle.objects.select_related('hunt'), pk=pk)
     team = puzzle.hunt.team_from_user(request.user)
 
     # Determine access
@@ -78,7 +78,7 @@ def puzzle_view(request, pk):
 
     submissions = None
     if team is not None:
-        submissions = Submission.objects.filter(team=team, puzzle=puzzle).order_by('-pk')
+        submissions = Submission.objects.filter(team=team, puzzle=puzzle).select_related('user').order_by('-pk')
 
     updates = Update.objects.filter(puzzle=puzzle).all()
     context = {"puzzle": puzzle, "team": team, "solved": solved, "submissions": submissions, 'updates': updates,
@@ -107,7 +107,7 @@ def puzzle_solution(request, pk):
 @require_POST
 @transaction.atomic
 def puzzle_submit(request, pk):
-    puzzle = get_object_or_404(Puzzle, pk=pk)
+    puzzle = get_object_or_404(Puzzle.objects.select_related('hunt'), pk=pk)
     team = puzzle.hunt.team_from_user(request.user)
 
     # You must have access to the hunt and the puzzle to make a submission
@@ -164,7 +164,7 @@ def puzzle_submit(request, pk):
 
 
 def puzzle_hints_view(request, pk):
-    puzzle = get_object_or_404(Puzzle, pk=pk)
+    puzzle = get_object_or_404(Puzzle.objects.select_related('hunt'), pk=pk)
     team = puzzle.hunt.team_from_user(request.user)
     if team is None:
         if not puzzle.hunt.is_public:
@@ -221,7 +221,7 @@ def puzzle_hints_view(request, pk):
 def puzzle_hints_submit(request, pk):
     if "hintText" not in request.POST:
         raise SuspiciousOperation
-    puzzle = get_object_or_404(Puzzle, pk=pk)
+    puzzle = get_object_or_404(Puzzle.objects.select_related('hunt'), pk=pk)
     team = puzzle.hunt.team_from_user(request.user)
     if not team.hints_open_for_puzzle(puzzle):
         return render(request, 'access_error.html', {'reason': "hint"})
@@ -245,7 +245,7 @@ def puzzle_hints_submit(request, pk):
 @require_POST
 @transaction.atomic
 def puzzle_hints_use_canned(request, pk):
-    puzzle = get_object_or_404(Puzzle, pk=pk)
+    puzzle = get_object_or_404(Puzzle.objects.select_related('hunt'), pk=pk)
     team = puzzle.hunt.team_from_user(request.user)
     if not team.hints_open_for_puzzle(puzzle):
         return render(request, 'access_error.html', {'reason': "hint"})

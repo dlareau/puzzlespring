@@ -19,11 +19,11 @@
 {% endblock title_meta_elements %}
 
 {% block content_wrapper %}
-<div id="huntContent" 
-     class="bulma" 
-     hx-ext="sse" 
-     {% if team %}
-       sse-connect="{% url 'puzzlehunt:team_events' team.pk %}"
+<div id="huntContent"
+     class="bulma"
+     hx-ext="sse"
+     {% if request.user.is_authenticated %}
+       sse-connect="{% url 'puzzlehunt:user_events' request.user.pk %}"
      {% endif %}
 >
   <section class="section">

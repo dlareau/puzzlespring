@@ -28,11 +28,11 @@ logger = logging.getLogger(__name__)
 
 time_zone = tz.gettz(settings.TIME_ZONE)
 
-def send_notification(text, team):
-    escaped_text = json.dumps(text)  # Properly escape newlines and quotes for JavaScript
-    toast_data = f"{{message: {escaped_text}, position: 'bottom-right', appendTo: document.getElementById('sse-message-container')}}"
-    sse_notification_string = f"<script> bulmaToast.toast({toast_data});</script>"
-    send_event(f"team-{team.pk}", f"notification", sse_notification_string, json_encode=False)
+
+def send_event_to_team_members(team, event_name, data):
+    """Send an SSE event to all members of a team via their user channels."""
+    for member_pk in team.members.values_list('pk', flat=True):
+        send_event(f"user-{member_pk}", event_name, data)
 
 # region User Model
 class CustomUserManager(BaseUserManager):
@@ -85,10 +85,36 @@ class User(AbstractUser):
             return name
 
     def display_string(self):
-        return self.display_name if (self.display_name != "" or self.display_name is None) else self.email
+        return self.display_name if self.display_name else self.email
 
     def __str__(self):
         return f"{self.display_string()} - {self.full_name()}"
+
+    def save(self, *args, **kwargs):
+        is_new = not bool(self.pk)
+        super().save(*args, **kwargs)
+        if is_new:
+            self._create_browser_subscription()
+
+    def _create_browser_subscription(self):
+        """Create default browser notification subscription for new users."""
+        browser_platform = NotificationPlatform.objects.filter(
+            type=NotificationPlatform.PlatformType.BROWSER,
+            enabled=True
+        ).first()
+        if browser_platform:
+            event_types = ','.join([
+                Event.EventType.PUZZLE_SOLVE,
+                Event.EventType.PUZZLE_UNLOCK,
+                Event.EventType.HINT_RESPONSE,
+                Event.EventType.HINT_REFUND,
+            ])
+            NotificationSubscription.objects.create(
+                user=self,
+                platform=browser_platform,
+                event_types=event_types,
+                active=True
+            )
 
 # endregion
 
@@ -964,7 +990,8 @@ class Submission(models.Model):
         super(Submission, self).save(*args, **kwargs)
         # This is to ensure that the event is sent after the view has completed the transaction
         # It has no effect if the caller is not in a transaction
-        transaction.on_commit(lambda: send_event(f"team-{self.team.pk}", f"submission-{self.puzzle.pk}", "modification"))
+        puzzle_pk = self.puzzle.pk
+        transaction.on_commit(lambda: send_event_to_team_members(self.team, f"submission-{puzzle_pk}", "modification"))
         if is_new:
             Event.objects.create_event(Event.EventType.PUZZLE_SUBMISSION, self, self.user)
 
@@ -1030,8 +1057,7 @@ class PuzzleStatus(models.Model):
         if is_new:
             # This is to ensure that the event is sent after the view has completed the transaction
             # It has no effect if the caller is not in a transaction
-            transaction.on_commit(lambda: send_event(f"team-{self.team.pk}", f"huntUpdate", "unlock"))
-            transaction.on_commit(lambda: send_notification(f"You have unlocked {self.puzzle.name}", self.team))
+            transaction.on_commit(lambda: send_event_to_team_members(self.team, "huntUpdate", "unlock"))
             Event.objects.create_event(Event.EventType.PUZZLE_UNLOCK, self, user=None)
 
     def mark_solved(self):
@@ -1044,8 +1070,7 @@ class PuzzleStatus(models.Model):
         self.team.process_unlocks()
         # This is to ensure that the event is sent after the view has completed the transaction
         # It has no effect if the caller is not in a transaction
-        transaction.on_commit(lambda: send_event(f"team-{self.team.pk}", f"huntUpdate", "solve"))
-        transaction.on_commit(lambda: send_notification(f"You have solved {self.puzzle.name}", self.team))
+        transaction.on_commit(lambda: send_event_to_team_members(self.team, "huntUpdate", "solve"))
         Event.objects.create_event(Event.EventType.PUZZLE_SOLVE, self, user=None)
         if self.puzzle.type == Puzzle.PuzzleType.FINAL_PUZZLE:
             Event.objects.create_event(Event.EventType.FINISH_HUNT, self, user=None)
@@ -1158,15 +1183,10 @@ class Hint(models.Model):
     )
 
     def send_hint_sse(self, data, send_team_msg=False):
+        """Send SSE update to staff hints page and optionally team hints UI."""
         send_event("staff", "hints", data)
         if send_team_msg:
-            if data == "response":
-                send_notification(f"You have received a response to your hint\nrequest for {self.puzzle.name}", self.team)
-            elif data == "response_update":
-                send_notification(f"Your hint response has been updated for {self.puzzle.name}", self.team)
-            elif data == "refund":
-                send_notification(f"Your hint has been refunded for {self.puzzle.name}", self.team)
-            send_event(f"team-{self.team.pk}", "hints", data)
+            send_event_to_team_members(self.team, "hints", data)
 
     def save(self, *args, **kwargs):
         """Override save to decrement the correct hint pool"""
@@ -1226,7 +1246,12 @@ class Hint(models.Model):
         self.last_modified_time = timezone.now()
         self.save()
         self.send_hint_sse(notification_type, True)
-        Event.objects.create_event(Event.EventType.HINT_RESPONSE, self, user)
+        Event.objects.create_event(
+            Event.EventType.HINT_RESPONSE,
+            self,
+            user,
+            related_data=notification_type
+        )
         return self
 
     def refund(self):
@@ -1245,6 +1270,7 @@ class Hint(models.Model):
             team.num_available_hints = F("num_available_hints") + 1
             team.save(update_fields=["num_available_hints"])
         self.send_hint_sse("refund", True)
+        Event.objects.create_event(Event.EventType.HINT_REFUND, self, user=None)
         return self
 
     def __str__(self):
@@ -1434,9 +1460,9 @@ class Update(models.Model):
 
 
 class EventManager(models.Manager):
-    def create_event(self, event_type, related_object, user):
+    def create_event(self, event_type, related_object, user, related_data=None):
         timestamp = timezone.now()
-        extra_data = dict()
+        extra_data = related_data if related_data else dict()
         team = None
         puzzle = None
         hunt = None
@@ -1465,6 +1491,14 @@ class EventManager(models.Manager):
                 hunt = team.hunt
             case Event.EventType.HINT_RESPONSE:  # related object hint
                 timestamp = related_object.response_time
+                puzzle = related_object.puzzle
+                team = related_object.team
+                # related_data can be "response" or "response_update"
+                if not related_data:
+                    extra_data = "response"
+                hunt = team.hunt
+            case Event.EventType.HINT_REFUND:  # related object hint
+                timestamp = related_object.last_modified_time
                 puzzle = related_object.puzzle
                 team = related_object.team
                 hunt = team.hunt
@@ -1518,6 +1552,7 @@ class Event(models.Model):
         PUZZLE_UNLOCK = 'PUNL', 'Unlock'
         HINT_REQUEST = 'HREQ', 'Hint Request'
         HINT_RESPONSE = 'HRES', 'Hint Response'
+        HINT_REFUND = 'HREF', 'Hint Refund'
         FINISH_HUNT = 'FINH', 'Finish Hunt'
         TEAM_JOIN = 'TMJH', 'Team Join'
 
@@ -1525,10 +1560,11 @@ class Event(models.Model):
         UPDATE = 'UPDT', 'New Update'
 
     queue_types = [EventType.PUZZLE_SUBMISSION, EventType.PUZZLE_SOLVE, EventType.PUZZLE_UNLOCK,
-                   EventType.HINT_REQUEST, EventType.HINT_RESPONSE, EventType.FINISH_HUNT,
-                   EventType.TEAM_JOIN]
-    public_types = [EventType.PUZZLE_SUBMISSION, EventType.PUZZLE_SOLVE, EventType.PUZZLE_UNLOCK, 
-                    EventType.HINT_REQUEST, EventType.HINT_RESPONSE, EventType.FINISH_HUNT, EventType.UPDATE]
+                   EventType.HINT_REQUEST, EventType.HINT_RESPONSE, EventType.HINT_REFUND,
+                   EventType.FINISH_HUNT, EventType.TEAM_JOIN]
+    public_types = [EventType.PUZZLE_SUBMISSION, EventType.PUZZLE_SOLVE, EventType.PUZZLE_UNLOCK,
+                    EventType.HINT_REQUEST, EventType.HINT_RESPONSE, EventType.HINT_REFUND,
+                    EventType.FINISH_HUNT, EventType.UPDATE]
 
     # Every event has a user, a team, and a hunt, some have a puzzle
     # (Except update which doesn't have a team)
@@ -1581,6 +1617,8 @@ class Event(models.Model):
                 return Hint.objects.get(pk=self.related_object_id)
             case Event.EventType.HINT_RESPONSE:
                 return Hint.objects.get(pk=self.related_object_id)
+            case Event.EventType.HINT_REFUND:
+                return Hint.objects.get(pk=self.related_object_id)
             case Event.EventType.FINISH_HUNT:
                 return PuzzleStatus.objects.get(pk=self.related_object_id)
             case Event.EventType.TEAM_JOIN:
@@ -1606,6 +1644,8 @@ class Event(models.Model):
                 return "#f5b78a"
             case Event.EventType.HINT_RESPONSE:
                 return "#dcdc9f"
+            case Event.EventType.HINT_REFUND:
+                return "#b8e6b8"
             case Event.EventType.FINISH_HUNT:
                 return "#d6a3ff"
             case Event.EventType.TEAM_JOIN:
@@ -1629,6 +1669,8 @@ class Event(models.Model):
                 return "fa-question"
             case Event.EventType.HINT_RESPONSE:
                 return "fa-reply"
+            case Event.EventType.HINT_REFUND:
+                return "fa-undo"
             case Event.EventType.FINISH_HUNT:
                 return "fa-flag-checkered"
             case Event.EventType.TEAM_JOIN:
@@ -1650,6 +1692,8 @@ class Event(models.Model):
             case Event.EventType.HINT_RESPONSE:
                 return (f"<b>{ self.user.first_name } { self.user.last_name }</b> has responded to the hint request from "
                         f"<b>{ self.team.name }</b> for <b>{ self.puzzle.name }</b>.")
+            case Event.EventType.HINT_REFUND:
+                return f"A hint has been refunded for <b>{ self.team.name }</b> on <b>{ self.puzzle.name }</b>."
             case Event.EventType.FINISH_HUNT:
                 return f"Team <b>{ self.team.name }</b> has finished!"
             case Event.EventType.TEAM_JOIN:
@@ -1668,7 +1712,11 @@ class Event(models.Model):
             case Event.EventType.HINT_REQUEST:
                 return f"Your team has requested a hint for { self.puzzle.name }."
             case Event.EventType.HINT_RESPONSE:
-                return (f"Staff has responded to your hint request for { self.puzzle.name }.")
+                if self.related_data == "response_update":
+                    return f"Your hint response has been updated for { self.puzzle.name }."
+                return f"Staff has responded to your hint request for { self.puzzle.name }."
+            case Event.EventType.HINT_REFUND:
+                return f"Your hint has been refunded for { self.puzzle.name }."
             case Event.EventType.FINISH_HUNT:
                 return f"Your team has finished!"
             case Event.EventType.UPDATE:
@@ -1697,13 +1745,13 @@ class DisplayOnlyHunt(models.Model):
 
 
 class NotificationPlatform(models.Model):
-    """A platform that can be used to send notifications (Discord, Email, etc.)"""
-    
+    """A platform that can be used to send notifications (Browser, Email, Webhook)"""
+
     class PlatformType(models.TextChoices):
-        DISCORD = 'DISC', 'Discord'
+        BROWSER = 'BRWS', 'Browser'
         EMAIL = 'MAIL', 'Email'
-        # More platforms can be added here
-    
+        WEBHOOK = 'WHBK', 'Webhook'
+
     type = models.CharField(
         max_length=4,
         choices=PlatformType.choices,
@@ -1718,9 +1766,19 @@ class NotificationPlatform(models.Model):
         null=True,
         blank=True,
         help_text="Platform-specific configuration (API keys, URLs, etc.)")
-    
+
     def __str__(self):
         return self.name
+
+    def clean(self):
+        """Validate platform configuration using handler's validate_config method"""
+        from .notifications import NotificationHandler
+        handler_class = NotificationHandler.get_handler(self.type)
+        if handler_class:
+            try:
+                handler_class.validate_config(self.config or {})
+            except ValidationError as e:
+                raise ValidationError({'config': e.message if hasattr(e, 'message') else str(e)})
 
     class Meta:
         unique_together = ['type', 'name']
@@ -1767,12 +1825,22 @@ class NotificationSubscription(models.Model):
         return [t.strip() for t in self.event_types.split(',') if t.strip()]
 
     def clean(self):
-        """Validate that event_types only contains valid choices"""
+        """Validate event_types and destination"""
+        # Validate event types
         invalid_types = set(self.event_types_list) - set(Event.EventType.values)
         if invalid_types:
             raise ValidationError({
                 'event_types': f"Invalid event types: {', '.join(invalid_types)}"
             })
+
+        # Validate destination using the platform's handler
+        from .notifications import NotificationHandler
+        handler = NotificationHandler.create_handler(self.platform)
+        if handler:
+            try:
+                handler.validate_destination(self.destination)
+            except ValidationError as e:
+                raise ValidationError({'destination': e.message})
 
     def save(self, *args, **kwargs):
         self.clean()
