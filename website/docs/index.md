@@ -44,6 +44,16 @@ Perfect for **hunt staff** who need to manage teams and respond to participants 
 
 ---
 
+### Participating in a Hunt
+
+Set up notifications and get the most out of your hunt experience.
+
+[User Guide](user-guide/){: .btn .btn-primary }
+
+Perfect for **participants** who want to customize their experience and stay informed during a hunt.
+
+---
+
 ## Additional Resources
 
 ### [Customization](customization/)
