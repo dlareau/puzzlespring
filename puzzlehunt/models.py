@@ -262,8 +262,12 @@ class Hunt(models.Model):
     end_date = models.DateTimeField(
         help_text="The date/time at which a hunt will be archived and available to the public")
     display_start_date = models.DateTimeField(
+        blank=True,
+        null=True,
         help_text="The start date/time displayed to users")
     display_end_date = models.DateTimeField(
+        blank=True,
+        null=True,
         help_text="The end date/time displayed to users")
     location = models.CharField(
         blank=True,

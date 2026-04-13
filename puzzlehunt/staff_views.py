@@ -18,6 +18,7 @@ from django.forms import ValidationError
 from django.views.decorators.http import require_GET, require_POST
 from django.shortcuts import redirect, render, get_object_or_404
 from django.db.models import F, Max, Count, Subquery, OuterRef, PositiveIntegerField, Min
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.utils import timezone
 from django.contrib import messages
@@ -713,10 +714,12 @@ def view_hunts(request, hunt):
     # For each hunt, get the end date of the previous hunt
     hunts = hunts.annotate(
         prev_hunt_end=Subquery(
-            Hunt.objects.filter(
-                display_end_date__lt=OuterRef('display_start_date')
-            ).order_by('-display_end_date')
-            .values('display_end_date')[:1]
+            Hunt.objects.annotate(
+                effective_end_date=Coalesce('display_end_date', 'end_date')
+            ).filter(
+                effective_end_date__lt=Coalesce(OuterRef('display_start_date'), OuterRef('start_date'))
+            ).order_by('-effective_end_date')
+            .values('effective_end_date')[:1]
         )
     )
     

@@ -30,7 +30,7 @@ def archive(request):
         hunt.num_puzzles = hunt.puzzle_set.count()
 
     all_hunts = list(normal_hunts) + list(display_only_hunts)
-    all_hunts.sort(key=lambda x: x.display_start_date)
+    all_hunts.sort(key=lambda x: x.display_start_date or x.start_date)
 
     return render(request, "archive.html", {'hunts': all_hunts})
 
