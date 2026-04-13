@@ -8,7 +8,7 @@ import puzzlehunt.models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('puzzlehunt', '0014_submission_matched_response'),
+        ('puzzlehunt', '0017_consolidate_webhook_platforms'),
     ]
 
     operations = [

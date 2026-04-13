@@ -27,9 +27,9 @@ from django.http import JsonResponse
 from django.core import serializers
 
 from django_sendfile import sendfile
-from .utils import create_media_files, get_media_file_model, get_media_file_parent_model, create_hunt_export_zip, import_hunt_from_zip, import_hunt_from_zip, validate_hunt_zip
+from .utils import create_media_files, get_media_file_model, get_media_file_parent_model, create_hunt_export_zip, validate_hunt_zip
 from .hunt_views import protected_static
-from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile
+from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile, Round
 from .tasks import import_hunt_background
 from .config_parser import parse_config, process_config_rules
 
@@ -646,17 +646,50 @@ def get_hunt_template_errors(template_text, hunt, request):
     return None
 
 
+def get_round_template_errors(template_text, round_obj, request):
+    team = Team(
+        name="Preview Team",
+        hunt=round_obj.hunt,
+    )
+    puzzle_list = round_obj.puzzles.all()
+
+    puzzles = sorted(puzzle_list, key=lambda p: p.order_number)
+    solved = []
+    context = {'round': round_obj, 'hunt': round_obj.hunt, 'puzzles': puzzles, 'team': team, 'solved': solved}
+
+    try:
+        # Get the default Django template engine
+        default_engine = engines['django']
+        # Create a template instance
+        template = default_engine.from_string(template_text)
+        template.render(context, request=request)
+    except Exception as e:
+        return f"Error rendering template: {e}"
+    return None
+
+
 @staff_member_required
 def hunt_template(request, hunt):
-    # Take text from the template_text parameter and save it to the hunt's template file
+    # Check for round query parameter to determine if editing hunt or round template
+    round_order = request.GET.get('round') or request.POST.get('round')
+    selected_round = None
+
+    if round_order:
+        selected_round = get_object_or_404(Round, hunt=hunt, order_number=round_order)
+        target = selected_round
+        template_errors_fn = get_round_template_errors
+    else:
+        target = hunt
+        template_errors_fn = get_hunt_template_errors
+
     if request.method == "POST":
         template_text = request.POST.get("template_text", "")
         if template_text == "":
             messages.success(request, "Template cleared")
-            hunt.template_file = None
-            hunt.save()
+            target.template_file = None
+            target.save()
         else:
-            template_errors = get_hunt_template_errors(template_text, hunt, request)
+            template_errors = template_errors_fn(template_text, target, request)
             if template_errors is not None:
                 messages.error(request, template_errors)
             else:
@@ -664,14 +697,28 @@ def hunt_template(request, hunt):
                     buf.write(template_text.encode("utf-8"))
                     buf.seek(0)
                     template_file = File(buf, "template.html")
-                    hunt.template_file = template_file
-                    hunt.save()
+                    target.template_file = template_file
+                    target.save()
                 messages.success(request, "Template saved")
     else:
         template_text = ""
-        if hunt.template_file is not None and hunt.template_file != "":
-            template_text = hunt.template_file.file.read().decode("utf-8")
-    context = {'hunt': hunt, 'template_text': template_text, 'puzzle_numbers': hunt.puzzle_set.values_list('order_number', flat=True)}
+        if target.template_file is not None and target.template_file != "":
+            template_text = target.template_file.file.read().decode("utf-8")
+
+    rounds = hunt.round_set.order_by('order_number')
+    puzzle_numbers = (
+        selected_round.puzzles.values_list('order_number', flat=True)
+        if selected_round else
+        hunt.puzzle_set.values_list('order_number', flat=True)
+    )
+
+    context = {
+        'hunt': hunt,
+        'rounds': rounds,
+        'selected_round': selected_round,
+        'template_text': template_text,
+        'puzzle_numbers': list(puzzle_numbers),
+    }
     return render(request, "staff_hunt_template.html", context)
 
 
@@ -689,6 +736,38 @@ def preview_template(request, hunt):
 
     solved = hunt.puzzle_set.filter(order_number__in=solved)
     context = {'hunt': hunt, 'puzzles': puzzles, 'team': Team(name="Preview Team", hunt=hunt), 'solved': solved}
+
+    try:
+        # Get the default Django template engine
+        default_engine = engines['django']
+        # Create a template instance
+        template = default_engine.from_string(template_text)
+        return HttpResponse(template.render(context, request=request))
+    except Exception as e:
+        return HttpResponse(f"Error rendering template: {e}")
+
+
+@require_POST
+@staff_member_required
+def preview_round_template(request, hunt, order_number):
+    round_obj = get_object_or_404(Round, hunt=hunt, order_number=order_number)
+    template_text = request.POST.get("template_text", "")
+    solved_arg = request.POST.get("solved", "")
+    solved = [] if solved_arg == "" else [int(x) for x in solved_arg.split(",")]
+
+    unlocked_arg = request.POST.get("unlocked", "")
+    unlocked = [] if unlocked_arg == "" else [int(x) for x in unlocked_arg.split(",")]
+    puzzle_list = round_obj.puzzles.filter(order_number__in=unlocked)
+    puzzles = sorted(puzzle_list, key=lambda p: p.order_number)
+
+    solved = round_obj.puzzles.filter(order_number__in=solved)
+    context = {
+        'round': round_obj,
+        'hunt': hunt,
+        'puzzles': puzzles,
+        'team': Team(name="Preview Team", hunt=hunt),
+        'solved': solved
+    }
 
     try:
         # Get the default Django template engine

@@ -128,15 +128,19 @@ def round_view(request, hunt, order_number):
     # Get puzzles in this round based on access level
     team = hunt.team_from_user(request.user)
     puzzle_list = []
+    round_list = []
 
     if hunt.is_public or request.user.is_staff:
+        round_list = list(hunt.rounds)
         puzzle_list = round.puzzles
     elif team and team.playtest_happening:
+        round_list = list(team.unlocked_rounds())
         puzzle_list = team.puzzle_statuses.filter(round=round)
     elif hunt.is_open:
         if team is None or team.hunt != hunt:
             return render(request, 'access_error.html', {'reason': "team"})
         else:
+            round_list = list(team.unlocked_rounds())
             puzzle_list = team.puzzle_statuses.filter(round=round)
 
     puzzles = sorted(puzzle_list, key=lambda p: p.order_number)
@@ -148,10 +152,11 @@ def round_view(request, hunt, order_number):
 
     context = {
         'round': round,
+        'rounds': round_list,
         'hunt': hunt,
         'puzzles': puzzles,
         'team': team,
-        'solved': solved
+        'solved': solved,
     }
 
     if round.template_file is None or round.template_file == "":

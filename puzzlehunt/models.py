@@ -681,8 +681,7 @@ class RoundStatus(models.Model):
         is_new = not bool(self.pk)
         super().save(*args, **kwargs)
         if is_new:
-            transaction.on_commit(lambda: send_event(f"team-{self.team.pk}", f"huntUpdate", "round_unlock"))
-            transaction.on_commit(lambda: send_notification(f"You have unlocked round: {self.round.name}", self.team))
+            transaction.on_commit(lambda: send_event_to_team_members(self.team, "huntUpdate", "round_unlock"))
             Event.objects.create_event(Event.EventType.ROUND_UNLOCK, self, user=None)
 
     def natural_key(self):

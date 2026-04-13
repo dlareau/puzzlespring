@@ -87,6 +87,7 @@ urlpatterns = [
         path('hunt/<hunt-fallback:hunt>/download-emails/', staff_views.download_emails, name='download_emails'),
         path('hunt/<hunt-fallback:hunt>/template/', staff_views.hunt_template, name='hunt_template'),
         path('hunt/<hunt-fallback:hunt>/template/preview/', staff_views.preview_template, name='preview_template'),
+        path('hunt/<hunt-fallback:hunt>/template/preview/round/<int:order_number>/', staff_views.preview_round_template, name='preview_round_template'),
         path('hunt/<hunt-fallback:hunt>/config/', staff_views.hunt_config, name='hunt_config'),
         path('hunt/<hunt-fallback:hunt>/config-tester/', staff_views.config_tester, name='config_tester'),
         path('hunt/<hunt-fallback:hunt>/puzzles/', staff_views.hunt_puzzles, name='hunt_puzzles'),
