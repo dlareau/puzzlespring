@@ -11,7 +11,10 @@
 @context:
   hunt: The Hunt object being displayed
   ruleset: List of LeaderboardRule objects defining the columns and ranking rules
+  data_questions: List of TeamDataQuestion objects visible on the leaderboard
   team_data: List of Team objects with their ranking data
+  grouping_question: TeamDataQuestion used to split the leaderboard into groups, or None
+  leaderboard_groups: List of {label, teams} dicts, present when grouping_question is set
 {% endcomment %}
 
 {% block title_meta_elements %}
@@ -35,29 +38,29 @@
   <h1 style="text-align: center;"> Leaderboard - {{hunt.name}}</h1>
   <br>
   <br>
-  {% if split_leaderboard %}
-    <div x-data="{ activeTab: 'all' }">
-      <div class="tabs is-boxed">
-        <ul>
-          <li :class="{ 'is-active': activeTab === 'all' }">
-            <a @click.prevent="activeTab = 'all'">All Teams</a>
-          </li>
-          <li :class="{ 'is-active': activeTab === 'true' }">
-            <a @click.prevent="activeTab = 'true'">{{ custom_data_name }}: Yes</a>
-          </li>
-          <li :class="{ 'is-active': activeTab === 'false' }">
-            <a @click.prevent="activeTab = 'false'">{{ custom_data_name }}: No</a>
-          </li>
-        </ul>
+  {% if grouping_question %}
+    <div x-data="{ showAll: false }">
+      <div class="level">
+        <div class="level-left">
+          <div class="notification is-light is-size-6 mb-0">
+            <strong>Grouped by {{ grouping_question.name }}</strong>
+          </div>
+        </div>
+        <div class="level-right">
+          <button class="button is-small" @click="showAll = !showAll">
+            <span x-show="!showAll">View combined</span>
+            <span x-show="showAll" x-cloak>View grouped</span>
+          </button>
+        </div>
       </div>
-      <div x-show="activeTab === 'all'">
+      <div x-show="showAll" x-cloak>
         {% include "partials/_leaderboard_table.html" with teams=team_data %}
       </div>
-      <div x-show="activeTab === 'true'">
-        {% include "partials/_leaderboard_table.html" with teams=team_data_true %}
-      </div>
-      <div x-show="activeTab === 'false'">
-        {% include "partials/_leaderboard_table.html" with teams=team_data_false %}
+      <div x-show="!showAll">
+        {% for group in leaderboard_groups %}
+          <h2 class="title is-5 has-text-centered mt-5">{{ group.label }}</h2>
+          {% include "partials/_leaderboard_table.html" with teams=group.teams %}
+        {% endfor %}
       </div>
     </div>
   {% else %}

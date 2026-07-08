@@ -115,6 +115,31 @@
       <p class="has-text-grey">Enter search terms to find participants or teams</p>
     </div>
   </div>
+
+  <!-- Team Data Questions -->
+  {% if data_questions %}
+    <div class="box mb-5">
+      <h2 class="subtitle">Team Data</h2>
+      <div style="overflow-x: auto;">
+        <table class="table is-striped is-size-7-mobile">
+          <tr>
+            <th>Team</th>
+            {% for question in data_questions %}
+              <th>{{ question.name }}</th>
+            {% endfor %}
+          </tr>
+          {% for team, answers in teams_with_answers %}
+            <tr>
+              <td>{{ team.name }}</td>
+              {% for question in data_questions %}
+                <td>{{ answers|get_item:question.id|default:"—" }}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  {% endif %}
 </div>
 
-{% endblock %} 
+{% endblock %}

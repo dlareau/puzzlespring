@@ -663,11 +663,6 @@ class Team(models.Model):
     members = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         help_text="Members of this team")
-    custom_data = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text=f"A field for custom registration data"
-    )
     join_code = models.CharField(
         max_length=8,
         default=team_key_gen,
@@ -706,6 +701,9 @@ class Team(models.Model):
     def is_normal_team(self):
         """ A boolean indicating whether the team is a normal (non-playtester) team """
         return not self.playtester
+
+    def get_data_answer(self, question):
+        return self.teamdataanswer_set.filter(question=question).first()
 
     @property
     def playtest_started(self):
@@ -1433,6 +1431,112 @@ class TeamRankingRule(models.Model):
 
     def natural_key(self):
         return self.hunt.natural_key() + (self.rule_order,)
+
+
+class TeamDataQuestionManager(models.Manager):
+    def get_by_natural_key(self, hunt_name, hunt_start_date, question_order):
+        hunt = Hunt.objects.get_by_natural_key(hunt_name, hunt_start_date)
+        return self.get(hunt=hunt, question_order=question_order)
+
+
+class TeamDataQuestion(models.Model):
+    """ A per-hunt custom registration question, optionally shown on the leaderboard """
+
+    class QuestionType(models.TextChoices):
+        TEXT = 'TEXT', 'Text'
+        BOOLEAN = 'BOOL', 'Yes/No'
+        SELECT = 'SEL', 'Select (single choice)'
+
+    class Meta:
+        unique_together = ('hunt', 'question_order')
+        ordering = ['question_order']
+
+    objects = TeamDataQuestionManager()
+
+    hunt = models.ForeignKey(
+        Hunt,
+        on_delete=models.CASCADE,
+        help_text="The hunt this question belongs to")
+
+    name = models.CharField(
+        max_length=100,
+        help_text="The label shown to teams and on the leaderboard")
+
+    description = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Optional help text shown under the field")
+
+    question_type = models.CharField(
+        max_length=4,
+        choices=QuestionType.choices,
+        default=QuestionType.TEXT,
+        help_text="The type of question")
+
+    options = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Option strings; only used when question_type is 'select'")
+
+    question_order = models.IntegerField(
+        help_text="The order in which the question is displayed")
+
+    required = models.BooleanField(
+        default=False,
+        help_text="Must a team answer this to register/update?")
+
+    visible_on_leaderboard = models.BooleanField(
+        default=False,
+        help_text="Show this as a column on the leaderboard")
+
+    used_for_grouping = models.BooleanField(
+        default=False,
+        help_text="Split the leaderboard by this question (only one at a time per hunt)")
+
+    def __str__(self):
+        return f"{self.hunt.name}: {self.name}"
+
+    def natural_key(self):
+        return self.hunt.natural_key() + (self.question_order,)
+
+    def clean(self):
+        super().clean()
+        if self.question_type == self.QuestionType.SELECT and not self.options:
+            raise ValidationError({'options': "Select questions must have at least one option."})
+        if self.question_type != self.QuestionType.SELECT and self.options:
+            raise ValidationError({'options': "Options are only used for select questions."})
+
+
+class TeamDataAnswer(models.Model):
+    """ A team's answer to one TeamDataQuestion (mirrors the PuzzleStatus team/puzzle through-table) """
+
+    class Meta:
+        verbose_name_plural = "team data answers"
+        unique_together = ('question', 'team')
+
+    question = models.ForeignKey(
+        TeamDataQuestion,
+        on_delete=models.CASCADE,
+        help_text="The question being answered")
+
+    team = models.ForeignKey(
+        Team,
+        on_delete=models.CASCADE,
+        help_text="The team that gave this answer")
+
+    value = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text="Stored answer; boolean as 'True'/'False', select as the chosen option text")
+
+    def __str__(self):
+        return f"{self.team.name} -> {self.question.name}: {self.value}"
+
+    @property
+    def display_value(self):
+        if self.question.question_type == TeamDataQuestion.QuestionType.BOOLEAN:
+            return "Yes" if self.value == "True" else "No"
+        return self.value or "—"
 
 
 class Update(models.Model):

@@ -116,6 +116,10 @@
                      href="{% url 'puzzlehunt:staff:hunt_puzzles' hunt.id %}">
                 Puzzles
               </a></li>
+              <li><a class="{% active_page request "team_data_questions" %}"
+                     href="{% url 'puzzlehunt:staff:team_data_questions' hunt.id %}">
+                Team Data Questions
+              </a></li>
               <li><a class="{% active_page request "hunt_template" %}"
                      href="{% url 'puzzlehunt:staff:hunt_template' hunt.id %}">
                 Hunt Template

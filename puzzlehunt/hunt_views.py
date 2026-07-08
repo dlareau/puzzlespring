@@ -1,4 +1,5 @@
 from crispy_forms.utils import render_crispy_form
+from collections import OrderedDict
 from pathlib import Path
 
 from django.conf import settings
@@ -18,7 +19,7 @@ from django_sendfile import sendfile
 from constance import config
 
 from .forms import AnswerForm
-from .models import Puzzle, Submission, Prepuzzle, Hint, PuzzleStatus, Update
+from .models import Puzzle, Submission, Prepuzzle, Hint, PuzzleStatus, Update, TeamDataAnswer
 from .utils import get_media_file_model
 
 import logging
@@ -365,43 +366,50 @@ def _process_teams_for_leaderboard(teams_queryset, ruleset):
     return processed_teams
 
 
+def _bulk_fetch_answers(teams_queryset, questions):
+    """Helper function to bulk-fetch TeamDataAnswers, avoiding N+1 queries per team/question cell."""
+    if not questions:
+        return {}
+    result = {}
+    for a in TeamDataAnswer.objects.filter(team__in=teams_queryset, question__in=questions).select_related('question'):
+        result.setdefault(a.team_id, {})[a.question_id] = a.display_value
+    return result
+
+
 def hunt_leaderboard(request, hunt):
     ruleset = hunt.teamrankingrule_set.order_by("rule_order").all()
+    data_questions = hunt.teamdataquestion_set.filter(visible_on_leaderboard=True).order_by("question_order")
 
     base_teams = hunt.team_set.exclude(playtester=True)
     for rule in ruleset:
         base_teams = rule.annotate_query(base_teams)
 
-    # Check if we should split the leaderboard by custom data
-    split_leaderboard = (
-        config.SPLIT_LEADERBOARD_BY_CUSTOM_DATA and
-        config.TEAM_CUSTOM_DATA_TYPE == 'boolean'
-    )
+    grouping_question = hunt.teamdataquestion_set.filter(used_for_grouping=True).first()
 
-    # Only split if there are teams in both categories
-    if split_leaderboard:
-        has_true_teams = base_teams.filter(custom_data="True").exists()
-        has_false_teams = base_teams.exclude(custom_data="True").exists()
-        split_leaderboard = has_true_teams and has_false_teams
+    processed_teams = _process_teams_for_leaderboard(base_teams, ruleset)
+    answers_by_team = _bulk_fetch_answers(base_teams, data_questions)
+    for team in processed_teams:
+        team.data_answers = answers_by_team.get(team.id, {})
 
     context = {
         'ruleset': ruleset,
         'hunt': hunt,
-        'split_leaderboard': split_leaderboard,
+        'data_questions': data_questions,
     }
 
-    if split_leaderboard:
-        # Process all three team lists
-        context['team_data'] = _process_teams_for_leaderboard(base_teams, ruleset)
-        context['team_data_true'] = _process_teams_for_leaderboard(
-            base_teams.filter(custom_data="True"), ruleset
-        )
-        context['team_data_false'] = _process_teams_for_leaderboard(
-            base_teams.exclude(custom_data="True"), ruleset
-        )
-        context['custom_data_name'] = config.TEAM_CUSTOM_DATA_NAME or "Custom Field"
+    if grouping_question:
+        group_answers = {
+            a.team_id: a.display_value
+            for a in TeamDataAnswer.objects.filter(question=grouping_question, team__in=base_teams)
+        }
+        groups = OrderedDict()
+        for team in processed_teams:
+            groups.setdefault(group_answers.get(team.id) or "Unspecified", []).append(team)
+        context['leaderboard_groups'] = [{'label': label, 'teams': teams} for label, teams in groups.items()]
+        context['grouping_question'] = grouping_question
+        context['team_data'] = processed_teams
     else:
-        context['team_data'] = _process_teams_for_leaderboard(base_teams, ruleset)
+        context['team_data'] = processed_teams
 
     return render(request, 'leaderboard.html', context)
 

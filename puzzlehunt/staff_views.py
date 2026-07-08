@@ -15,8 +15,10 @@ from django.core.exceptions import SuspiciousOperation
 from django.core.files import File
 from django.core.paginator import Paginator
 from django.forms import ValidationError
+from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 from django.shortcuts import redirect, render, get_object_or_404
+from django.db import transaction
 from django.db.models import F, Max, Count, Subquery, OuterRef, PositiveIntegerField, Min
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
@@ -29,8 +31,9 @@ from django.core import serializers
 
 from django_sendfile import sendfile
 from .utils import create_media_files, get_media_file_model, get_media_file_parent_model, create_hunt_export_zip, import_hunt_from_zip, import_hunt_from_zip, validate_hunt_zip
-from .hunt_views import protected_static
-from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile
+from .hunt_views import protected_static, _bulk_fetch_answers
+from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile, \
+    TeamDataQuestion
 from .tasks import import_hunt_background
 from .config_parser import parse_config, process_config_rules
 
@@ -240,11 +243,18 @@ def participant_info(request, hunt):
     
     # Generate email string for clipboard
     emails_string = ', '.join([user.email for user in regular_participants])
-    
+
+    data_questions = list(hunt.teamdataquestion_set.order_by("question_order"))
+    all_teams = hunt.team_set.order_by('name')
+    answers_by_team = _bulk_fetch_answers(all_teams, data_questions)
+    teams_with_answers = [(team, answers_by_team.get(team.id, {})) for team in all_teams]
+
     context = {
         'hunt': hunt,
         'stats': stats,
-        'emails_string': emails_string
+        'emails_string': emails_string,
+        'data_questions': data_questions,
+        'teams_with_answers': teams_with_answers,
     }
     return render(request, "staff_participant_info.html", context)
 
@@ -793,6 +803,111 @@ def hunt_puzzles(request, hunt):
 
     context = {'hunt': hunt, 'puzzles': puzzles}
     return render(request, "staff_hunt_puzzles.html", context)
+
+
+def _parse_question_options(raw_options):
+    """ Splits a comma/newline-separated options string into a clean list of option strings """
+    return [opt.strip() for opt in raw_options.replace('\n', ',').split(',') if opt.strip()]
+
+
+def _question_list_response(request, hunt):
+    questions = list(hunt.teamdataquestion_set.order_by('question_order'))
+    if request.htmx:
+        return render(request, "partials/_team_data_question_list.html", {'hunt': hunt, 'questions': questions})
+    return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
+
+
+def _apply_question_form_data(question, request):
+    question.name = request.POST.get('name', '').strip()
+    question.description = request.POST.get('description', '').strip()
+    question.question_type = request.POST.get('question_type', TeamDataQuestion.QuestionType.TEXT)
+    question.options = (
+        _parse_question_options(request.POST.get('options', ''))
+        if question.question_type == TeamDataQuestion.QuestionType.SELECT else []
+    )
+    question.required = request.POST.get('required') == 'on'
+    question.visible_on_leaderboard = request.POST.get('visible_on_leaderboard') == 'on'
+    question.used_for_grouping = request.POST.get('used_for_grouping') == 'on'
+
+
+@staff_member_required
+def team_data_questions(request, hunt):
+    """ Staff page for configuring the per-hunt custom team data registration questions. """
+    questions = list(hunt.teamdataquestion_set.order_by('question_order'))
+    context = {
+        'hunt': hunt,
+        'questions': questions,
+        'create_url': reverse('puzzlehunt:staff:team_data_question_create', args=[hunt.pk]),
+    }
+    return render(request, "staff_team_data_questions.html", context)
+
+
+@require_POST
+@staff_member_required
+def team_data_question_create(request, hunt):
+    next_order = (hunt.teamdataquestion_set.aggregate(Max('question_order'))['question_order__max'] or 0) + 1
+    question = TeamDataQuestion(hunt=hunt, question_order=next_order)
+    _apply_question_form_data(question, request)
+    try:
+        question.full_clean()
+        with transaction.atomic():
+            question.save()
+            if question.used_for_grouping:
+                hunt.teamdataquestion_set.exclude(pk=question.pk).update(used_for_grouping=False)
+        messages.success(request, "Question added.")
+    except ValidationError as e:
+        messages.error(request, "; ".join(sum(e.message_dict.values(), [])) if hasattr(e, 'message_dict') else str(e))
+
+    return _question_list_response(request, hunt)
+
+
+@require_POST
+@staff_member_required
+def team_data_question_update(request, hunt, pk):
+    question = get_object_or_404(TeamDataQuestion, pk=pk, hunt=hunt)
+    _apply_question_form_data(question, request)
+    try:
+        question.full_clean()
+        with transaction.atomic():
+            question.save()
+            if question.used_for_grouping:
+                hunt.teamdataquestion_set.exclude(pk=question.pk).update(used_for_grouping=False)
+        messages.success(request, "Question updated.")
+    except ValidationError as e:
+        messages.error(request, "; ".join(sum(e.message_dict.values(), [])) if hasattr(e, 'message_dict') else str(e))
+
+    return _question_list_response(request, hunt)
+
+
+@require_POST
+@staff_member_required
+def team_data_question_delete(request, hunt, pk):
+    question = get_object_or_404(TeamDataQuestion, pk=pk, hunt=hunt)
+    question.delete()
+    messages.success(request, "Question deleted.")
+
+    return _question_list_response(request, hunt)
+
+
+@require_POST
+@staff_member_required
+def team_data_question_move(request, hunt, pk):
+    question = get_object_or_404(TeamDataQuestion, pk=pk, hunt=hunt)
+    direction = request.POST.get('direction')
+    questions = list(hunt.teamdataquestion_set.order_by('question_order'))
+    index = next((i for i, q in enumerate(questions) if q.pk == question.pk), None)
+
+    if index is not None:
+        neighbor_index = index - 1 if direction == 'up' else index + 1
+        if 0 <= neighbor_index < len(questions):
+            neighbor = questions[neighbor_index]
+            with transaction.atomic():
+                # Swap through a placeholder value to avoid violating unique_together mid-update
+                TeamDataQuestion.objects.filter(pk=question.pk).update(question_order=-1)
+                TeamDataQuestion.objects.filter(pk=neighbor.pk).update(question_order=question.question_order)
+                TeamDataQuestion.objects.filter(pk=question.pk).update(question_order=neighbor.question_order)
+
+    return _question_list_response(request, hunt)
 
 
 @require_POST

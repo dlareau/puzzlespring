@@ -1,0 +1,57 @@
+{% extends 'staff_hunt_base.html' %}
+{% comment %}
+@template: staff_team_data_questions.html
+@description: Staff interface for configuring per-hunt custom team data registration questions.
+@extends: staff_hunt_base.html
+@blocks:
+  staff_content: Displays the ordered question list and an "add question" modal
+@context:
+  hunt: The current Hunt object
+  questions: List of TeamDataQuestion objects for the hunt, ordered by question_order
+  create_url: URL the "add question" form should POST to
+{% endcomment %}
+
+{% block title_meta_elements %}
+  {% with title="Staff Team Data Questions" %} {{ block.super }} {% endwith %}
+{% endblock title_meta_elements %}
+
+{% block staff_content %}
+  <div class="columns" x-data="{questionModal: false}">
+    <div class="column is-12 is-12-desktop is-10-widescreen is-offset-1-widescreen is-8-fullhd is-offset-2-fullhd">
+      <div class="level">
+        <div class="level-left">
+          <h3 class="title is-4">Team Data Questions</h3>
+        </div>
+        <div class="level-right">
+          <button class="button is-primary" @click="questionModal = true">
+            <span class="icon is-small"><i class="fa fa-plus"></i></span>
+            <span>Add Question</span>
+          </button>
+        </div>
+      </div>
+      <p class="help mb-4">
+        These questions are shown to teams when they register or update their team, and can optionally be
+        shown as leaderboard columns or used to split the leaderboard into groups.
+      </p>
+
+      <div id="team-data-question-list">
+        {% include "partials/_team_data_question_list.html" %}
+      </div>
+
+      <div class="modal" :class="questionModal && 'is-active'" x-cloak @keydown.escape.window="questionModal = false">
+        <div class="modal-background" @click="questionModal = false"></div>
+        <div class="modal-card">
+          <header class="modal-card-head">
+            <p class="modal-card-title">Add Question</p>
+            <button class="delete" aria-label="close" @click="questionModal = false"></button>
+          </header>
+          <section class="modal-card-body">
+            {% with action_url=create_url question=None %}
+              {% include "partials/_team_data_question_form.html" %}
+            {% endwith %}
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

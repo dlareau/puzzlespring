@@ -3,7 +3,8 @@ from django.db.models.functions import Lower
 
 from puzzlehunt.models import Hunt, Puzzle, Prepuzzle, Team, PuzzleStatus, Submission, User, Event,\
     Response, Hint, Update, TeamRankingRule, PuzzleFile, SolutionFile, HuntFile,\
-    PrepuzzleFile, DisplayOnlyHunt, NotificationPlatform, NotificationSubscription, CannedHint
+    PrepuzzleFile, DisplayOnlyHunt, NotificationPlatform, NotificationSubscription, CannedHint,\
+    TeamDataQuestion, TeamDataAnswer
 from puzzlehunt.utils import create_media_files
 from admin_interface.models import Theme
 from django.utils.translation import gettext_lazy as _
@@ -66,6 +67,13 @@ class TeamRankingRuleInline(admin.TabularInline):
     fields = ['rule_order', 'rule_type', 'visible']
 
 
+class TeamDataQuestionInline(admin.TabularInline):
+    model = TeamDataQuestion
+    extra = 1
+    ordering = ('question_order',)
+    fields = ['question_order', 'name', 'question_type', 'options', 'required', 'visible_on_leaderboard', 'used_for_grouping']
+
+
 class HuntAdminForm(forms.ModelForm):
     model = Hunt
 
@@ -82,7 +90,7 @@ class HuntAdminForm(forms.ModelForm):
 class HuntAdmin(admin.ModelAdmin):
     form = HuntAdminForm
     list_display = ['name', 'team_size_limit', 'start_date', 'is_current_hunt']
-    inlines = (TeamRankingRuleInline,)
+    inlines = (TeamRankingRuleInline, TeamDataQuestionInline)
     fieldsets = (
         ('Basic Info', {'fields': ('name', 'is_current_hunt', 'team_size_limit', 'location',
                         ('start_date', 'display_start_date'), ('end_date', 'display_end_date'))}),
@@ -268,7 +276,7 @@ class TeamAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Basic Info",
          {
-            'fields': ['name', 'hunt', 'members', 'custom_data', 'join_code'],
+            'fields': ['name', 'hunt', 'members', 'join_code'],
          }),
         ("Playtesting",
          {
@@ -313,6 +321,13 @@ class PuzzleStatusAdmin(admin.ModelAdmin):
             kwargs["queryset"] = Team.objects.select_related("hunt")
 
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+@admin.register(TeamDataAnswer)
+class TeamDataAnswerAdmin(admin.ModelAdmin):
+    list_display = [short_team_name, 'question', 'value']
+    list_filter = ['question__hunt', 'question']
+    autocomplete_fields = ['team']
 
 
 @admin.register(Hint)
