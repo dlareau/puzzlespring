@@ -15,7 +15,6 @@ from django.core.exceptions import SuspiciousOperation
 from django.core.files import File
 from django.core.paginator import Paginator
 from django.forms import ValidationError
-from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
 from django.shortcuts import redirect, render, get_object_or_404
 from django.db import transaction
@@ -31,9 +30,10 @@ from django.core import serializers
 
 from django_sendfile import sendfile
 from .utils import create_media_files, get_media_file_model, get_media_file_parent_model, create_hunt_export_zip, import_hunt_from_zip, import_hunt_from_zip, validate_hunt_zip
-from .hunt_views import protected_static, _bulk_fetch_answers
+from .hunt_views import protected_static, prefetch_data_answers, set_data_answer_values
 from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile, \
     TeamDataQuestion
+from .forms import TeamDataQuestionForm
 from .tasks import import_hunt_background
 from .config_parser import parse_config, process_config_rules
 
@@ -245,16 +245,15 @@ def participant_info(request, hunt):
     emails_string = ', '.join([user.email for user in regular_participants])
 
     data_questions = list(hunt.teamdataquestion_set.order_by("question_order"))
-    all_teams = hunt.team_set.order_by('name')
-    answers_by_team = _bulk_fetch_answers(all_teams, data_questions)
-    teams_with_answers = [(team, answers_by_team.get(team.id, {})) for team in all_teams]
+    all_teams = list(prefetch_data_answers(hunt.team_set.order_by('name'), data_questions))
+    set_data_answer_values(all_teams, data_questions)
 
     context = {
         'hunt': hunt,
         'stats': stats,
         'emails_string': emails_string,
         'data_questions': data_questions,
-        'teams_with_answers': teams_with_answers,
+        'teams': all_teams,
     }
     return render(request, "staff_participant_info.html", context)
 
@@ -805,39 +804,21 @@ def hunt_puzzles(request, hunt):
     return render(request, "staff_hunt_puzzles.html", context)
 
 
-def _parse_question_options(raw_options):
-    """ Splits a comma/newline-separated options string into a clean list of option strings """
-    return [opt.strip() for opt in raw_options.replace('\n', ',').split(',') if opt.strip()]
-
-
-def _question_list_response(request, hunt):
+def _questions_with_edit_forms(hunt):
+    """ The hunt's questions, each carrying a bound-to-instance TeamDataQuestionForm for inline editing. """
     questions = list(hunt.teamdataquestion_set.order_by('question_order'))
-    if request.htmx:
-        return render(request, "partials/_team_data_question_list.html", {'hunt': hunt, 'questions': questions})
-    return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
-
-
-def _apply_question_form_data(question, request):
-    question.name = request.POST.get('name', '').strip()
-    question.description = request.POST.get('description', '').strip()
-    question.question_type = request.POST.get('question_type', TeamDataQuestion.QuestionType.TEXT)
-    question.options = (
-        _parse_question_options(request.POST.get('options', ''))
-        if question.question_type == TeamDataQuestion.QuestionType.SELECT else []
-    )
-    question.required = request.POST.get('required') == 'on'
-    question.visible_on_leaderboard = request.POST.get('visible_on_leaderboard') == 'on'
-    question.used_for_grouping = request.POST.get('used_for_grouping') == 'on'
+    for question in questions:
+        question.edit_form = TeamDataQuestionForm(instance=question)
+    return questions
 
 
 @staff_member_required
 def team_data_questions(request, hunt):
     """ Staff page for configuring the per-hunt custom team data registration questions. """
-    questions = list(hunt.teamdataquestion_set.order_by('question_order'))
     context = {
         'hunt': hunt,
-        'questions': questions,
-        'create_url': reverse('puzzlehunt:staff:team_data_question_create', args=[hunt.pk]),
+        'questions': _questions_with_edit_forms(hunt),
+        'create_form': TeamDataQuestionForm(hunt=hunt),
     }
     return render(request, "staff_team_data_questions.html", context)
 
@@ -846,37 +827,40 @@ def team_data_questions(request, hunt):
 @staff_member_required
 def team_data_question_create(request, hunt):
     next_order = (hunt.teamdataquestion_set.aggregate(Max('question_order'))['question_order__max'] or 0) + 1
-    question = TeamDataQuestion(hunt=hunt, question_order=next_order)
-    _apply_question_form_data(question, request)
-    try:
-        question.full_clean()
-        with transaction.atomic():
-            question.save()
-            if question.used_for_grouping:
-                hunt.teamdataquestion_set.exclude(pk=question.pk).update(used_for_grouping=False)
+    form = TeamDataQuestionForm(
+        request.POST, hunt=hunt, instance=TeamDataQuestion(hunt=hunt, question_order=next_order)
+    )
+    if form.is_valid():
+        question = form.save()
+        if question.used_for_grouping:
+            hunt.teamdataquestion_set.exclude(pk=question.pk).update(used_for_grouping=False)
         messages.success(request, "Question added.")
-    except ValidationError as e:
-        messages.error(request, "; ".join(sum(e.message_dict.values(), [])) if hasattr(e, 'message_dict') else str(e))
+    else:
+        messages.error(request, "; ".join(f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()))
 
-    return _question_list_response(request, hunt)
+    if request.htmx:
+        return render(request, "partials/_team_data_question_list.html",
+                       {'hunt': hunt, 'questions': _questions_with_edit_forms(hunt)})
+    return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
 
 
 @require_POST
 @staff_member_required
 def team_data_question_update(request, hunt, pk):
     question = get_object_or_404(TeamDataQuestion, pk=pk, hunt=hunt)
-    _apply_question_form_data(question, request)
-    try:
-        question.full_clean()
-        with transaction.atomic():
-            question.save()
-            if question.used_for_grouping:
-                hunt.teamdataquestion_set.exclude(pk=question.pk).update(used_for_grouping=False)
+    form = TeamDataQuestionForm(request.POST, instance=question)
+    if form.is_valid():
+        question = form.save()
+        if question.used_for_grouping:
+            hunt.teamdataquestion_set.exclude(pk=question.pk).update(used_for_grouping=False)
         messages.success(request, "Question updated.")
-    except ValidationError as e:
-        messages.error(request, "; ".join(sum(e.message_dict.values(), [])) if hasattr(e, 'message_dict') else str(e))
+    else:
+        messages.error(request, "; ".join(f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()))
 
-    return _question_list_response(request, hunt)
+    if request.htmx:
+        return render(request, "partials/_team_data_question_list.html",
+                       {'hunt': hunt, 'questions': _questions_with_edit_forms(hunt)})
+    return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
 
 
 @require_POST
@@ -886,7 +870,10 @@ def team_data_question_delete(request, hunt, pk):
     question.delete()
     messages.success(request, "Question deleted.")
 
-    return _question_list_response(request, hunt)
+    if request.htmx:
+        return render(request, "partials/_team_data_question_list.html",
+                       {'hunt': hunt, 'questions': _questions_with_edit_forms(hunt)})
+    return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
 
 
 @require_POST
@@ -906,6 +893,11 @@ def team_data_question_move(request, hunt, pk):
                 TeamDataQuestion.objects.filter(pk=question.pk).update(question_order=-1)
                 TeamDataQuestion.objects.filter(pk=neighbor.pk).update(question_order=question.question_order)
                 TeamDataQuestion.objects.filter(pk=question.pk).update(question_order=neighbor.question_order)
+
+    if request.htmx:
+        return render(request, "partials/_team_data_question_list.html",
+                       {'hunt': hunt, 'questions': _questions_with_edit_forms(hunt)})
+    return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
 
     return _question_list_response(request, hunt)
 

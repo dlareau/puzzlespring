@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
 from django.contrib import messages
-from django.db.models import F
+from django.db.models import F, Prefetch
 from django.db import transaction
 
 from django_htmx.http import retarget, reswap
@@ -366,30 +366,41 @@ def _process_teams_for_leaderboard(teams_queryset, ruleset):
     return processed_teams
 
 
-def _bulk_fetch_answers(teams_queryset, questions):
-    """Helper function to bulk-fetch TeamDataAnswers, avoiding N+1 queries per team/question cell."""
+def prefetch_data_answers(teams_queryset, questions):
+    """ Attaches a filtered, select_related prefetch of TeamDataAnswer rows to `teams_queryset`,
+    so that later access to each team's `.prefetched_data_answers` costs one query total instead
+    of one per team. Must be called before the queryset is evaluated. """
     if not questions:
-        return {}
-    result = {}
-    for a in TeamDataAnswer.objects.filter(team__in=teams_queryset, question__in=questions).select_related('question'):
-        result.setdefault(a.team_id, {})[a.question_id] = a.display_value
-    return result
+        return teams_queryset
+    return teams_queryset.prefetch_related(Prefetch(
+        'teamdataanswer_set',
+        queryset=TeamDataAnswer.objects.filter(question__in=questions).select_related('question'),
+        to_attr='prefetched_data_answers',
+    ))
+
+
+def set_data_answer_values(teams, questions):
+    """ For each team (already prefetched via prefetch_data_answers), attaches
+    `data_answer_values`: a list of display strings positionally aligned with `questions`,
+    using TeamDataAnswer.NO_ANSWER_DISPLAY for any question the team hasn't answered. """
+    for team in teams:
+        by_question = {a.question_id: a.display_value for a in getattr(team, 'prefetched_data_answers', [])}
+        team.data_answer_values = [by_question.get(q.id, TeamDataAnswer.NO_ANSWER_DISPLAY) for q in questions]
 
 
 def hunt_leaderboard(request, hunt):
     ruleset = hunt.teamrankingrule_set.order_by("rule_order").all()
-    data_questions = hunt.teamdataquestion_set.filter(visible_on_leaderboard=True).order_by("question_order")
+    data_questions = list(hunt.teamdataquestion_set.filter(visible_on_leaderboard=True).order_by("question_order"))
 
     base_teams = hunt.team_set.exclude(playtester=True)
     for rule in ruleset:
         base_teams = rule.annotate_query(base_teams)
+    base_teams = prefetch_data_answers(base_teams, data_questions)
 
     grouping_question = hunt.teamdataquestion_set.filter(used_for_grouping=True).first()
 
     processed_teams = _process_teams_for_leaderboard(base_teams, ruleset)
-    answers_by_team = _bulk_fetch_answers(base_teams, data_questions)
-    for team in processed_teams:
-        team.data_answers = answers_by_team.get(team.id, {})
+    set_data_answer_values(processed_teams, data_questions)
 
     context = {
         'ruleset': ruleset,

@@ -128,11 +128,11 @@
               <th>{{ question.name }}</th>
             {% endfor %}
           </tr>
-          {% for team, answers in teams_with_answers %}
+          {% for team in teams %}
             <tr>
               <td>{{ team.name }}</td>
-              {% for question in data_questions %}
-                <td>{{ answers|get_item:question.id|default:"—" }}</td>
+              {% for value in team.data_answer_values %}
+                <td>{{ value }}</td>
               {% endfor %}
             </tr>
           {% endfor %}

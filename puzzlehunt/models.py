@@ -1514,6 +1514,11 @@ class TeamDataAnswer(models.Model):
         verbose_name_plural = "team data answers"
         unique_together = ('question', 'team')
 
+    # The single canonical placeholder for "no answer" - used both below for a blank stored
+    # value and by callers (e.g. leaderboard/participant-info rendering) for a team that has
+    # no TeamDataAnswer row at all, so there's only one place defining what that looks like.
+    NO_ANSWER_DISPLAY = "—"
+
     question = models.ForeignKey(
         TeamDataQuestion,
         on_delete=models.CASCADE,
@@ -1536,7 +1541,7 @@ class TeamDataAnswer(models.Model):
     def display_value(self):
         if self.question.question_type == TeamDataQuestion.QuestionType.BOOLEAN:
             return "Yes" if self.value == "True" else "No"
-        return self.value or "—"
+        return self.value or self.NO_ANSWER_DISPLAY
 
 
 class Update(models.Model):

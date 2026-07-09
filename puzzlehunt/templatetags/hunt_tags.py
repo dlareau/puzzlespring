@@ -128,11 +128,6 @@ def get_attribute(obj, attribute):
     return val
 
 
-@register.filter()
-def get_item(d, key):
-    return d.get(key)
-
-
 @register.simple_tag
 def active_page(request, view_name):
     if not request:

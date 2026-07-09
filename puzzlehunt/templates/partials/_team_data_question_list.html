@@ -1,10 +1,11 @@
+{% load crispy_forms_tags %}
 {% comment %}
 @template: _team_data_question_list.html
 @description: Renders the ordered list of TeamDataQuestion rows for a hunt, each editable/deletable/movable via HTMX.
 @context:
   hunt: The Hunt object
+  questions: List of TeamDataQuestion objects for the hunt, ordered by question_order, each with an edit_form
 {% endcomment %}
-{% with questions=hunt.teamdataquestion_set.all %}
   {% if questions %}
     {% for question in questions %}
       <div class="box p-4" x-data="{editing: false}">
@@ -65,10 +66,7 @@
           </div>
         </div>
         <div x-show="editing" x-cloak>
-          {% url 'puzzlehunt:staff:team_data_question_update' hunt.id question.pk as update_url %}
-          {% with action_url=update_url %}
-            {% include "partials/_team_data_question_form.html" %}
-          {% endwith %}
+          {% crispy question.edit_form %}
           <button class="button is-small mt-2" @click="editing = false">Cancel</button>
         </div>
       </div>
@@ -76,4 +74,3 @@
   {% else %}
     <p class="has-text-centered has-text-grey">No custom questions configured for this hunt.</p>
   {% endif %}
-{% endwith %}

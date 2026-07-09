@@ -1,4 +1,5 @@
 {% extends 'staff_hunt_base.html' %}
+{% load crispy_forms_tags %}
 {% comment %}
 @template: staff_team_data_questions.html
 @description: Staff interface for configuring per-hunt custom team data registration questions.
@@ -7,8 +8,8 @@
   staff_content: Displays the ordered question list and an "add question" modal
 @context:
   hunt: The current Hunt object
-  questions: List of TeamDataQuestion objects for the hunt, ordered by question_order
-  create_url: URL the "add question" form should POST to
+  questions: List of TeamDataQuestion objects for the hunt, ordered by question_order, each with an edit_form
+  create_form: TeamDataQuestionForm for adding a new question
 {% endcomment %}
 
 {% block title_meta_elements %}
@@ -46,9 +47,7 @@
             <button class="delete" aria-label="close" @click="questionModal = false"></button>
           </header>
           <section class="modal-card-body">
-            {% with action_url=create_url question=None %}
-              {% include "partials/_team_data_question_form.html" %}
-            {% endwith %}
+            {% crispy create_form %}
           </section>
         </div>
       </div>

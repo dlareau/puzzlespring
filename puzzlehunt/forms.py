@@ -128,6 +128,62 @@ class TeamForm(ModelForm):
         return team
 
 
+class TeamDataQuestionForm(ModelForm):
+    options = CharField(
+        required=False,
+        help_text='Comma-separated list of choices. Only used when Type is "Select".',
+    )
+
+    class Meta:
+        model = TeamDataQuestion
+        fields = ['name', 'description', 'question_type', 'required', 'visible_on_leaderboard', 'used_for_grouping']
+
+    def __init__(self, *args, hunt=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.hunt = hunt or (self.instance.hunt if self.instance.hunt_id else None)
+
+        if self.instance.pk:
+            self.initial['options'] = ', '.join(self.instance.options)
+            url = reverse('puzzlehunt:staff:team_data_question_update', args=[self.hunt.pk, self.instance.pk])
+        else:
+            url = reverse('puzzlehunt:staff:team_data_question_create', args=[self.hunt.pk])
+
+        self.helper = FormHelper()
+        self.helper.form_class = 'block'
+        self.helper.attrs = {'hx-post': url, 'hx-target': '#team-data-question-list', 'hx-swap': 'innerHTML'}
+        self.helper.form_action = url
+        self.helper.layout = Layout(
+            Field('name'),
+            Field('description'),
+            Field('question_type'),
+            Field('options'),
+            Field('required'),
+            Field('visible_on_leaderboard'),
+            Field('used_for_grouping'),
+            Div(Div(Submit('save', 'Save', css_class="is-primary"), css_class="level-right"), css_class="level"),
+        )
+
+    def clean_options(self):
+        raw = self.cleaned_data.get('options', '')
+        return [opt.strip() for opt in raw.replace('\n', ',').split(',') if opt.strip()]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Non-select questions never store options, regardless of stray text left in the field
+        if cleaned_data.get('question_type') != TeamDataQuestion.QuestionType.SELECT:
+            cleaned_data['options'] = []
+        return cleaned_data
+
+    def _post_clean(self):
+        # `options` is a plain CharField proxying the model's JSONField, so it isn't in
+        # Meta.fields and Django's ModelForm machinery won't copy it onto the instance for
+        # us. Set it before super()._post_clean() runs instance.full_clean(), so
+        # TeamDataQuestion.clean()'s select/options cross-check sees the right value and can
+        # attach its error to this form's `options` field.
+        self.instance.options = self.cleaned_data.get('options', [])
+        super()._post_clean()
+
+
 class UserEditForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
