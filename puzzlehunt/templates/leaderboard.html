@@ -39,29 +39,27 @@
   <br>
   <br>
   {% if grouping_question %}
-    <div x-data="{ showAll: false }">
-      <div class="level">
-        <div class="level-left">
-          <div class="notification is-light is-size-6 mb-0">
-            <strong>Grouped by {{ grouping_question.name }}</strong>
-          </div>
-        </div>
-        <div class="level-right">
-          <button class="button is-small" @click="showAll = !showAll">
-            <span x-show="!showAll">View combined</span>
-            <span x-show="showAll" x-cloak>View grouped</span>
-          </button>
-        </div>
+    <div x-data="{ activeTab: 'all' }">
+      <div class="tabs is-boxed">
+        <ul>
+          <li :class="{ 'is-active': activeTab === 'all' }">
+            <a @click.prevent="activeTab = 'all'">All Teams</a>
+          </li>
+          {% for group in leaderboard_groups %}
+            <li :class="{ 'is-active': activeTab === 'group-{{ forloop.counter0 }}' }">
+              <a @click.prevent="activeTab = 'group-{{ forloop.counter0 }}'">{{ group.label }}</a>
+            </li>
+          {% endfor %}
+        </ul>
       </div>
-      <div x-show="showAll" x-cloak>
+      <div x-show="activeTab === 'all'">
         {% include "partials/_leaderboard_table.html" with teams=team_data %}
       </div>
-      <div x-show="!showAll">
-        {% for group in leaderboard_groups %}
-          <h2 class="title is-5 has-text-centered mt-5">{{ group.label }}</h2>
+      {% for group in leaderboard_groups %}
+        <div x-show="activeTab === 'group-{{ forloop.counter0 }}'" x-cloak>
           {% include "partials/_leaderboard_table.html" with teams=group.teams %}
-        {% endfor %}
-      </div>
+        </div>
+      {% endfor %}
     </div>
   {% else %}
     {% include "partials/_leaderboard_table.html" with teams=team_data %}

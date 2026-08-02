@@ -258,7 +258,7 @@ def test_leaderboard_groups_by_select_question(client, basic_hunt, basic_user):
     client.force_login(basic_user)
     response = client.get(reverse('puzzlehunt:hunt_leaderboard', args=[basic_hunt.pk]))
     content = response.content.decode()
-    assert "Grouped by Division" in content
+    assert "All Teams" in content
     assert "Rookie" in content
     assert "Veteran" in content
 
@@ -268,4 +268,24 @@ def test_leaderboard_no_grouping_when_no_question_configured(client, basic_hunt,
     client.force_login(basic_user)
     response = client.get(reverse('puzzlehunt:hunt_leaderboard', args=[basic_hunt.pk]))
     content = response.content.decode()
-    assert "Grouped by" not in content
+    assert "All Teams" not in content
+
+
+def test_leaderboard_groups_ordered_by_select_options(client, basic_hunt, basic_user):
+    question = TeamDataQuestion.objects.create(
+        hunt=basic_hunt, name="Division", question_type=TeamDataQuestion.QuestionType.SELECT,
+        options=["Veteran", "Rookie", "Legend"], question_order=1, used_for_grouping=True
+    )
+    t1 = Team.objects.create(name="Team A", hunt=basic_hunt)
+    t2 = Team.objects.create(name="Team B", hunt=basic_hunt)
+    # Answered in the opposite order from `options`, and with no team for "Legend" or unanswered.
+    TeamDataAnswer.objects.create(question=question, team=t1, value="Rookie")
+    TeamDataAnswer.objects.create(question=question, team=t2, value="Veteran")
+    t3 = Team.objects.create(name="Team C", hunt=basic_hunt)  # unanswered -> "Unspecified"
+
+    client.force_login(basic_user)
+    response = client.get(reverse('puzzlehunt:hunt_leaderboard', args=[basic_hunt.pk]))
+    labels = [group['label'] for group in response.context['leaderboard_groups']]
+    # "Legend" has no answering team so it's dropped; "Unspecified" (t3) sorts after the
+    # pre-seeded option order regardless of team/answer creation order.
+    assert labels == ["Veteran", "Rookie", "Unspecified"]

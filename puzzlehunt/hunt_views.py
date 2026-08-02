@@ -19,7 +19,7 @@ from django_sendfile import sendfile
 from constance import config
 
 from .forms import AnswerForm
-from .models import Puzzle, Submission, Prepuzzle, Hint, PuzzleStatus, Update, TeamDataAnswer
+from .models import Puzzle, Submission, Prepuzzle, Hint, PuzzleStatus, Update, TeamDataQuestion, TeamDataAnswer
 from .utils import get_media_file_model
 
 import logging
@@ -413,10 +413,20 @@ def hunt_leaderboard(request, hunt):
             a.team_id: a.display_value
             for a in TeamDataAnswer.objects.filter(question=grouping_question, team__in=base_teams)
         }
-        groups = OrderedDict()
+        if grouping_question.question_type == TeamDataQuestion.QuestionType.SELECT:
+            ordered_labels = grouping_question.options
+        elif grouping_question.question_type == TeamDataQuestion.QuestionType.BOOLEAN:
+            ordered_labels = ["Yes", "No"]
+        else:
+            ordered_labels = []
+        # Pre-seed group order from the question's defined option order; "Unspecified" and any
+        # other labels are appended in first-encountered order after that, so they land last.
+        groups = OrderedDict((label, []) for label in ordered_labels)
         for team in processed_teams:
             groups.setdefault(group_answers.get(team.id) or "Unspecified", []).append(team)
-        context['leaderboard_groups'] = [{'label': label, 'teams': teams} for label, teams in groups.items()]
+        context['leaderboard_groups'] = [
+            {'label': label, 'teams': teams} for label, teams in groups.items() if teams
+        ]
         context['grouping_question'] = grouping_question
         context['team_data'] = processed_teams
     else:
