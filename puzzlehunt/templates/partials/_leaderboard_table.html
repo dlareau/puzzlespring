@@ -2,8 +2,9 @@
 @template: _leaderboard_table.html
 @description: Reusable leaderboard table partial for displaying team rankings.
 @context:
-  teams: List of Team objects with computed_rank attribute
+  teams: List of Team objects with computed_rank and data_answer_values attributes
   ruleset: List of LeaderboardRule objects defining the columns and ranking rules
+  data_questions: List of TeamDataQuestion objects visible on the leaderboard
   hunt: The Hunt object being displayed
 {% endcomment %}
 
@@ -20,6 +21,9 @@
         {% if rule.visible %}
           <th>{{ rule.display_name }}</th>
         {% endif %}
+      {% endfor %}
+      {% for question in data_questions %}
+        <th>{{ question.name }}</th>
       {% endfor %}
     </tr>
     {% for team in teams %}
@@ -42,6 +46,9 @@
             <td>{{ val }}</td>
           {% endif %}
         {% endif %}
+      {% endfor %}
+      {% for value in team.data_answer_values %}
+        <td>{{ value }}</td>
       {% endfor %}
     </tr>
     {% endfor %}

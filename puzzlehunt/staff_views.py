@@ -17,6 +17,7 @@ from django.core.paginator import Paginator
 from django.forms import ValidationError
 from django.views.decorators.http import require_GET, require_POST
 from django.shortcuts import redirect, render, get_object_or_404
+from django.db import transaction
 from django.db.models import F, Max, Count, Subquery, OuterRef, PositiveIntegerField, Min
 from django.db.models.functions import Coalesce
 from django.http import HttpResponse
@@ -29,8 +30,10 @@ from django.core import serializers
 
 from django_sendfile import sendfile
 from .utils import create_media_files, get_media_file_model, get_media_file_parent_model, create_hunt_export_zip, import_hunt_from_zip, import_hunt_from_zip, validate_hunt_zip
-from .hunt_views import protected_static
-from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile
+from .hunt_views import protected_static, prefetch_data_answers, set_data_answer_values
+from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile, \
+    TeamDataQuestion
+from .forms import TeamDataQuestionForm
 from .tasks import import_hunt_background
 from .config_parser import parse_config, process_config_rules
 
@@ -240,11 +243,17 @@ def participant_info(request, hunt):
     
     # Generate email string for clipboard
     emails_string = ', '.join([user.email for user in regular_participants])
-    
+
+    data_questions = list(hunt.teamdataquestion_set.order_by("question_order"))
+    all_teams = list(prefetch_data_answers(hunt.team_set.order_by('name'), data_questions))
+    set_data_answer_values(all_teams, data_questions)
+
     context = {
         'hunt': hunt,
         'stats': stats,
-        'emails_string': emails_string
+        'emails_string': emails_string,
+        'data_questions': data_questions,
+        'teams': all_teams,
     }
     return render(request, "staff_participant_info.html", context)
 
@@ -793,6 +802,104 @@ def hunt_puzzles(request, hunt):
 
     context = {'hunt': hunt, 'puzzles': puzzles}
     return render(request, "staff_hunt_puzzles.html", context)
+
+
+def _questions_with_edit_forms(hunt):
+    """ The hunt's questions, each carrying a bound-to-instance TeamDataQuestionForm for inline editing. """
+    questions = list(hunt.teamdataquestion_set.order_by('question_order'))
+    for question in questions:
+        question.edit_form = TeamDataQuestionForm(instance=question)
+    return questions
+
+
+@staff_member_required
+def team_data_questions(request, hunt):
+    """ Staff page for configuring the per-hunt custom team data registration questions. """
+    context = {
+        'hunt': hunt,
+        'questions': _questions_with_edit_forms(hunt),
+        'create_form': TeamDataQuestionForm(hunt=hunt),
+    }
+    return render(request, "staff_team_data_questions.html", context)
+
+
+@require_POST
+@staff_member_required
+def team_data_question_create(request, hunt):
+    next_order = (hunt.teamdataquestion_set.aggregate(Max('question_order'))['question_order__max'] or 0) + 1
+    form = TeamDataQuestionForm(
+        request.POST, hunt=hunt, instance=TeamDataQuestion(hunt=hunt, question_order=next_order)
+    )
+    if form.is_valid():
+        question = form.save()
+        if question.used_for_grouping:
+            hunt.teamdataquestion_set.exclude(pk=question.pk).update(used_for_grouping=False)
+        messages.success(request, "Question added.")
+    else:
+        messages.error(request, "; ".join(f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()))
+
+    if request.htmx:
+        return render(request, "partials/_team_data_question_list.html",
+                       {'hunt': hunt, 'questions': _questions_with_edit_forms(hunt)})
+    return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
+
+
+@require_POST
+@staff_member_required
+def team_data_question_update(request, hunt, pk):
+    question = get_object_or_404(TeamDataQuestion, pk=pk, hunt=hunt)
+    form = TeamDataQuestionForm(request.POST, instance=question)
+    if form.is_valid():
+        question = form.save()
+        if question.used_for_grouping:
+            hunt.teamdataquestion_set.exclude(pk=question.pk).update(used_for_grouping=False)
+        messages.success(request, "Question updated.")
+    else:
+        messages.error(request, "; ".join(f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()))
+
+    if request.htmx:
+        return render(request, "partials/_team_data_question_list.html",
+                       {'hunt': hunt, 'questions': _questions_with_edit_forms(hunt)})
+    return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
+
+
+@require_POST
+@staff_member_required
+def team_data_question_delete(request, hunt, pk):
+    question = get_object_or_404(TeamDataQuestion, pk=pk, hunt=hunt)
+    question.delete()
+    messages.success(request, "Question deleted.")
+
+    if request.htmx:
+        return render(request, "partials/_team_data_question_list.html",
+                       {'hunt': hunt, 'questions': _questions_with_edit_forms(hunt)})
+    return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
+
+
+@require_POST
+@staff_member_required
+def team_data_question_move(request, hunt, pk):
+    question = get_object_or_404(TeamDataQuestion, pk=pk, hunt=hunt)
+    direction = request.POST.get('direction')
+    questions = list(hunt.teamdataquestion_set.order_by('question_order'))
+    index = next((i for i, q in enumerate(questions) if q.pk == question.pk), None)
+
+    if index is not None:
+        neighbor_index = index - 1 if direction == 'up' else index + 1
+        if 0 <= neighbor_index < len(questions):
+            neighbor = questions[neighbor_index]
+            with transaction.atomic():
+                # Swap through a placeholder value to avoid violating unique_together mid-update
+                TeamDataQuestion.objects.filter(pk=question.pk).update(question_order=-1)
+                TeamDataQuestion.objects.filter(pk=neighbor.pk).update(question_order=question.question_order)
+                TeamDataQuestion.objects.filter(pk=question.pk).update(question_order=neighbor.question_order)
+
+    if request.htmx:
+        return render(request, "partials/_team_data_question_list.html",
+                       {'hunt': hunt, 'questions': _questions_with_edit_forms(hunt)})
+    return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
+
+    return _question_list_response(request, hunt)
 
 
 @require_POST

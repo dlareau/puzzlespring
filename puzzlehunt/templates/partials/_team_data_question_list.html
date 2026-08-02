@@ -1,0 +1,76 @@
+{% load crispy_forms_tags %}
+{% comment %}
+@template: _team_data_question_list.html
+@description: Renders the ordered list of TeamDataQuestion rows for a hunt, each editable/deletable/movable via HTMX.
+@context:
+  hunt: The Hunt object
+  questions: List of TeamDataQuestion objects for the hunt, ordered by question_order, each with an edit_form
+{% endcomment %}
+  {% if questions %}
+    {% for question in questions %}
+      <div class="box p-4" x-data="{editing: false}">
+        <div x-show="!editing">
+          <div class="columns is-vcentered is-mobile is-multiline">
+            <div class="column is-narrow">
+              <div class="buttons has-addons">
+                <button class="button is-small"
+                        hx-post="{% url 'puzzlehunt:staff:team_data_question_move' hunt.id question.pk %}"
+                        hx-vals='{"direction": "up"}'
+                        hx-target="#team-data-question-list" hx-swap="innerHTML"
+                        {% if forloop.first %}disabled{% endif %}>
+                  <span class="icon is-small"><i class="fa fa-arrow-up"></i></span>
+                </button>
+                <button class="button is-small"
+                        hx-post="{% url 'puzzlehunt:staff:team_data_question_move' hunt.id question.pk %}"
+                        hx-vals='{"direction": "down"}'
+                        hx-target="#team-data-question-list" hx-swap="innerHTML"
+                        {% if forloop.last %}disabled{% endif %}>
+                  <span class="icon is-small"><i class="fa fa-arrow-down"></i></span>
+                </button>
+              </div>
+            </div>
+            <div class="column is-narrow">
+              {% if question.question_type == "TEXT" %}
+                <span class="tag is-info">Text</span>
+              {% elif question.question_type == "BOOL" %}
+                <span class="tag is-warning">Yes/No</span>
+              {% else %}
+                <span class="tag is-primary">Select</span>
+              {% endif %}
+            </div>
+            <div class="column">
+              <strong>{{ question.name }}</strong>
+              {% if question.description %}<p class="help">{{ question.description }}</p>{% endif %}
+              {% if question.question_type == "SEL" %}
+                <p class="help">Options: {{ question.options|join:", " }}</p>
+              {% endif %}
+              <div>
+                {% if question.required %}<span class="tag is-light">Required</span>{% endif %}
+                {% if question.visible_on_leaderboard %}<span class="tag is-light">On Leaderboard</span>{% endif %}
+                {% if question.used_for_grouping %}<span class="tag is-light">Groups Leaderboard</span>{% endif %}
+              </div>
+            </div>
+            <div class="column is-narrow">
+              <div class="buttons">
+                <button class="button is-small" @click="editing = true">
+                  <span class="icon is-small"><i class="fa fa-pencil"></i></span>
+                </button>
+                <button class="button is-small is-danger"
+                        onclick="return confirm('Delete this question? All team answers to it will also be deleted.')"
+                        hx-post="{% url 'puzzlehunt:staff:team_data_question_delete' hunt.id question.pk %}"
+                        hx-target="#team-data-question-list" hx-swap="innerHTML">
+                  <span class="icon is-small"><i class="fa fa-trash"></i></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div x-show="editing" x-cloak>
+          {% crispy question.edit_form %}
+          <button class="button is-small mt-2" @click="editing = false">Cancel</button>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="has-text-centered has-text-grey">No custom questions configured for this hunt.</p>
+  {% endif %}

@@ -1,4 +1,5 @@
 from crispy_forms.utils import render_crispy_form
+from collections import OrderedDict
 from pathlib import Path
 
 from django.conf import settings
@@ -9,7 +10,7 @@ from django.utils import timezone
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
 from django.contrib import messages
-from django.db.models import F
+from django.db.models import F, Prefetch
 from django.db import transaction
 
 from django_htmx.http import retarget, reswap
@@ -18,7 +19,7 @@ from django_sendfile import sendfile
 from constance import config
 
 from .forms import AnswerForm
-from .models import Puzzle, Submission, Prepuzzle, Hint, PuzzleStatus, Update
+from .models import Puzzle, Submission, Prepuzzle, Hint, PuzzleStatus, Update, TeamDataQuestion, TeamDataAnswer
 from .utils import get_media_file_model
 
 import logging
@@ -365,43 +366,71 @@ def _process_teams_for_leaderboard(teams_queryset, ruleset):
     return processed_teams
 
 
+def prefetch_data_answers(teams_queryset, questions):
+    """ Attaches a filtered, select_related prefetch of TeamDataAnswer rows to `teams_queryset`,
+    so that later access to each team's `.prefetched_data_answers` costs one query total instead
+    of one per team. Must be called before the queryset is evaluated. """
+    if not questions:
+        return teams_queryset
+    return teams_queryset.prefetch_related(Prefetch(
+        'teamdataanswer_set',
+        queryset=TeamDataAnswer.objects.filter(question__in=questions).select_related('question'),
+        to_attr='prefetched_data_answers',
+    ))
+
+
+def set_data_answer_values(teams, questions):
+    """ For each team (already prefetched via prefetch_data_answers), attaches
+    `data_answer_values`: a list of display strings positionally aligned with `questions`,
+    using TeamDataAnswer.NO_ANSWER_DISPLAY for any question the team hasn't answered. """
+    for team in teams:
+        by_question = {a.question_id: a.display_value for a in getattr(team, 'prefetched_data_answers', [])}
+        team.data_answer_values = [by_question.get(q.id, TeamDataAnswer.NO_ANSWER_DISPLAY) for q in questions]
+
+
 def hunt_leaderboard(request, hunt):
     ruleset = hunt.teamrankingrule_set.order_by("rule_order").all()
+    data_questions = list(hunt.teamdataquestion_set.filter(visible_on_leaderboard=True).order_by("question_order"))
 
     base_teams = hunt.team_set.exclude(playtester=True)
     for rule in ruleset:
         base_teams = rule.annotate_query(base_teams)
+    base_teams = prefetch_data_answers(base_teams, data_questions)
 
-    # Check if we should split the leaderboard by custom data
-    split_leaderboard = (
-        config.SPLIT_LEADERBOARD_BY_CUSTOM_DATA and
-        config.TEAM_CUSTOM_DATA_TYPE == 'boolean'
-    )
+    grouping_question = hunt.teamdataquestion_set.filter(used_for_grouping=True).first()
 
-    # Only split if there are teams in both categories
-    if split_leaderboard:
-        has_true_teams = base_teams.filter(custom_data="True").exists()
-        has_false_teams = base_teams.exclude(custom_data="True").exists()
-        split_leaderboard = has_true_teams and has_false_teams
+    processed_teams = _process_teams_for_leaderboard(base_teams, ruleset)
+    set_data_answer_values(processed_teams, data_questions)
 
     context = {
         'ruleset': ruleset,
         'hunt': hunt,
-        'split_leaderboard': split_leaderboard,
+        'data_questions': data_questions,
     }
 
-    if split_leaderboard:
-        # Process all three team lists
-        context['team_data'] = _process_teams_for_leaderboard(base_teams, ruleset)
-        context['team_data_true'] = _process_teams_for_leaderboard(
-            base_teams.filter(custom_data="True"), ruleset
-        )
-        context['team_data_false'] = _process_teams_for_leaderboard(
-            base_teams.exclude(custom_data="True"), ruleset
-        )
-        context['custom_data_name'] = config.TEAM_CUSTOM_DATA_NAME or "Custom Field"
+    if grouping_question:
+        group_answers = {
+            a.team_id: a.display_value
+            for a in TeamDataAnswer.objects.filter(question=grouping_question, team__in=base_teams)
+        }
+        if grouping_question.question_type == TeamDataQuestion.QuestionType.SELECT:
+            ordered_labels = grouping_question.options
+        elif grouping_question.question_type == TeamDataQuestion.QuestionType.BOOLEAN:
+            ordered_labels = ["Yes", "No"]
+        else:
+            ordered_labels = []
+        # Pre-seed group order from the question's defined option order; "Unspecified" and any
+        # other labels are appended in first-encountered order after that, so they land last.
+        groups = OrderedDict((label, []) for label in ordered_labels)
+        for team in processed_teams:
+            groups.setdefault(group_answers.get(team.id) or "Unspecified", []).append(team)
+        context['leaderboard_groups'] = [
+            {'label': label, 'teams': teams} for label, teams in groups.items() if teams
+        ]
+        context['grouping_question'] = grouping_question
+        context['team_data'] = processed_teams
     else:
-        context['team_data'] = _process_teams_for_leaderboard(base_teams, ruleset)
+        context['team_data'] = processed_teams
 
     return render(request, 'leaderboard.html', context)
 

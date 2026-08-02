@@ -5,24 +5,24 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, Div
 from django.conf import settings
 from django.forms import (
-    ModelForm, Form, CharField, FileField, 
+    ModelForm, Form, CharField, FileField, ChoiceField,
     TextInput, MultipleChoiceField, CheckboxSelectMultiple,
     BooleanField, CheckboxInput
 )
 from django.contrib.auth.forms import ValidationError
 from django.urls import reverse
-from constance import config
 
-from .models import Team, User, NotificationSubscription, Event
+from .models import Team, User, NotificationSubscription, Event, TeamDataQuestion, TeamDataAnswer
 from .notifications import NotificationHandler
 
 class TeamForm(ModelForm):
     class Meta:
         model = Team
-        fields = ['name', 'custom_data']
+        fields = ['name']
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, hunt=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.hunt = hunt or (self.instance.hunt if self.instance.hunt_id else None)
         self.helper = FormHelper()
         if self.instance.pk:
             url = reverse("puzzlehunt:team_update", kwargs={'pk': self.instance.pk})
@@ -34,47 +34,60 @@ class TeamForm(ModelForm):
         self.helper.form_class = 'block'
         self.helper.form_action = url
 
-        # Hide custom_data field if no name is set
-        if not config.TEAM_CUSTOM_DATA_NAME:
-            self.fields['custom_data'].widget = TextInput(attrs={'style': 'display: none;'})
-            layout_fields = ['name']
-        else:
-            self.fields['custom_data'].label = config.TEAM_CUSTOM_DATA_NAME
-            self.fields['custom_data'].help_text = config.TEAM_CUSTOM_DATA_DESCRIPTION
-            
-            # Handle different field types
-            if config.TEAM_CUSTOM_DATA_TYPE == 'boolean':
-                # Convert the field to a BooleanField
-                self.fields['custom_data'] = BooleanField(
-                    required=False,
-                    label=config.TEAM_CUSTOM_DATA_NAME,
-                    help_text=config.TEAM_CUSTOM_DATA_DESCRIPTION
+        self.questions = (
+            list(self.hunt.teamdataquestion_set.order_by('question_order')) if self.hunt else []
+        )
+        existing_answers = (
+            {a.question_id: a.value for a in self.instance.teamdataanswer_set.all()}
+            if self.instance.pk else {}
+        )
+
+        layout_fields = ['name']
+        for question in self.questions:
+            field_name = f'question_{question.pk}'
+            if question.question_type == TeamDataQuestion.QuestionType.BOOLEAN:
+                self.fields[field_name] = BooleanField(
+                    required=question.required,
+                    label=question.name,
+                    help_text=question.description,
                 )
-                # Convert stored string value to boolean if it exists
-                if self.instance.custom_data:
-                    self.initial['custom_data'] = self.instance.custom_data.lower() == 'true'
-                
-                # Create a custom template for the switch
+                if question.pk in existing_answers:
+                    self.initial[field_name] = existing_answers[question.pk] == 'True'
                 switch_field = BulmaField(
-                    'custom_data',
+                    field_name,
                     template='components/_bulma_switch_field.html',
                     wrapper_class='field'
                 )
-                layout_fields = [
-                    'name',
-                    Div(
-                        Div(switch_field, css_class="level-left"),
-                        css_class="level"
-                    ),
+                layout_fields.append(
+                    Div(Div(switch_field, css_class="level-left"), css_class="level")
+                )
+            elif question.question_type == TeamDataQuestion.QuestionType.SELECT:
+                choices = ([('', '---')] if not question.required else []) + [
+                    (opt, opt) for opt in question.options
                 ]
+                self.fields[field_name] = ChoiceField(
+                    required=question.required,
+                    label=question.name,
+                    help_text=question.description,
+                    choices=choices,
+                )
+                if question.pk in existing_answers:
+                    self.initial[field_name] = existing_answers[question.pk]
+                layout_fields.append(
+                    Div(Div(Field(field_name), css_class="level-left"), css_class="level")
+                )
             else:
-                layout_fields = [
-                    'name',
-                    Div(
-                        Div(Field('custom_data'), css_class="level-left"),
-                        css_class="level"
-                    ),
-                ]
+                self.fields[field_name] = CharField(
+                    required=question.required,
+                    label=question.name,
+                    help_text=question.description,
+                    max_length=200,
+                )
+                if question.pk in existing_answers:
+                    self.initial[field_name] = existing_answers[question.pk]
+                layout_fields.append(
+                    Div(Div(Field(field_name), css_class="level-left"), css_class="level")
+                )
 
         layout_fields.append(
             Div(
@@ -100,12 +113,75 @@ class TeamForm(ModelForm):
 
         return name
 
-    def clean_custom_data(self):
-        data = self.cleaned_data['custom_data']
-        # Convert boolean values to string for storage
-        if config.TEAM_CUSTOM_DATA_TYPE == 'boolean':
-            return str(data)
-        return data
+    def save(self, commit=True):
+        team = super().save(commit=commit)
+        if commit:
+            for question in self.questions:
+                raw = self.cleaned_data.get(f'question_{question.pk}')
+                if question.question_type == TeamDataQuestion.QuestionType.BOOLEAN:
+                    value = str(bool(raw))
+                else:
+                    value = raw or ''
+                TeamDataAnswer.objects.update_or_create(
+                    team=team, question=question, defaults={'value': value}
+                )
+        return team
+
+
+class TeamDataQuestionForm(ModelForm):
+    options = CharField(
+        required=False,
+        help_text='Comma-separated list of choices. Only used when Type is "Select".',
+    )
+
+    class Meta:
+        model = TeamDataQuestion
+        fields = ['name', 'description', 'question_type', 'required', 'visible_on_leaderboard', 'used_for_grouping']
+
+    def __init__(self, *args, hunt=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.hunt = hunt or (self.instance.hunt if self.instance.hunt_id else None)
+
+        if self.instance.pk:
+            self.initial['options'] = ', '.join(self.instance.options)
+            url = reverse('puzzlehunt:staff:team_data_question_update', args=[self.hunt.pk, self.instance.pk])
+        else:
+            url = reverse('puzzlehunt:staff:team_data_question_create', args=[self.hunt.pk])
+
+        self.helper = FormHelper()
+        self.helper.form_class = 'block'
+        self.helper.attrs = {'hx-post': url, 'hx-target': '#team-data-question-list', 'hx-swap': 'innerHTML'}
+        self.helper.form_action = url
+        self.helper.layout = Layout(
+            Field('name'),
+            Field('description'),
+            Field('question_type'),
+            Field('options'),
+            Field('required'),
+            Field('visible_on_leaderboard'),
+            Field('used_for_grouping'),
+            Div(Div(Submit('save', 'Save', css_class="is-primary"), css_class="level-right"), css_class="level"),
+        )
+
+    def clean_options(self):
+        raw = self.cleaned_data.get('options', '')
+        return [opt.strip() for opt in raw.replace('\n', ',').split(',') if opt.strip()]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Non-select questions never store options, regardless of stray text left in the field
+        if cleaned_data.get('question_type') != TeamDataQuestion.QuestionType.SELECT:
+            cleaned_data['options'] = []
+        return cleaned_data
+
+    def _post_clean(self):
+        # `options` is a plain CharField proxying the model's JSONField, so it isn't in
+        # Meta.fields and Django's ModelForm machinery won't copy it onto the instance for
+        # us. Set it before super()._post_clean() runs instance.full_clean(), so
+        # TeamDataQuestion.clean()'s select/options cross-check sees the right value and can
+        # attach its error to this form's `options` field.
+        self.instance.options = self.cleaned_data.get('options', [])
+        super()._post_clean()
 
 
 class UserEditForm(ModelForm):
