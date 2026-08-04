@@ -3,9 +3,17 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils import timezone
 
+from puzzlehunt.forms import TeamDataQuestionForm
 from puzzlehunt.models import Hunt, Team, TeamDataAnswer, TeamDataQuestion
 
 pytestmark = pytest.mark.django_db
+
+
+def opts(*labels, leaderboard_labels=None):
+    """Build a list of {label, leaderboard_label} option dicts for tests.
+    `leaderboard_labels`, if given, must be the same length as `labels`."""
+    leaderboard_labels = leaderboard_labels or [''] * len(labels)
+    return [{'label': label, 'leaderboard_label': lb} for label, lb in zip(labels, leaderboard_labels)]
 
 
 @pytest.fixture
@@ -111,7 +119,7 @@ def test_registration_form_only_shows_questions_for_current_hunt(client, basic_h
 def test_registration_rejects_invalid_select_option(client, basic_hunt, basic_user):
     question = TeamDataQuestion.objects.create(
         hunt=basic_hunt, name="Shirt Size", question_type=TeamDataQuestion.QuestionType.SELECT,
-        options=["S", "M", "L"], question_order=1, required=True
+        options=opts("S", "M", "L"), question_order=1, required=True
     )
     client.force_login(basic_user)
     response = client.post(reverse('puzzlehunt:team_create'), {
@@ -129,7 +137,7 @@ def test_registration_saves_multiple_question_types(client, basic_hunt, basic_us
     )
     q_sel = TeamDataQuestion.objects.create(
         hunt=basic_hunt, name="Size", question_type=TeamDataQuestion.QuestionType.SELECT,
-        options=["S", "M", "L"], question_order=3
+        options=opts("S", "M", "L"), question_order=3
     )
 
     client.force_login(basic_user)
@@ -248,7 +256,7 @@ def test_leaderboard_shows_visible_columns_only(client, basic_hunt, basic_user):
 def test_leaderboard_groups_by_select_question(client, basic_hunt, basic_user):
     question = TeamDataQuestion.objects.create(
         hunt=basic_hunt, name="Division", question_type=TeamDataQuestion.QuestionType.SELECT,
-        options=["Rookie", "Veteran"], question_order=1, used_for_grouping=True
+        options=opts("Rookie", "Veteran"), question_order=1, used_for_grouping=True
     )
     t1 = Team.objects.create(name="Team A", hunt=basic_hunt)
     t2 = Team.objects.create(name="Team B", hunt=basic_hunt)
@@ -274,7 +282,7 @@ def test_leaderboard_no_grouping_when_no_question_configured(client, basic_hunt,
 def test_leaderboard_groups_ordered_by_select_options(client, basic_hunt, basic_user):
     question = TeamDataQuestion.objects.create(
         hunt=basic_hunt, name="Division", question_type=TeamDataQuestion.QuestionType.SELECT,
-        options=["Veteran", "Rookie", "Legend"], question_order=1, used_for_grouping=True
+        options=opts("Veteran", "Rookie", "Legend"), question_order=1, used_for_grouping=True
     )
     t1 = Team.objects.create(name="Team A", hunt=basic_hunt)
     t2 = Team.objects.create(name="Team B", hunt=basic_hunt)
@@ -289,3 +297,196 @@ def test_leaderboard_groups_ordered_by_select_options(client, basic_hunt, basic_
     # "Legend" has no answering team so it's dropped; "Unspecified" (t3) sorts after the
     # pre-seeded option order regardless of team/answer creation order.
     assert labels == ["Veteran", "Rookie", "Unspecified"]
+
+
+# --- Registration label vs. leaderboard label ---
+
+def test_display_label_falls_back_to_name(basic_hunt):
+    question = TeamDataQuestion.objects.create(hunt=basic_hunt, name="Affiliated group?", question_order=1)
+    assert question.display_label == "Affiliated group?"
+
+
+def test_display_label_uses_leaderboard_label_when_set(basic_hunt):
+    question = TeamDataQuestion.objects.create(
+        hunt=basic_hunt, name="Affiliated group?", leaderboard_label="Group", question_order=1
+    )
+    assert question.display_label == "Group"
+
+
+def test_leaderboard_header_uses_leaderboard_label(client, basic_hunt, basic_user):
+    TeamDataQuestion.objects.create(
+        hunt=basic_hunt, name="What group are you affiliated with?", leaderboard_label="Affiliated Group",
+        question_order=1, visible_on_leaderboard=True
+    )
+    Team.objects.create(name="Team A", hunt=basic_hunt)
+
+    client.force_login(basic_user)
+    response = client.get(reverse('puzzlehunt:hunt_leaderboard', args=[basic_hunt.pk]))
+    content = response.content.decode()
+    assert "Affiliated Group" in content
+    assert "What group are you affiliated with?" not in content
+
+
+def test_registration_form_uses_name_not_leaderboard_label(client, basic_hunt, basic_user):
+    TeamDataQuestion.objects.create(
+        hunt=basic_hunt, name="What group are you affiliated with?", leaderboard_label="Affiliated Group",
+        question_order=1
+    )
+    client.force_login(basic_user)
+    response = client.get(reverse('puzzlehunt:team_create'))
+    content = response.content.decode()
+    assert "What group are you affiliated with?" in content
+    assert "Affiliated Group" not in content
+
+
+def test_participant_info_header_uses_leaderboard_label(client, basic_hunt, staff_user):
+    TeamDataQuestion.objects.create(
+        hunt=basic_hunt, name="What group are you affiliated with?", leaderboard_label="Affiliated Group",
+        question_order=1
+    )
+    client.force_login(staff_user)
+    response = client.get(reverse('puzzlehunt:staff:participant_info', args=[basic_hunt.pk]))
+    content = response.content.decode()
+    assert "Affiliated Group" in content
+    assert "What group are you affiliated with?" not in content
+
+
+# --- Per-option leaderboard label override ---
+
+def test_option_leaderboard_label_falls_back_to_label(basic_hunt):
+    question = TeamDataQuestion.objects.create(
+        hunt=basic_hunt, name="Group", question_type=TeamDataQuestion.QuestionType.SELECT,
+        options=opts("Rookie"), question_order=1
+    )
+    assert question.get_option_leaderboard_label("Rookie") == "Rookie"
+
+
+def test_option_leaderboard_label_override(basic_hunt):
+    question = TeamDataQuestion.objects.create(
+        hunt=basic_hunt, name="Group", question_type=TeamDataQuestion.QuestionType.SELECT,
+        options=opts("N/A (not affiliated with any group)", leaderboard_labels=["N/A"]), question_order=1
+    )
+    assert question.get_option_leaderboard_label("N/A (not affiliated with any group)") == "N/A"
+
+
+def test_answer_display_value_uses_option_leaderboard_label(basic_hunt):
+    question = TeamDataQuestion.objects.create(
+        hunt=basic_hunt, name="Group", question_type=TeamDataQuestion.QuestionType.SELECT,
+        options=opts("N/A (not affiliated with any group)", leaderboard_labels=["N/A"]), question_order=1
+    )
+    team = Team.objects.create(name="Team A", hunt=basic_hunt)
+    answer = TeamDataAnswer.objects.create(question=question, team=team, value="N/A (not affiliated with any group)")
+    assert answer.display_value == "N/A"
+
+
+def test_leaderboard_cell_and_registration_dropdown_use_different_option_text(client, basic_hunt, basic_user):
+    question = TeamDataQuestion.objects.create(
+        hunt=basic_hunt, name="Group", question_type=TeamDataQuestion.QuestionType.SELECT,
+        options=opts("N/A (not affiliated with any group)", leaderboard_labels=["N/A"]),
+        question_order=1, visible_on_leaderboard=True
+    )
+    team = Team.objects.create(name="Team A", hunt=basic_hunt)
+    TeamDataAnswer.objects.create(question=question, team=team, value="N/A (not affiliated with any group)")
+
+    client.force_login(basic_user)
+
+    leaderboard_content = client.get(reverse('puzzlehunt:hunt_leaderboard', args=[basic_hunt.pk])).content.decode()
+    assert "N/A</td>" in leaderboard_content
+    assert "N/A (not affiliated with any group)" not in leaderboard_content
+
+    registration_content = client.get(reverse('puzzlehunt:team_create')).content.decode()
+    assert "N/A (not affiliated with any group)" in registration_content
+
+
+def test_leaderboard_group_tab_uses_option_leaderboard_label(client, basic_hunt, basic_user):
+    question = TeamDataQuestion.objects.create(
+        hunt=basic_hunt, name="Group", question_type=TeamDataQuestion.QuestionType.SELECT,
+        options=opts("N/A (not affiliated with any group)", leaderboard_labels=["N/A"]),
+        question_order=1, used_for_grouping=True
+    )
+    team = Team.objects.create(name="Team A", hunt=basic_hunt)
+    TeamDataAnswer.objects.create(question=question, team=team, value="N/A (not affiliated with any group)")
+
+    client.force_login(basic_user)
+    response = client.get(reverse('puzzlehunt:hunt_leaderboard', args=[basic_hunt.pk]))
+    labels = [group['label'] for group in response.context['leaderboard_groups']]
+    assert labels == ["N/A"]
+
+
+# --- Model validation for option shape ---
+
+def test_select_question_rejects_blank_option_label(basic_hunt):
+    question = TeamDataQuestion(
+        hunt=basic_hunt, name="Group", question_type=TeamDataQuestion.QuestionType.SELECT,
+        question_order=1, options=opts("Rookie", "")
+    )
+    with pytest.raises(ValidationError):
+        question.full_clean()
+
+
+def test_select_question_rejects_duplicate_option_labels(basic_hunt):
+    question = TeamDataQuestion(
+        hunt=basic_hunt, name="Group", question_type=TeamDataQuestion.QuestionType.SELECT,
+        question_order=1, options=opts("Rookie", "Rookie")
+    )
+    with pytest.raises(ValidationError):
+        question.full_clean()
+
+
+# --- TeamDataQuestionForm options textarea parsing ---
+
+def test_form_clean_options_parses_plain_lines(basic_hunt):
+    form = TeamDataQuestionForm(data={
+        'name': 'Group', 'question_type': 'SEL', 'options': 'Rookie\nVeteran',
+        'required': '', 'visible_on_leaderboard': '', 'used_for_grouping': '',
+    }, hunt=basic_hunt)
+    assert form.is_valid(), form.errors
+    assert form.instance.options == opts("Rookie", "Veteran")
+
+
+def test_form_clean_options_parses_leaderboard_override(basic_hunt):
+    form = TeamDataQuestionForm(data={
+        'name': 'Group', 'question_type': 'SEL',
+        'options': 'N/A (not affiliated with any group) | N/A\nRookie',
+        'required': '', 'visible_on_leaderboard': '', 'used_for_grouping': '',
+    }, hunt=basic_hunt)
+    assert form.is_valid(), form.errors
+    assert form.instance.options == [
+        {'label': 'N/A (not affiliated with any group)', 'leaderboard_label': 'N/A'},
+        {'label': 'Rookie', 'leaderboard_label': ''},
+    ]
+
+
+def test_form_initial_options_round_trips_leaderboard_override(basic_hunt):
+    question = TeamDataQuestion.objects.create(
+        hunt=basic_hunt, name="Group", question_type=TeamDataQuestion.QuestionType.SELECT,
+        options=opts("N/A (not affiliated with any group)", "Rookie", leaderboard_labels=["N/A", ""]),
+        question_order=1
+    )
+    form = TeamDataQuestionForm(instance=question)
+    assert form.initial['options'] == "N/A (not affiliated with any group) | N/A\nRookie"
+
+
+# --- Options-shape migration ---
+
+def test_reshape_options_migration_converts_legacy_flat_strings(basic_hunt):
+    import importlib
+    from django.apps import apps as live_apps
+
+    migration = importlib.import_module(
+        'puzzlehunt.migrations.0022_add_leaderboard_label_and_restructure_options'
+    )
+
+    question = TeamDataQuestion.objects.create(
+        hunt=basic_hunt, name="Division", question_type=TeamDataQuestion.QuestionType.SELECT,
+        options=["Rookie", "Veteran"], question_order=1
+    )
+
+    migration.reshape_options_to_dicts(live_apps, None)
+    question.refresh_from_db()
+    assert question.options == opts("Rookie", "Veteran")
+
+    # Running it again should be a no-op (idempotent), not re-wrap already-migrated options.
+    migration.reshape_options_to_dicts(live_apps, None)
+    question.refresh_from_db()
+    assert question.options == opts("Rookie", "Veteran")

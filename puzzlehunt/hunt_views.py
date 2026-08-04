@@ -414,7 +414,9 @@ def hunt_leaderboard(request, hunt):
             for a in TeamDataAnswer.objects.filter(question=grouping_question, team__in=base_teams)
         }
         if grouping_question.question_type == TeamDataQuestion.QuestionType.SELECT:
-            ordered_labels = grouping_question.options
+            ordered_labels = [
+                option.get('leaderboard_label') or option['label'] for option in grouping_question.options
+            ]
         elif grouping_question.question_type == TeamDataQuestion.QuestionType.BOOLEAN:
             ordered_labels = ["Yes", "No"]
         else:

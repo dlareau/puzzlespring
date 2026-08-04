@@ -6,6 +6,7 @@
   hunt: The Hunt object
   questions: List of TeamDataQuestion objects for the hunt, ordered by question_order, each with an edit_form
 {% endcomment %}
+  {% include "partial_header.html" %}
   {% if questions %}
     {% for question in questions %}
       <div class="box p-4" x-data="{editing: false}">
@@ -40,9 +41,12 @@
             </div>
             <div class="column">
               <strong>{{ question.name }}</strong>
+              {% if question.leaderboard_label %}<span class="has-text-grey"> &rarr; {{ question.leaderboard_label }}</span>{% endif %}
               {% if question.description %}<p class="help">{{ question.description }}</p>{% endif %}
               {% if question.question_type == "SEL" %}
-                <p class="help">Options: {{ question.options|join:", " }}</p>
+                <p class="help">Options:
+                  {% for option in question.options %}{{ option.label }}{% if option.leaderboard_label and option.leaderboard_label != option.label %} (&rarr; {{ option.leaderboard_label }}){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}
+                </p>
               {% endif %}
               <div>
                 {% if question.required %}<span class="tag is-light">Required</span>{% endif %}

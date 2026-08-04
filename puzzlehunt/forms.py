@@ -6,7 +6,7 @@ from crispy_forms.layout import Layout, Field, Div
 from django.conf import settings
 from django.forms import (
     ModelForm, Form, CharField, FileField, ChoiceField,
-    TextInput, MultipleChoiceField, CheckboxSelectMultiple,
+    TextInput, Textarea, MultipleChoiceField, CheckboxSelectMultiple,
     BooleanField, CheckboxInput
 )
 from django.contrib.auth.forms import ValidationError
@@ -58,12 +58,10 @@ class TeamForm(ModelForm):
                     template='components/_bulma_switch_field.html',
                     wrapper_class='field'
                 )
-                layout_fields.append(
-                    Div(Div(switch_field, css_class="level-left"), css_class="level")
-                )
+                layout_fields.append(Div(switch_field, css_class="mb-5"))
             elif question.question_type == TeamDataQuestion.QuestionType.SELECT:
                 choices = ([('', '---')] if not question.required else []) + [
-                    (opt, opt) for opt in question.options
+                    (opt['label'], opt['label']) for opt in question.options
                 ]
                 self.fields[field_name] = ChoiceField(
                     required=question.required,
@@ -73,9 +71,7 @@ class TeamForm(ModelForm):
                 )
                 if question.pk in existing_answers:
                     self.initial[field_name] = existing_answers[question.pk]
-                layout_fields.append(
-                    Div(Div(Field(field_name), css_class="level-left"), css_class="level")
-                )
+                layout_fields.append(Div(Field(field_name), css_class="mb-5"))
             else:
                 self.fields[field_name] = CharField(
                     required=question.required,
@@ -85,9 +81,7 @@ class TeamForm(ModelForm):
                 )
                 if question.pk in existing_answers:
                     self.initial[field_name] = existing_answers[question.pk]
-                layout_fields.append(
-                    Div(Div(Field(field_name), css_class="level-left"), css_class="level")
-                )
+                layout_fields.append(Div(Field(field_name), css_class="mb-5"))
 
         layout_fields.append(
             Div(
@@ -131,19 +125,29 @@ class TeamForm(ModelForm):
 class TeamDataQuestionForm(ModelForm):
     options = CharField(
         required=False,
-        help_text='Comma-separated list of choices. Only used when Type is "Select".',
+        widget=Textarea,
+        help_text='One option per line. Add "| shorter text" to use different text on the '
+                   'leaderboard, e.g. "N/A (not affiliated with any group) | N/A".',
     )
 
     class Meta:
         model = TeamDataQuestion
-        fields = ['name', 'description', 'question_type', 'required', 'visible_on_leaderboard', 'used_for_grouping']
+        fields = ['name', 'leaderboard_label', 'description', 'question_type', 'required',
+                  'visible_on_leaderboard', 'used_for_grouping']
 
     def __init__(self, *args, hunt=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.hunt = hunt or (self.instance.hunt if self.instance.hunt_id else None)
 
         if self.instance.pk:
-            self.initial['options'] = ', '.join(self.instance.options)
+            lines = []
+            for option in self.instance.options:
+                leaderboard_label = option.get('leaderboard_label')
+                if leaderboard_label and leaderboard_label != option['label']:
+                    lines.append(f"{option['label']} | {leaderboard_label}")
+                else:
+                    lines.append(option['label'])
+            self.initial['options'] = '\n'.join(lines)
             url = reverse('puzzlehunt:staff:team_data_question_update', args=[self.hunt.pk, self.instance.pk])
         else:
             url = reverse('puzzlehunt:staff:team_data_question_create', args=[self.hunt.pk])
@@ -154,6 +158,7 @@ class TeamDataQuestionForm(ModelForm):
         self.helper.form_action = url
         self.helper.layout = Layout(
             Field('name'),
+            Field('leaderboard_label'),
             Field('description'),
             Field('question_type'),
             Field('options'),
@@ -165,7 +170,20 @@ class TeamDataQuestionForm(ModelForm):
 
     def clean_options(self):
         raw = self.cleaned_data.get('options', '')
-        return [opt.strip() for opt in raw.replace('\n', ',').split(',') if opt.strip()]
+        options = []
+        for line in raw.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if '|' in line:
+                label, leaderboard_label = line.split('|', 1)
+            else:
+                label, leaderboard_label = line, ''
+            label = label.strip()
+            leaderboard_label = leaderboard_label.strip()
+            if label:
+                options.append({'label': label, 'leaderboard_label': leaderboard_label})
+        return options
 
     def clean(self):
         cleaned_data = super().clean()

@@ -46,7 +46,8 @@
             <p class="modal-card-title">Add Question</p>
             <button class="delete" aria-label="close" @click="questionModal = false"></button>
           </header>
-          <section class="modal-card-body">
+          <section class="modal-card-body"
+                   @htmx:after-request.camel="if($event.detail.successful) questionModal = false">
             {% crispy create_form %}
           </section>
         </div>

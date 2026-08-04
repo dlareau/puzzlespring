@@ -325,7 +325,7 @@ class PuzzleStatusAdmin(admin.ModelAdmin):
 
 @admin.register(TeamDataAnswer)
 class TeamDataAnswerAdmin(admin.ModelAdmin):
-    list_display = [short_team_name, 'question', 'value']
+    list_display = [short_team_name, 'question', 'display_value']
     list_filter = ['question__hunt', 'question']
     autocomplete_fields = ['team']
 

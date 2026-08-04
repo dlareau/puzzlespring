@@ -23,7 +23,7 @@
         {% endif %}
       {% endfor %}
       {% for question in data_questions %}
-        <th>{{ question.name }}</th>
+        <th>{{ question.display_label }}</th>
       {% endfor %}
     </tr>
     {% for team in teams %}

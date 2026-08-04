@@ -1460,7 +1460,13 @@ class TeamDataQuestion(models.Model):
 
     name = models.CharField(
         max_length=100,
-        help_text="The label shown to teams and on the leaderboard")
+        help_text="The label shown to teams when registering")
+
+    leaderboard_label = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Optional label for the leaderboard/participant-info columns; defaults to the "
+                   "question name if blank")
 
     description = models.CharField(
         max_length=255,
@@ -1476,7 +1482,8 @@ class TeamDataQuestion(models.Model):
     options = models.JSONField(
         default=list,
         blank=True,
-        help_text="Option strings; only used when question_type is 'select'")
+        help_text="List of {label, leaderboard_label} objects; only used when question_type is "
+                   "'select'. leaderboard_label may be blank to use label everywhere")
 
     question_order = models.IntegerField(
         help_text="The order in which the question is displayed")
@@ -1499,11 +1506,27 @@ class TeamDataQuestion(models.Model):
     def natural_key(self):
         return self.hunt.natural_key() + (self.question_order,)
 
+    @property
+    def display_label(self):
+        return self.leaderboard_label or self.name
+
+    def get_option_leaderboard_label(self, value):
+        for option in self.options:
+            if option.get('label') == value:
+                return option.get('leaderboard_label') or option.get('label')
+        return value
+
     def clean(self):
         super().clean()
-        if self.question_type == self.QuestionType.SELECT and not self.options:
-            raise ValidationError({'options': "Select questions must have at least one option."})
-        if self.question_type != self.QuestionType.SELECT and self.options:
+        if self.question_type == self.QuestionType.SELECT:
+            if not self.options:
+                raise ValidationError({'options': "Select questions must have at least one option."})
+            labels = [option.get('label', '').strip() for option in self.options]
+            if any(not label for label in labels):
+                raise ValidationError({'options': "Each option must have text."})
+            if len(labels) != len(set(labels)):
+                raise ValidationError({'options': "Option text must be unique."})
+        elif self.options:
             raise ValidationError({'options': "Options are only used for select questions."})
 
 
@@ -1541,6 +1564,8 @@ class TeamDataAnswer(models.Model):
     def display_value(self):
         if self.question.question_type == TeamDataQuestion.QuestionType.BOOLEAN:
             return "Yes" if self.value == "True" else "No"
+        if self.question.question_type == TeamDataQuestion.QuestionType.SELECT:
+            return self.question.get_option_leaderboard_label(self.value) or self.NO_ANSWER_DISPLAY
         return self.value or self.NO_ANSWER_DISPLAY
 
 
