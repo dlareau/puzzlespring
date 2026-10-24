@@ -1,7 +1,7 @@
 import pytest
 from django.urls import reverse
 from django.core.files.base import ContentFile
-from puzzlehunt.models import Hunt, Puzzle, PuzzleFile, SolutionFile, HuntFile
+from puzzlehunt.models import Hunt, Puzzle, PuzzleFile, SolutionFile, HuntFile, Prepuzzle, PrepuzzleFile
 
 pytestmark = pytest.mark.django_db
 
@@ -44,6 +44,15 @@ def hunt_with_file(basic_hunt):
     hunt_file = HuntFile(parent=basic_hunt)
     hunt_file.file.save('styles.css', ContentFile(b'body { color: black; }'))
     return basic_hunt
+
+
+@pytest.fixture
+def prepuzzle_with_file(basic_hunt):
+    """Create a hunt-attached prepuzzle with an editable HTML file."""
+    prepuzzle = Prepuzzle.objects.create(name="Test Prepuzzle", hunt=basic_hunt, answer="PREANSWER")
+    prepuzzle_file = PrepuzzleFile(parent=prepuzzle)
+    prepuzzle_file.file.save('prepuzzle.html', ContentFile(b'<html><body>Prepuzzle Content</body></html>'))
+    return prepuzzle
 
 
 @pytest.fixture
@@ -445,3 +454,48 @@ def test_file_save_content_solution_file(client, staff_user, puzzle_with_solutio
     saved_content = solution_file.file.read()
     solution_file.file.close()
     assert 'Updated Solution' in saved_content
+
+
+# =============================================================================
+# Prepuzzle File Tests
+# =============================================================================
+
+def test_file_editor_puzzle_list_includes_prepuzzle(client, staff_user, prepuzzle_with_file):
+    """Test that puzzle list endpoint includes the hunt's prepuzzle when it has editable files."""
+    client.force_login(staff_user)
+    url = reverse('puzzlehunt:staff:file_editor_puzzle_list')
+    response = client.get(url, {'hunt_id': prepuzzle_with_file.hunt.pk}, HTTP_HX_REQUEST='true')
+
+    assert response.status_code == 200
+    assert response.context['prepuzzle'] == prepuzzle_with_file
+    assert f'prepuzzle:{prepuzzle_with_file.pk}' in response.content.decode()
+
+
+def test_file_editor_puzzle_list_excludes_prepuzzle_without_editable_files(client, staff_user, basic_hunt):
+    """Test that a prepuzzle with only non-editable files is not listed."""
+    prepuzzle = Prepuzzle.objects.create(name="Image Prepuzzle", hunt=basic_hunt, answer="X")
+    prepuzzle_file = PrepuzzleFile(parent=prepuzzle)
+    prepuzzle_file.file.save('image.png', ContentFile(b'\x89PNG\r\n\x1a\n'))
+
+    client.force_login(staff_user)
+    url = reverse('puzzlehunt:staff:file_editor_puzzle_list')
+    response = client.get(url, {'hunt_id': basic_hunt.pk}, HTTP_HX_REQUEST='true')
+
+    assert response.status_code == 200
+    assert response.context['prepuzzle'] is None
+
+
+def test_file_editor_preselect_prepuzzle_file(client, staff_user, prepuzzle_with_file):
+    """Test that preselecting a prepuzzle file marks the prepuzzle option as selected."""
+    client.force_login(staff_user)
+    prepuzzle_file = prepuzzle_with_file.files.first()
+
+    url = reverse('puzzlehunt:staff:file_editor', args=[prepuzzle_with_file.hunt.pk])
+    response = client.get(url, {
+        'type': 'prepuzzle',
+        'parent': prepuzzle_with_file.pk,
+        'file': prepuzzle_file.pk
+    })
+
+    assert response.status_code == 200
+    assert f'value="prepuzzle:{prepuzzle_with_file.pk}" selected' in response.content.decode()

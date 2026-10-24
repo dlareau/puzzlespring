@@ -32,7 +32,7 @@ from django_sendfile import sendfile
 from .utils import create_media_files, get_media_file_model, get_media_file_parent_model, create_hunt_export_zip, import_hunt_from_zip, import_hunt_from_zip, validate_hunt_zip
 from .hunt_views import protected_static, prefetch_data_answers, set_data_answer_values
 from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile, \
-    TeamDataQuestion
+    TeamDataQuestion, Prepuzzle
 from .forms import TeamDataQuestionForm
 from .tasks import import_hunt_background
 from .config_parser import parse_config, process_config_rules
@@ -1236,6 +1236,16 @@ def _get_puzzles_with_editable_files(hunt):
     return puzzles_with_files, hunt_has_files
 
 
+def _get_prepuzzle_with_editable_files(hunt):
+    """
+    Helper: Return the hunt's prepuzzle if it has any text-editable files, else None.
+    """
+    prepuzzle = Prepuzzle.objects.filter(hunt=hunt).first()
+    if prepuzzle and any(f.is_text_editable for f in prepuzzle.files.all()):
+        return prepuzzle
+    return None
+
+
 def _get_editable_files(parent_type, parent):
     """
     Helper: Get editable files for a parent (puzzle or hunt).
@@ -1304,7 +1314,9 @@ def file_editor(request, hunt):
             context.update({
                 'puzzles': puzzles,
                 'hunt_has_files': hunt_has_files,
+                'prepuzzle': _get_prepuzzle_with_editable_files(hunt),
                 'selected_is_hunt': preselect_type == "hunt",
+                'selected_is_prepuzzle': preselect_type == "prepuzzle",
                 'selected_puzzle_pk': preselect_parent_pk if preselect_type in ("puzzle", "solution") else None,
                 'file_entries': file_entries,
                 'selected_file_pk': int(preselect_file_pk),
@@ -1338,6 +1350,7 @@ def file_editor_puzzle_list(request):
         'hunt': hunt,
         'puzzles': puzzles_with_files,
         'hunt_has_files': hunt_has_files,
+        'prepuzzle': _get_prepuzzle_with_editable_files(hunt),
     }
     return render(request, "partials/_file_editor_puzzle_select.html", context)
 
