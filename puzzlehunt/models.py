@@ -1392,12 +1392,12 @@ class TeamRankingRule(models.Model):
     def annotate_query(self, query):
         match self.rule_type:
             case self.RuleType.NUM_UNLOCKS:
-                sq = PuzzleStatus.objects.filter(team__pk=OuterRef('pk'),  unlock_time__isnull=False).order_by()
+                sq = PuzzleStatus.objects.filter(team__pk=OuterRef('pk'),  unlock_time__isnull=False).exclude(puzzle__type=Puzzle.PuzzleType.NON_PUZZLE).order_by()
                 sq = sq.values('team').annotate(c=Count('*')).values('c')
                 args = {self.rule_type: Subquery(sq, output_field=PositiveIntegerField())}
                 return query.annotate(**args)
             case self.RuleType.NUM_PUZZLES:
-                sq = PuzzleStatus.objects.filter(team__pk=OuterRef('pk'), solve_time__isnull=False).order_by()
+                sq = PuzzleStatus.objects.filter(team__pk=OuterRef('pk'), solve_time__isnull=False).exclude(puzzle__type=Puzzle.PuzzleType.NON_PUZZLE).order_by()
                 sq = sq.values('team').annotate(c=Count('*')).values('c')
                 args = {self.rule_type: Subquery(sq, output_field=PositiveIntegerField())}
                 return query.annotate(**args)
@@ -1420,7 +1420,7 @@ class TeamRankingRule(models.Model):
                 args = {self.rule_type: Subquery(sq, output_field=DateTimeField())}
                 return query.annotate(**args)
             case self.RuleType.LAST_SOLVE_TIME:
-                sq = PuzzleStatus.objects.filter(team__pk=OuterRef('pk'), solve_time__isnull=False).order_by()
+                sq = PuzzleStatus.objects.filter(team__pk=OuterRef('pk'), solve_time__isnull=False).exclude(puzzle__type=Puzzle.PuzzleType.NON_PUZZLE).order_by()
                 sq = sq.values('team').annotate(last_time=Max('solve_time')).values('last_time')
                 args = {self.rule_type: Subquery(sq, output_field=DateTimeField())}
                 return query.annotate(**args)
