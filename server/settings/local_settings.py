@@ -18,13 +18,16 @@ CACHES = {
     }
 }
 
+# Constance rejects per-process locmem caches; read config straight from the DB
+CONSTANCE_DATABASE_CACHE_BACKEND = None
+
 ASGI_APPLICATION = 'server.asgi.application'
 
 STATICFILES_DIRS = ["custom/static",]
 STATIC_ROOT = "static/"
 MEDIA_ROOT = "media/"
 
-TEMPLATES[0]['DIRS'] = ['custom/templates/',  'media/trusted/',]
+TEMPLATES[0]['DIRS'] = [os.path.join(BASE_DIR, 'templates/'), 'custom/templates/', 'media/trusted/',]
 
 HUEY = {
     'huey_class': 'huey.SqliteHuey',  # Use SQLite instead of Redis
