@@ -301,7 +301,6 @@ def validate_hunt_zip(zip_path: str | Path, include_activity: bool = False) -> N
         'file_references.json',
         'hunt.json',
         'ranking_rules.json',
-        'rounds.json',
         'team_data_questions.json',
         'puzzles.json',
         'puzzle_files.json',
@@ -318,10 +317,13 @@ def validate_hunt_zip(zip_path: str | Path, include_activity: bool = False) -> N
         'hints.json',
         'updates.json',
         'puzzle_statuses.json',
-        'round_statuses.json',
         'submissions.json',
         'team_data_answers.json'
     }
+
+    # Files added after the export format was first released; older zips won't have them
+    optional_files = {'rounds.json'}
+    optional_activity_files = {'round_statuses.json'}
 
     with zipfile.ZipFile(zip_path, 'r') as zip_file:
         # Validate zip structure
@@ -343,7 +345,10 @@ def validate_hunt_zip(zip_path: str | Path, include_activity: bool = False) -> N
             raise ValidationError("Invalid file_references.json format")
 
         # Validate all JSON files can be parsed
-        for json_file in required_files | (activity_files if include_activity else set()):
+        files_to_check = required_files | (optional_files & zip_contents)
+        if include_activity:
+            files_to_check |= activity_files | (optional_activity_files & zip_contents)
+        for json_file in files_to_check:
             if not json_file.endswith('.json'):
                 continue
             try:
@@ -398,7 +403,8 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
 
             # 2. Import rounds (must be before puzzles since puzzles may reference rounds)
             rounds = {}
-            for obj in serializers.deserialize('json', zip_file.read('rounds.json')):
+            rounds_data = zip_file.read('rounds.json') if 'rounds.json' in zip_file.namelist() else '[]'
+            for obj in serializers.deserialize('json', rounds_data):
                 round_obj = obj.object
                 round_obj.hunt = new_hunt
                 round_obj.save()
@@ -512,6 +518,8 @@ def import_hunt_from_zip(zip_path: str | Path, include_activity: bool = False) -
                     'team_data_answers.json'  # TeamDataAnswer depends on Team and TeamDataQuestion
                 ]
                 for filename in activity_order:
+                    if filename == 'round_statuses.json' and filename not in zip_file.namelist():
+                        continue
                     for obj in serializers.deserialize('json', zip_file.read(filename)):
                         obj.save()
 

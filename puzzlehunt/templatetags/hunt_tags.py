@@ -195,6 +195,12 @@ def order_number_exists(value, number):
     return any([x.order_number == number for x in value])
 
 
+@register.simple_tag
+def email_backend_configured():
+    """Check if an email backend is configured in settings."""
+    return bool(settings.EMAIL_CONFIGURED)
+
+
 @register.filter
 def round_unlocked(rounds, round_number):
     if rounds is None:
@@ -204,6 +210,10 @@ def round_unlocked(rounds, round_number):
 
 @register.simple_tag(takes_context=True)
 def hunt_back_url(context, hunt_pk):
+    """
+    Returns the back URL for a hunt page, using HTTP_REFERER if it's a valid hunt_view URL
+    for the specified hunt, otherwise returns the default hunt_view URL.
+    """
     request = context.get('request')
     if not request:
         return reverse('puzzlehunt:hunt_view', args=[hunt_pk])
