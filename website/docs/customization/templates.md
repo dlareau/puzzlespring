@@ -21,7 +21,7 @@ _Extends:_ info_base.html
 
 _Context Variables:_
 
-- `reason`: The reason for access denial ('hunt', 'team', 'puzzle', or 'hint')
+- `reason`: The reason for access denial ('hunt', 'team', 'puzzle', 'hint', or 'round')
 
 
 _Template Blocks:_
@@ -164,6 +164,7 @@ _Context Variables:_
 - `team`: The current Team object
 - `puzzles`: List of all Puzzle objects in the hunt
 - `solved`: List of puzzles that have been solved by the team
+- `rounds`: List of Round objects the team has unlocked (all rounds for staff or public hunts)
 
 
 _Template Blocks:_
@@ -430,6 +431,30 @@ _Template Blocks:_
 
 
 
+### <u>round_non_template.html</u>
+
+_Description:_ Displays a simple list view of all puzzles in a round with their solve status and answers.
+
+
+_Extends:_ hunt_base.html
+
+
+_Context Variables:_
+
+- `round`: The current Round object
+- `hunt`: The current Hunt object
+- `team`: The current Team object
+- `puzzles`: List of Puzzle objects in the round
+- `solved`: List of puzzles that have been solved by the team
+- `rounds`: List of Round objects the team has unlocked (all rounds for staff or public hunts)
+
+
+_Template Blocks:_
+
+- `content_wrapper`: Displays round title, hunt name, team name, and puzzle list table
+
+
+
 ### <u>staff_charts.html</u>
 
 _Description:_ Displays various charts and statistics about puzzle solves, submissions, and hints using Google Charts.
@@ -466,13 +491,17 @@ _Extends:_ staff_hunt_base.html
 _Context Variables:_
 
 - `hunt`: The current Hunt object
-- `puzzle_data`: List of dicts with puzzle info and simulated state
+- `grouped_data`: List of round groups, each with round info and list of puzzle dicts
 - `time_offset_mins`: Current simulated time offset in minutes (integer)
 - `simulated_time`: Absolute simulated datetime
 - `points`: Accumulated points
 - `hints`: Accumulated hints
 - `earned_badges`: List of earned badge texts
 - `parse_error`: Config parse error message if any
+- `num_unlocked`: Number of unlocked puzzles
+- `num_solved`: Number of solved puzzles
+- `num_rounds_unlocked`: Number of unlocked rounds
+- `num_rounds`: Total number of rounds
 
 
 _Template Blocks:_
@@ -581,11 +610,35 @@ _Extends:_ staff_hunt_base.html
 _Context Variables:_
 
 - `puzzles`: List of all Puzzle objects in the hunt
+- `has_rounds`: Boolean indicating if the hunt has any rounds
+- `round_puzzle_groups`: List of (round, puzzles) tuples for rounds with puzzles
+- `puzzles_no_round`: List of puzzles without a round
 
 
 _Template Blocks:_
 
 - `staff_content`: The main content area displaying puzzle management interface
+
+
+
+### <u>staff_hunt_rounds.html</u>
+
+_Description:_ Staff interface for creating, editing, and deleting a hunt's rounds and choosing which puzzles are in each.
+
+
+_Extends:_ staff_hunt_base.html
+
+
+_Context Variables:_
+
+- `hunt`: The current Hunt object
+- `rounds`: List of Round objects for the hunt, ordered by order_number, each with an edit_form
+- `create_form`: RoundForm for adding a new round
+
+
+_Template Blocks:_
+
+- `staff_content`: Displays the round list and an "add round" modal
 
 
 
@@ -602,6 +655,9 @@ _Context Variables:_
 - `hunt`: The current Hunt object
 - `template_text`: The current template text content
 - `puzzle_numbers`: List of puzzle numbers for preview functionality
+- `rounds`: The hunt's rounds, for the hunt/round template selector
+- `selected_round`: The Round whose template is being edited, or None for the hunt template
+- `round_numbers`: List of round order numbers for preview functionality
 
 
 _Template Blocks:_
@@ -982,6 +1038,18 @@ _Context Variables:_
 
 
 
+### <u>_round_list.html</u>
+
+_Description:_ Renders a hunt's rounds with their puzzles, each editable/deletable via HTMX.
+
+
+_Context Variables:_
+
+- `hunt`: The Hunt object
+- `rounds`: List of Round objects for the hunt, ordered by order_number, each with an edit_form
+
+
+
 ### <u>_search_results.html</u>
 
 _Description:_ Displays search results for users and teams in the staff interface.
@@ -1020,6 +1088,17 @@ _Context Variables:_
 - `previous_hints`: List of previous Hint objects for this team and puzzle
 - `previous_submissions`: List of previous PuzzleSubmission objects for this team and puzzle
 - `form`: Form for submitting hint response
+
+
+
+### <u>_staff_puzzle_box.html</u>
+
+_Description:_ A single puzzle box for the staff puzzles page
+
+
+_Context Variables:_
+
+- `puzzle`: The Puzzle object to display
 
 
 

@@ -54,6 +54,23 @@ Use the up/down arrow buttons to reorder questions - this controls both the orde
 
 Adding a question after teams have already registered doesn't retroactively require anything of existing teams - it simply appears the next time they visit their team page. Until a team answers it, they'll show as "-" on the leaderboard/participant-info, or fall into an "Unspecified" leaderboard group if the question is used for grouping.
 
+## Rounds
+
+The Rounds page lets you create and manage a hunt's rounds. Located in the sidebar under "Hunt Setup", next to Puzzles.
+
+Click **Add Round** to create a round, or the pencil icon on an existing round to edit it in place. Each round has:
+
+- **Name**: The name shown to teams
+- **Order Number**: The round's number. The hunt config refers to the round as `R` plus this number, e.g. `R2`.
+- **Puzzles**: The puzzles in this round. Checking a puzzle that's already in another round moves it to this one.
+
+Each round also has buttons to view its page and to edit its template in the Hunt Template editor.
+
+{: .warning }
+> Rounds referenced in the hunt config can't be deleted or renumbered, since that would break the config. Update the config first.
+
+Deleting a round leaves its puzzles in the hunt without a round, and removes every team's unlock of the round.
+
 ## Config Tester
 
 The Config Tester simulates puzzle unlocking rules without affecting real team data. Use it to verify your hunt configuration before the hunt begins.
@@ -86,6 +103,8 @@ The summary box shows what a team would have earned based on your configuration:
 - **Hints**: Total global hints earned
 - **P. Hints**: Puzzle-specific hints (shown per puzzle in the table)
 - **Badges**: Any badges earned are displayed below the summary
+
+If the hunt has rounds, puzzles are grouped by round, the summary also shows how many rounds are unlocked, and each round's header shows whether it's unlocked. A puzzle whose rule is met but whose round is still locked is marked **Gated**.
 
 Use the **Reset All** button to clear all solved states and reset time to zero.
 

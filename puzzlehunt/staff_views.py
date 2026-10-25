@@ -770,6 +770,7 @@ def preview_template(request, hunt):
 @require_POST
 @staff_member_required
 def preview_round_template(request, hunt, order_number):
+    """ Renders a round template preview using the puzzles and rounds the staff member marked as unlocked. """
     round_obj = get_object_or_404(Round, hunt=hunt, order_number=order_number)
     template_text = request.POST.get("template_text", "")
     solved_arg = request.POST.get("solved", "")
@@ -942,6 +943,7 @@ def hunt_rounds(request, hunt):
 @require_POST
 @staff_member_required
 def round_create(request, hunt):
+    """ Creates a round from the rounds page form and assigns its puzzles. """
     next_order = (hunt.round_set.aggregate(Max('order_number'))['order_number__max'] or 0) + 1
     form = RoundForm(request.POST, hunt=hunt, instance=Round(hunt=hunt, order_number=next_order))
     if form.is_valid():
@@ -955,6 +957,7 @@ def round_create(request, hunt):
 @require_POST
 @staff_member_required
 def round_update(request, hunt, pk):
+    """ Updates a round's name, number, and puzzles from the rounds page form. """
     round_obj = get_object_or_404(Round, pk=pk, hunt=hunt)
     form = RoundForm(request.POST, hunt=hunt, instance=round_obj)
     if form.is_valid():
@@ -968,6 +971,7 @@ def round_update(request, hunt, pk):
 @require_POST
 @staff_member_required
 def round_delete(request, hunt, pk):
+    """ Deletes a round, unless the hunt config refers to it. Its puzzles are left without a round. """
     round_obj = get_object_or_404(Round, pk=pk, hunt=hunt)
     remaining = hunt.round_set.exclude(pk=round_obj.pk).values_list('order_number', flat=True)
     config_error = hunt.config_error_for_rounds(remaining)

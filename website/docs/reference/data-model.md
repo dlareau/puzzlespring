@@ -169,6 +169,7 @@ A class representing a puzzle within a hunt
 Fields:
 - `id` (CharField): A 3-8 character hex string that uniquely identifies the puzzle
 - `hunt` (ForeignKey): The hunt that this puzzle is a part of
+- `round` (ForeignKey): The round that this puzzle belongs to (optional)
 - `name` (CharField): The name of the puzzle as it will be seen by hunt participants
 - `order_number` (IntegerField): The number of the puzzle within the hunt, for sorting purposes
 - `answer` (CharField): The answer to the puzzle.
@@ -213,6 +214,28 @@ Fields:
 - `regex` (CharField): The python-style regex that will be checked against the user's response
 - `text` (CharField): The text to use in the submission response if the regex matched
 
+## Round Model
+
+A class representing a round (grouping of puzzles) within a hunt
+
+Fields:
+- `id` (AutoField): No description available
+- `hunt` (ForeignKey): The hunt that this round is a part of
+- `name` (CharField): The name of the round as it will be seen by hunt participants
+- `order_number` (IntegerField): The number of the round within the hunt, for sorting purposes
+- `template_file` (FileField): No description available
+- `extra_data` (CharField): A misc. field for any extra data to be stored with the round.
+
+## RoundStatus Model
+
+A class representing the status of a round for a team
+
+Fields:
+- `id` (AutoField): No description available
+- `round` (ForeignKey): The round this status is for
+- `team` (ForeignKey): The team that this round status is for
+- `unlock_time` (DateTimeField): The time this round was unlocked for this team
+
 ## SolutionFile Model
 
 SolutionFile(id, file, parent)
@@ -254,6 +277,7 @@ Fields:
 - `points` (IntegerField): The total number of points this team has earned through config rules
 - `badges` (JSONField): List of badge texts earned by this team
 - `puzzle_statuses` (ManyToManyField): The statuses of puzzles the team has unlocked
+- `round_statuses` (ManyToManyField): The statuses of rounds the team has unlocked
 - `members` (ManyToManyField): Members of this team
 
 ## Team_members Model
