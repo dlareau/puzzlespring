@@ -27,7 +27,7 @@ STATICFILES_DIRS = ["custom/static",]
 STATIC_ROOT = "static/"
 MEDIA_ROOT = "media/"
 
-TEMPLATES[0]['DIRS'] = ['custom/templates/',  'media/trusted/',]
+TEMPLATES[0]['DIRS'] = [os.path.join(BASE_DIR, 'templates/'), 'custom/templates/', 'media/trusted/',]
 
 HUEY = {
     'huey_class': 'huey.SqliteHuey',  # Use SQLite instead of Redis
