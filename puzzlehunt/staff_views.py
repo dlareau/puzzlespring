@@ -643,7 +643,7 @@ def get_hunt_template_errors(template_text, hunt, request):
 
     puzzles = sorted(puzzle_list, key=lambda p: p.order_number)
     solved = []
-    context = {'hunt': hunt, 'puzzles': puzzles, 'team': team, 'solved': solved}
+    context = {'hunt': hunt, 'puzzles': puzzles, 'team': team, 'solved': solved, 'rounds': list(hunt.rounds)}
 
     try:
         # Get the default Django template engine
@@ -665,7 +665,8 @@ def get_round_template_errors(template_text, round_obj, request):
 
     puzzles = sorted(puzzle_list, key=lambda p: p.order_number)
     solved = []
-    context = {'round': round_obj, 'hunt': round_obj.hunt, 'puzzles': puzzles, 'team': team, 'solved': solved}
+    context = {'round': round_obj, 'hunt': round_obj.hunt, 'puzzles': puzzles, 'team': team, 'solved': solved,
+               'rounds': list(round_obj.hunt.rounds)}
 
     try:
         # Get the default Django template engine
@@ -728,8 +729,16 @@ def hunt_template(request, hunt):
         'selected_round': selected_round,
         'template_text': template_text,
         'puzzle_numbers': list(puzzle_numbers),
+        'round_numbers': [r.order_number for r in rounds],
     }
     return render(request, "staff_hunt_template.html", context)
+
+
+def _preview_rounds(request, hunt):
+    """Rounds to treat as unlocked in a template preview, from the "unlocked_rounds" form field."""
+    unlocked_rounds_arg = request.POST.get("unlocked_rounds", "")
+    unlocked_rounds = [] if unlocked_rounds_arg == "" else [int(x) for x in unlocked_rounds_arg.split(",")]
+    return list(hunt.rounds.filter(order_number__in=unlocked_rounds))
 
 
 @require_POST
@@ -745,7 +754,8 @@ def preview_template(request, hunt):
     puzzles = sorted(puzzle_list, key=lambda p: p.order_number)
 
     solved = hunt.puzzle_set.filter(order_number__in=solved)
-    context = {'hunt': hunt, 'puzzles': puzzles, 'team': Team(name="Preview Team", hunt=hunt), 'solved': solved}
+    context = {'hunt': hunt, 'puzzles': puzzles, 'team': Team(name="Preview Team", hunt=hunt), 'solved': solved,
+               'rounds': _preview_rounds(request, hunt)}
 
     try:
         # Get the default Django template engine
@@ -776,7 +786,8 @@ def preview_round_template(request, hunt, order_number):
         'hunt': hunt,
         'puzzles': puzzles,
         'team': Team(name="Preview Team", hunt=hunt),
-        'solved': solved
+        'solved': solved,
+        'rounds': _preview_rounds(request, hunt),
     }
 
     try:
