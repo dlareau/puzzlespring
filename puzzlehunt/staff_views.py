@@ -899,8 +899,6 @@ def team_data_question_move(request, hunt, pk):
                        {'hunt': hunt, 'questions': _questions_with_edit_forms(hunt)})
     return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
 
-    return _question_list_response(request, hunt)
-
 
 @require_POST
 @staff_member_required
