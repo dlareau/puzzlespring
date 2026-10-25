@@ -12,7 +12,7 @@
 
   <p>
     <a href="https://www.puzzlespring.com/docs">Documentation</a> |
-    <a href="https://www.puzzlespring.com/docs/getting-started/quickstart.html">Quick Start</a> |
+    <a href="https://www.puzzlespring.com/docs/installation/quickstart.html">Quick Start</a> |
     <a href="https://www.puzzlespring.com/docs/contributing.html">Contributing</a>
   </p>
 </div>
