@@ -7,12 +7,12 @@ from django.conf import settings
 from django.forms import (
     ModelForm, Form, CharField, FileField, ChoiceField,
     TextInput, Textarea, MultipleChoiceField, CheckboxSelectMultiple,
-    BooleanField, CheckboxInput
+    BooleanField, CheckboxInput, ModelMultipleChoiceField
 )
 from django.contrib.auth.forms import ValidationError
 from django.urls import reverse
 
-from .models import Team, User, NotificationSubscription, Event, TeamDataQuestion, TeamDataAnswer
+from .models import Team, User, NotificationSubscription, Event, TeamDataQuestion, TeamDataAnswer, Round, Puzzle
 from .notifications import NotificationHandler
 
 class TeamForm(ModelForm):
@@ -200,6 +200,72 @@ class TeamDataQuestionForm(ModelForm):
         # attach its error to this form's `options` field.
         self.instance.options = self.cleaned_data.get('options', [])
         super()._post_clean()
+
+
+class RoundForm(ModelForm):
+    puzzles = ModelMultipleChoiceField(
+        queryset=Puzzle.objects.none(),
+        required=False,
+        widget=CheckboxSelectMultiple,
+        help_text="Puzzles in this round. Checking a puzzle that is in another round moves it here.",
+    )
+
+    class Meta:
+        model = Round
+        fields = ['name', 'order_number']
+        help_texts = {
+            'order_number': 'The hunt config refers to this round as "R" plus this number, e.g. R2.',
+        }
+
+    def __init__(self, *args, hunt=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.hunt = hunt or self.instance.hunt
+        self.fields['puzzles'].queryset = self.hunt.puzzle_set.select_related('round').order_by('order_number')
+        self.fields['puzzles'].label_from_instance = self._puzzle_label
+
+        if self.instance.pk:
+            self.initial['puzzles'] = list(self.instance.puzzle_set.values_list('pk', flat=True))
+            url = reverse('puzzlehunt:staff:round_update', args=[self.hunt.pk, self.instance.pk])
+        else:
+            url = reverse('puzzlehunt:staff:round_create', args=[self.hunt.pk])
+
+        self.helper = FormHelper()
+        self.helper.form_class = 'block'
+        self.helper.attrs = {'hx-post': url, 'hx-target': '#round-list', 'hx-swap': 'innerHTML'}
+        self.helper.form_action = url
+        self.helper.layout = Layout(
+            Field('name'),
+            Field('order_number'),
+            Field('puzzles'),
+            Div(Div(Submit('save', 'Save', css_class="is-primary"), css_class="level-right"), css_class="level"),
+        )
+
+    def _puzzle_label(self, puzzle):
+        label = f"{puzzle.order_number}. {puzzle.name}"
+        if puzzle.round_id and puzzle.round_id != self.instance.pk:
+            label += f" (currently in {puzzle.round.name})"
+        return label
+
+    def clean_order_number(self):
+        order_number = self.cleaned_data['order_number']
+        others = self.hunt.round_set.exclude(pk=self.instance.pk)
+        if others.filter(order_number=order_number).exists():
+            raise ValidationError("Another round in this hunt already uses this number.")
+
+        # Renumbering or adding a round must leave the hunt config valid
+        round_numbers = set(others.values_list('order_number', flat=True)) | {order_number}
+        config_error = self.hunt.config_error_for_rounds(round_numbers)
+        if config_error:
+            raise ValidationError(f"The hunt config would no longer be valid: {config_error}")
+        return order_number
+
+    def save(self, commit=True):
+        round_obj = super().save(commit=commit)
+        if commit:
+            selected = self.cleaned_data['puzzles']
+            round_obj.puzzle_set.exclude(pk__in=[p.pk for p in selected]).update(round=None)
+            Puzzle.objects.filter(pk__in=[p.pk for p in selected]).update(round=round_obj)
+        return round_obj
 
 
 class UserEditForm(ModelForm):

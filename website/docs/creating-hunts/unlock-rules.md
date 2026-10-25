@@ -49,6 +49,12 @@ The special identifier `PX` can be used to create rules that apply to all puzzle
 {: .note }
 For example, the rule `2 PX HINTS <= PX UNLOCK` will give 2 hints for puzzle A when puzzle A is unlocked, 2 hints for puzzle B when puzzle B is unlocked, and so on.
 
+### Round Numbers
+
+Rounds are referenced with `R` followed by the round's number, as shown on the [Rounds](../running-hunts/staff-tools.html#rounds) page:
+- `R1` refers to round number 1
+- `R2` refers to round number 2
+
 ### Rule Structure
 
 Each rule follows the format:
@@ -73,6 +79,15 @@ P2 <= P1  # This is an end-of-line comment
 P1 <= <condition>  # Unlock puzzle 1
 [P1, P2] <= <condition>  # Unlock multiple puzzles
 ```
+
+### Rounds
+```
+R1 <= <condition>  # Unlock round 1
+[P1, R1] <= <condition>  # Unlock puzzle 1 and round 1 together
+```
+
+{: .important }
+A puzzle that belongs to a round can't be unlocked until its round is. If a puzzle's rule is met while its round is still locked, the puzzle stays locked, then unlocks as soon as the round does. Puzzles that aren't in any round are unaffected.
 
 ### Points
 ```
@@ -102,6 +117,7 @@ These rules are evaluated once and trigger when their condition is met:
 #### Basic Conditions
 - Puzzle solve: `P1 SOLVE`
 - Puzzle unlock: `P1 UNLOCK`
+- Round unlock: `R1 UNLOCK` (or just `R1`)
 - Point threshold: `10 POINTS`
 - Time since hunt start: `+1:30` (1 hour 30 minutes)
 
@@ -152,6 +168,9 @@ For actions that should trigger exactly once after a delay from a puzzle event, 
 
 # Unlock P2 one hour after P1 is unlocked
 P2 <= 1 HOUR AFTER P1 UNLOCK
+
+# Unlock round 3 thirty minutes after round 2 unlocks
+R3 <= 30 MINUTES AFTER R2 UNLOCK
 ```
 
 This is equivalent to but more readable than:
@@ -179,28 +198,30 @@ The language follows this simplified grammar:
 ```
 rule := unlockable "<=" condition
 
-unlockable := puzzle_id | point_reward | hint_reward | badge | "[" unlockable_list "]"
+unlockable := puzzle_id | round_num | point_reward | hint_reward | badge | "[" unlockable_list "]"
 unlockable_list := unlockable ("," unlockable)*
 
 puzzle_id := "P" hex_number
+round_num := "R" number
 point_reward := number "POINTS"
 hint_reward := number ["puzzle_id"] "HINTS"
 badge := "\"" string "\""
 
 condition := single_use_condition | multi_use_condition
 
-single_use_condition := puzzle_solve | puzzle_id | puzzle_unlock | time_since_start |
-                       point_threshold | logical_expression | delayed_action
+single_use_condition := puzzle_solve | puzzle_id | puzzle_unlock | round_unlock | round_num |
+                       time_since_start | point_threshold | logical_expression | delayed_action
 logical_expression := "(" condition ("AND"|"OR") condition ")" |
                      number "OF" "(" condition_list ")"
 delayed_action := number ("MINUTES"|"HOURS") "AFTER" point_in_time ["IF" single_use_condition]
 
 multi_use_condition := time_interval ["IF" single_use_condition]
 time_interval := "EVERY" number ("MINUTES"|"HOURS") ["AFTER" point_in_time]
-point_in_time := time_since_start | puzzle_solve | puzzle_unlock
+point_in_time := time_since_start | puzzle_solve | puzzle_unlock | round_unlock
 
 puzzle_solve := puzzle_id "SOLVE"
 puzzle_unlock := puzzle_id "UNLOCK"
+round_unlock := round_num "UNLOCK"
 time_since_start := "+" hours ":" minutes
 point_threshold := number "POINTS"
 ```

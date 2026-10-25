@@ -64,6 +64,7 @@ hunt: The current hunt object
 puzzles: List of accessible puzzles
 team: The current team
 solved: List of solved puzzles
+rounds: List of unlocked rounds (all rounds for staff, or once the hunt is public)
 ```
 
 ## Creating Puzzles
@@ -86,6 +87,51 @@ At this stage, focus on creating the basic puzzle structure. You'll add puzzle c
 
 {: .note }
 The puzzle ID must be unique across all puzzles on the site, so it is recommended to build in some form of hunt prefix to your puzzle IDs. For example, we made the first puzzle in our first hunt "1001", and the first puzzle in our second hunt "2001", giving us 3 digits for the puzzle IDs in each hunt.
+
+## Rounds
+
+Rounds are an optional way to group a hunt's puzzles. Each round has a name, a number, and its own page at `/hunt/<hunt id>/round/<round number>/view/`. A team can't open a round, or any puzzle in it, until the round is unlocked.
+
+Create rounds and choose their puzzles on the [Rounds](../running-hunts/staff-tools.html#rounds) staff page. Then add rules to the hunt config to unlock them, for example:
+
+```
+[R1] <= 0 POINTS     # Round 1 is open from the start
+[R2] <= P009         # Round 2 opens when puzzle 009 is solved
+```
+
+See [Unlock Rules](unlock-rules.html#rounds) for the full syntax.
+
+### Round Templates
+
+By default, a round's page lists its puzzles with their solve status. To give a round a custom page, select it from the dropdown at the top of the **Hunt Template** staff page and write a template the same way you would for the hunt.
+
+Round templates have the following context:
+
+**Round Context**:
+```
+round: The current round
+hunt: The current hunt object
+puzzles: The round's puzzles that the team has unlocked
+team: The current team
+solved: List of solved puzzles in this round
+rounds: List of unlocked rounds (all rounds for staff, or once the hunt is public)
+```
+
+Two template tags help when laying out rounds and puzzles by number:
+
+- `round_unlocked` checks whether a round is in a list of rounds:
+  ```
+  {% raw %}{% if rounds|round_unlocked:2 %}<a href="...">Round 2</a>{% endif %}{% endraw %}
+  ```
+- `with_puzzle` renders its contents only if the puzzle with the given order number is in the list, and makes it available by name:
+  ```
+  {% raw %}{% with_puzzle puzzles 21 as puzzle %}
+    <a href="/puzzle/{{ puzzle.id }}/view/">{{ puzzle.name }}</a>
+  {% endwith_puzzle %}{% endraw %}
+  ```
+
+{: .note }
+Use the **Unlocked rounds** box in the template editor's preview to see how the hunt or round page looks with different rounds unlocked.
 
 ## Team Ranking Rules
 

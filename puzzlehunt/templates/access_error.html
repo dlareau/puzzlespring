@@ -7,7 +7,7 @@
   title: Sets page title to "Not Available"
   content: Displays the appropriate error message based on the reason
 @context:
-  reason: The reason for access denial ('hunt', 'team', 'puzzle', or 'hint')
+  reason: The reason for access denial ('hunt', 'team', 'puzzle', 'hint', or 'round')
 {% endcomment %}
 
 {% block title %}Not Available{% endblock title %}
@@ -45,6 +45,14 @@
     <p>
       You do not have access to this page. It may be because you do not have any
       hints available or because you do not have access to the corresponding puzzle.
+    </p>
+    {% endif %}
+
+    {% if reason == "round" %}
+    <p>
+      This round is part of an ongoing puzzlehunt and is not yet
+      unlocked for your team. Please continue playing to unlock it or
+      wait until the hunt is public.
     </p>
     {% endif %}
     <br>

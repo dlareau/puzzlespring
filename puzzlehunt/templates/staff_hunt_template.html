@@ -11,6 +11,9 @@
   hunt: The current Hunt object
   template_text: The current template text content
   puzzle_numbers: List of puzzle numbers for preview functionality
+  rounds: The hunt's rounds, for the hunt/round template selector
+  selected_round: The Round whose template is being edited, or None for the hunt template
+  round_numbers: List of round order numbers for preview functionality
 {% endcomment %}
 
 {% block title_meta_elements %}
@@ -20,25 +23,41 @@
 {% block staff_content %}
   <div x-data="{ modal:false, templateText:''}">
   <div class="columns is-multiline">
-    <div class="column subtitle pb-0">Hunt Template Editor:</div>
+    <div class="column pb-0">
+      <span class="subtitle">{% if selected_round %}Round Template Editor: {{ selected_round.name }}{% else %}Hunt Template Editor{% endif %}</span>
+      <div class="select ml-3" style="vertical-align: middle;">
+        <select onchange="window.location.href=this.value">
+          <option value="{% url 'puzzlehunt:staff:hunt_template' hunt.pk %}"
+                  {% if not selected_round %}selected{% endif %}>
+            Hunt Template
+          </option>
+          {% for r in rounds %}
+          <option value="{% url 'puzzlehunt:staff:hunt_template' hunt.pk %}?round={{ r.order_number }}"
+                  {% if selected_round and selected_round.pk == r.pk %}selected{% endif %}>
+            Round: {{ r.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
     <div class="column is-narrow pb-0">
       <div id="validateResponse"></div>
     </div>
     <div class="column is-narrow pb-0">
       <button class="button is-primary" style="width: 200px;"
-              hx-post="{% url 'puzzlehunt:staff:hunt_template' hunt.pk %}"
+              hx-post="{% url 'puzzlehunt:staff:hunt_template' hunt.pk %}{% if selected_round %}?round={{ selected_round.order_number }}{% endif %}"
               hx-target="#staff-content-container"
               hx-select="#staff-content-container"
               hx-swap="outerHTML"
-              hx-vals="js:{template_text: editor.getValue()}"
+              hx-vals="js:{template_text: editor.getValue(){% if selected_round %}, round: '{{ selected_round.order_number }}'{% endif %}}"
               hx-trigger="click, keyup[(ctrlKey||metaKey)&&key=='s'] from:body"
       >
         Save
       </button>
     </div>
     <div class="column is-12">
-      <form id="previewForm" hx-preserve 
-            action="{% url 'puzzlehunt:staff:preview_template' hunt.pk %}"
+      <form id="previewForm" hx-preserve
+            action="{% if selected_round %}{% url 'puzzlehunt:staff:preview_round_template' hunt.pk selected_round.order_number %}{% else %}{% url 'puzzlehunt:staff:preview_template' hunt.pk %}{% endif %}"
             target="preview_frame" method="post">
         {% csrf_token %}
         <div class="field is-horizontal">
@@ -63,6 +82,18 @@
                 <input class="input" type="text" name="solved" value="{{ puzzle_numbers|join:", " }}">
               </div>
             </div>
+            {% if round_numbers %}
+            <div class="field has-addons">
+              <div class="control">
+                <a class="button is-static">
+                  Unlocked rounds:
+                </a>
+              </div>
+              <div class="control is-expanded">
+                <input class="input" type="text" name="unlocked_rounds" value="{{ round_numbers|join:", " }}">
+              </div>
+            </div>
+            {% endif %}
             <div class="field is-grouped is-narrow">
               <div class="control">
                 <input

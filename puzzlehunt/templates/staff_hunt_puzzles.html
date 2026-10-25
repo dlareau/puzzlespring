@@ -7,6 +7,9 @@
   staff_content: The main content area displaying puzzle management interface
 @context:
   puzzles: List of all Puzzle objects in the hunt
+  has_rounds: Boolean indicating if the hunt has any rounds
+  round_puzzle_groups: List of (round, puzzles) tuples for rounds with puzzles
+  puzzles_no_round: List of puzzles without a round
 {% endcomment %}
 
 {% block title_meta_elements %}
@@ -15,90 +18,43 @@
 
 {% block staff_content %}
   <div class="columns"><div class="column is-12 is-12-desktop is-10-widescreen is-offset-1-widescreen is-8-fullhd is-offset-2-fullhd">
-  {% for puzzle in puzzles %}
-    {% if puzzle.has_gap %}
-      <hr class="has-background-grey" style="height:1px">
-    {% endif %}
-    <div class="box p-4">
-      <div class="columns is-multiline" x-data="{fileModal: false}">
-        <div class="column is-narrow has-text-grey">
-          <div>#{{ puzzle.order_number }}</div>
-          <div>ID: {{ puzzle.id }}</div>
-          {% if puzzle.type == puzzle.PuzzleType.STANDARD_PUZZLE %}
-            <span class="tag is-primary">Standard</span>
-          {% elif puzzle.type == puzzle.PuzzleType.META_PUZZLE %}
-            <span class="tag is-warning">Meta</span>
-          {% elif puzzle.type == puzzle.PuzzleType.FINAL_PUZZLE %}
-            <span class="tag is-danger">Final</span>
-          {% elif puzzle.type == puzzle.PuzzleType.NON_PUZZLE %}
-            <span class="tag is-info">Non-Puzzle</span>
-          {% endif %}
-        </div>
-        <div class="column">
-          <h3 class="is-size-4">{{ puzzle.name }}</h3>
-        </div>
-        <div class="column is-narrow">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-            <button class="button" @click="fileModal = true">
-              <span class="icon is-small">
-                <i class="fa fa-folder-open"></i>
-              </span>
-              <span>Files</span>
-            </button>
-            <a href="{% url 'admin:puzzlehunt_puzzle_change' puzzle.id %}" class="button">
-              <span class="icon is-small">
-                <i class="fa fa-pencil"></i>
-              </span>
-              <span>Edit</span>
-            </a>
-            <a href="{% url 'puzzlehunt:puzzle_view' puzzle.pk %}" class="button">
-              <span class="icon is-small">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span>Preview</span>
-            </a>
-            <div x-data="{showAnswer: false}" style="position: relative;">
-              <button class="button is-fullwidth"
-                      :class="showAnswer && 'is-danger is-light'"
-                      @click="showAnswer = !showAnswer;">
-                <span class="icon is-small">
-                  <i class="fa fa-key"></i>
-                </span>
-                <span>Answer</span>
-              </button>
-              <div x-show="showAnswer" x-cloak
-                   style="position: absolute; top: 100%; left: 50%; transform: translateX(-50%); z-index: 10; margin-top: 0.25rem;"
-                   @click.outside="showAnswer = false">
-                <span class="tag is-danger is-medium">{{ puzzle.answer }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- File Management Modal -->
-        <div class="modal" :class="fileModal && 'is-active'" x-cloak @keydown.escape.window="fileModal = false">
-          <div class="modal-background" @click="fileModal = false"></div>
-          <div class="modal-card" style="width: 95vw; max-height: 90vh;">
-            <header class="modal-card-head">
-              <p class="modal-card-title">{{ puzzle.name }} - File Management</p>
-              <button class="delete" aria-label="close" @click="fileModal = false"></button>
-            </header>
-            <section class="modal-card-body" style="min-height: 300px;">
-              <!-- Puzzle Files Section -->
-              <h4 class="title is-5">Puzzle Files</h4>
-              {% with parent=puzzle parent_type='puzzle'%}
-                {% include 'partials/_staff_file_list.html' %}
-              {% endwith %}
 
-              <!-- Solution Files Section -->
-              <h4 class="title is-5 mt-5">Solution Files</h4>
-              {% with parent=puzzle parent_type='solution'%}
-                {% include 'partials/_staff_file_list.html' %}
-              {% endwith %}
-            </section>
-          </div>
-        </div>
+  {% if has_rounds %}
+    {# Display puzzles grouped by round #}
+    {% for round, round_puzzles in round_puzzle_groups %}
+      <div class="mb-5">
+        <h2 class="title is-4 mb-3">
+          <span class="icon-text">
+            <span class="icon"><i class="fa fa-folder"></i></span>
+            <span>{{ round.name }}</span>
+          </span>
+        </h2>
+        {% for puzzle in round_puzzles %}
+          {% include 'partials/_staff_puzzle_box.html' %}
+        {% endfor %}
       </div>
-    </div>
-  {% endfor %}
+    {% endfor %}
+
+    {# Display puzzles without a round #}
+    {% if puzzles_no_round %}
+      <div class="mb-5">
+        <h2 class="title is-4 mb-3">
+          <span class="icon-text">
+            <span class="icon"><i class="fa fa-puzzle-piece"></i></span>
+            <span>No Round</span>
+          </span>
+        </h2>
+        {% for puzzle in puzzles_no_round %}
+          {% include 'partials/_staff_puzzle_box.html' %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% else %}
+    {# No rounds - display flat list #}
+    {% for puzzle in puzzles %}
+      {% include 'partials/_staff_puzzle_box.html' %}
+    {% endfor %}
+  {% endif %}
+
   </div></div>
 {% endblock %}

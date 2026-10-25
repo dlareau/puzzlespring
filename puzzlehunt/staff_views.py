@@ -32,8 +32,8 @@ from django_sendfile import sendfile
 from .utils import create_media_files, get_media_file_model, get_media_file_parent_model, create_hunt_export_zip, import_hunt_from_zip, import_hunt_from_zip, validate_hunt_zip
 from .hunt_views import protected_static, prefetch_data_answers, set_data_answer_values
 from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile, \
-    TeamDataQuestion, Prepuzzle
-from .forms import TeamDataQuestionForm
+    TeamDataQuestion, Prepuzzle, Round
+from .forms import TeamDataQuestionForm, RoundForm
 from .tasks import import_hunt_background
 from .config_parser import parse_config, process_config_rules
 
@@ -643,7 +643,30 @@ def get_hunt_template_errors(template_text, hunt, request):
 
     puzzles = sorted(puzzle_list, key=lambda p: p.order_number)
     solved = []
-    context = {'hunt': hunt, 'puzzles': puzzles, 'team': team, 'solved': solved}
+    context = {'hunt': hunt, 'puzzles': puzzles, 'team': team, 'solved': solved, 'rounds': list(hunt.rounds)}
+
+    try:
+        # Get the default Django template engine
+        default_engine = engines['django']
+        # Create a template instance
+        template = default_engine.from_string(template_text)
+        template.render(context, request=request)
+    except Exception as e:
+        return f"Error rendering template: {e}"
+    return None
+
+
+def get_round_template_errors(template_text, round_obj, request):
+    team = Team(
+        name="Preview Team",
+        hunt=round_obj.hunt,
+    )
+    puzzle_list = round_obj.puzzles.all()
+
+    puzzles = sorted(puzzle_list, key=lambda p: p.order_number)
+    solved = []
+    context = {'round': round_obj, 'hunt': round_obj.hunt, 'puzzles': puzzles, 'team': team, 'solved': solved,
+               'rounds': list(round_obj.hunt.rounds)}
 
     try:
         # Get the default Django template engine
@@ -658,15 +681,26 @@ def get_hunt_template_errors(template_text, hunt, request):
 
 @staff_member_required
 def hunt_template(request, hunt):
-    # Take text from the template_text parameter and save it to the hunt's template file
+    # Check for round query parameter to determine if editing hunt or round template
+    round_order = request.GET.get('round') or request.POST.get('round')
+    selected_round = None
+
+    if round_order:
+        selected_round = get_object_or_404(Round, hunt=hunt, order_number=round_order)
+        target = selected_round
+        template_errors_fn = get_round_template_errors
+    else:
+        target = hunt
+        template_errors_fn = get_hunt_template_errors
+
     if request.method == "POST":
         template_text = request.POST.get("template_text", "")
         if template_text == "":
             messages.success(request, "Template cleared")
-            hunt.template_file = None
-            hunt.save()
+            target.template_file = None
+            target.save()
         else:
-            template_errors = get_hunt_template_errors(template_text, hunt, request)
+            template_errors = template_errors_fn(template_text, target, request)
             if template_errors is not None:
                 messages.error(request, template_errors)
             else:
@@ -674,15 +708,37 @@ def hunt_template(request, hunt):
                     buf.write(template_text.encode("utf-8"))
                     buf.seek(0)
                     template_file = File(buf, "template.html")
-                    hunt.template_file = template_file
-                    hunt.save()
+                    target.template_file = template_file
+                    target.save()
                 messages.success(request, "Template saved")
     else:
         template_text = ""
-        if hunt.template_file is not None and hunt.template_file != "":
-            template_text = hunt.template_file.file.read().decode("utf-8")
-    context = {'hunt': hunt, 'template_text': template_text, 'puzzle_numbers': hunt.puzzle_set.values_list('order_number', flat=True)}
+        if target.template_file is not None and target.template_file != "":
+            template_text = target.template_file.file.read().decode("utf-8")
+
+    rounds = hunt.round_set.order_by('order_number')
+    puzzle_numbers = (
+        selected_round.puzzles.values_list('order_number', flat=True)
+        if selected_round else
+        hunt.puzzle_set.values_list('order_number', flat=True)
+    )
+
+    context = {
+        'hunt': hunt,
+        'rounds': rounds,
+        'selected_round': selected_round,
+        'template_text': template_text,
+        'puzzle_numbers': list(puzzle_numbers),
+        'round_numbers': [r.order_number for r in rounds],
+    }
     return render(request, "staff_hunt_template.html", context)
+
+
+def _preview_rounds(request, hunt):
+    """Rounds to treat as unlocked in a template preview, from the "unlocked_rounds" form field."""
+    unlocked_rounds_arg = request.POST.get("unlocked_rounds", "")
+    unlocked_rounds = [] if unlocked_rounds_arg == "" else [int(x) for x in unlocked_rounds_arg.split(",")]
+    return list(hunt.rounds.filter(order_number__in=unlocked_rounds))
 
 
 @require_POST
@@ -698,7 +754,42 @@ def preview_template(request, hunt):
     puzzles = sorted(puzzle_list, key=lambda p: p.order_number)
 
     solved = hunt.puzzle_set.filter(order_number__in=solved)
-    context = {'hunt': hunt, 'puzzles': puzzles, 'team': Team(name="Preview Team", hunt=hunt), 'solved': solved}
+    context = {'hunt': hunt, 'puzzles': puzzles, 'team': Team(name="Preview Team", hunt=hunt), 'solved': solved,
+               'rounds': _preview_rounds(request, hunt)}
+
+    try:
+        # Get the default Django template engine
+        default_engine = engines['django']
+        # Create a template instance
+        template = default_engine.from_string(template_text)
+        return HttpResponse(template.render(context, request=request))
+    except Exception as e:
+        return HttpResponse(f"Error rendering template: {e}")
+
+
+@require_POST
+@staff_member_required
+def preview_round_template(request, hunt, order_number):
+    """ Renders a round template preview using the puzzles and rounds the staff member marked as unlocked. """
+    round_obj = get_object_or_404(Round, hunt=hunt, order_number=order_number)
+    template_text = request.POST.get("template_text", "")
+    solved_arg = request.POST.get("solved", "")
+    solved = [] if solved_arg == "" else [int(x) for x in solved_arg.split(",")]
+
+    unlocked_arg = request.POST.get("unlocked", "")
+    unlocked = [] if unlocked_arg == "" else [int(x) for x in unlocked_arg.split(",")]
+    puzzle_list = round_obj.puzzles.filter(order_number__in=unlocked)
+    puzzles = sorted(puzzle_list, key=lambda p: p.order_number)
+
+    solved = round_obj.puzzles.filter(order_number__in=solved)
+    context = {
+        'round': round_obj,
+        'hunt': hunt,
+        'puzzles': puzzles,
+        'team': Team(name="Preview Team", hunt=hunt),
+        'solved': solved,
+        'rounds': _preview_rounds(request, hunt),
+    }
 
     try:
         # Get the default Django template engine
@@ -790,18 +881,106 @@ def hunt_puzzles(request, hunt):
     """
     View function to display puzzles for the current hunt.
 
-    This view fetches puzzles for a given hunt.
+    This view fetches puzzles for a given hunt, grouped by round if rounds exist.
     The puzzles are then rendered in the 'staff_hunt_puzzles.html' template.
 
     Args:
         hunt (Hunt): The hunt instance for which to display puzzles
     """
     puzzles = list(hunt.puzzle_set.order_by('order_number').all())
-    for i, puzzle in enumerate(puzzles):
-        puzzle.has_gap = (puzzles[i].order_number - puzzles[i-1].order_number > 1) if i != 0 else False
+    rounds = list(hunt.round_set.order_by('order_number').all())
 
-    context = {'hunt': hunt, 'puzzles': puzzles}
+    # Group puzzles by round as list of (round, puzzles) tuples
+    round_puzzle_groups = []
+    puzzles_no_round = []
+    for round_obj in rounds:
+        round_puzzles = [p for p in puzzles if p.round_id == round_obj.id]
+        if round_puzzles:
+            round_puzzle_groups.append((round_obj, round_puzzles))
+    puzzles_no_round = [p for p in puzzles if p.round_id is None]
+
+    context = {
+        'hunt': hunt,
+        'puzzles': puzzles,
+        'has_rounds': len(rounds) > 0,
+        'round_puzzle_groups': round_puzzle_groups,
+        'puzzles_no_round': puzzles_no_round,
+    }
     return render(request, "staff_hunt_puzzles.html", context)
+
+
+def _round_list_response(request, hunt):
+    """ Re-renders the round list for HTMX requests, otherwise redirects back to the rounds page. """
+    if request.htmx:
+        return render(request, "partials/_round_list.html", {'hunt': hunt, 'rounds': _rounds_with_edit_forms(hunt)})
+    return redirect('puzzlehunt:staff:hunt_rounds', hunt.pk)
+
+
+def _rounds_with_edit_forms(hunt):
+    """ The hunt's rounds with their puzzles, each carrying a RoundForm for inline editing. """
+    rounds = list(hunt.round_set.order_by('order_number').prefetch_related(
+        Prefetch('puzzle_set', queryset=Puzzle.objects.order_by('order_number'))))
+    for round_obj in rounds:
+        round_obj.edit_form = RoundForm(instance=round_obj, hunt=hunt)
+    return rounds
+
+
+def _form_error_message(form):
+    return "; ".join(f"{field}: {', '.join(errors)}" for field, errors in form.errors.items())
+
+
+@staff_member_required
+def hunt_rounds(request, hunt):
+    """ Staff page for creating, editing, and deleting a hunt's rounds and choosing their puzzles. """
+    context = {
+        'hunt': hunt,
+        'rounds': _rounds_with_edit_forms(hunt),
+        'create_form': RoundForm(hunt=hunt),
+    }
+    return render(request, "staff_hunt_rounds.html", context)
+
+
+@require_POST
+@staff_member_required
+def round_create(request, hunt):
+    """ Creates a round from the rounds page form and assigns its puzzles. """
+    next_order = (hunt.round_set.aggregate(Max('order_number'))['order_number__max'] or 0) + 1
+    form = RoundForm(request.POST, hunt=hunt, instance=Round(hunt=hunt, order_number=next_order))
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Round added.")
+    else:
+        messages.error(request, _form_error_message(form))
+    return _round_list_response(request, hunt)
+
+
+@require_POST
+@staff_member_required
+def round_update(request, hunt, pk):
+    """ Updates a round's name, number, and puzzles from the rounds page form. """
+    round_obj = get_object_or_404(Round, pk=pk, hunt=hunt)
+    form = RoundForm(request.POST, hunt=hunt, instance=round_obj)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Round updated.")
+    else:
+        messages.error(request, _form_error_message(form))
+    return _round_list_response(request, hunt)
+
+
+@require_POST
+@staff_member_required
+def round_delete(request, hunt, pk):
+    """ Deletes a round, unless the hunt config refers to it. Its puzzles are left without a round. """
+    round_obj = get_object_or_404(Round, pk=pk, hunt=hunt)
+    remaining = hunt.round_set.exclude(pk=round_obj.pk).values_list('order_number', flat=True)
+    config_error = hunt.config_error_for_rounds(remaining)
+    if config_error:
+        messages.error(request, f"Can't delete {round_obj.name}: the hunt config would no longer be valid: {config_error}")
+    else:
+        round_obj.delete()
+        messages.success(request, "Round deleted. Its puzzles are no longer in a round.")
+    return _round_list_response(request, hunt)
 
 
 def _questions_with_edit_forms(hunt):
@@ -1143,6 +1322,9 @@ def config_tester(request, hunt):
     puzzle_ids = set(str(p.id) for p in puzzles)
     order_to_id = {p.order_number: str(p.id) for p in puzzles}
 
+    rounds = hunt.round_set.order_by('order_number').all()
+    round_order_numbers = set(r.order_number for r in rounds)
+
     # Parse simulated time offset from URL params as integer minutes (default: 0)
     time_offset_mins = int(request.GET.get('t', 0))
     simulated_time = hunt.start_date + timedelta(minutes=time_offset_mins)
@@ -1173,6 +1355,7 @@ def config_tester(request, hunt):
 
     # Parse and process config rules
     unlocked_puzzles = set()
+    unlocked_rounds = set()
     points = 0
     hints = 0
     puzzle_hints = {}
@@ -1181,31 +1364,70 @@ def config_tester(request, hunt):
 
     if hunt.config and hunt.config.strip():
         try:
-            config_rules = parse_config(hunt.config, puzzle_ids, order_to_id)
-            unlocked_puzzles, points, hints, puzzle_hints, earned_badges = process_config_rules(
+            config_rules = parse_config(hunt.config, puzzle_ids, order_to_id, round_order_numbers)
+            unlocked_puzzles, unlocked_rounds, points, hints, puzzle_hints, earned_badges = process_config_rules(
                 config_rules,
                 mock_statuses,
+                [],  # Empty list - rounds only unlock via config rules
                 hunt.start_date,
                 simulated_time
             )
         except Exception as e:
             parse_error = str(e)
 
-    # Build puzzle data for template
-    puzzle_data = []
+    # Build puzzle data grouped by round
+    round_to_puzzles = {}
+    no_round_puzzles = []
+
     for puzzle in puzzles:
         pid = str(puzzle.id)
-        puzzle_data.append({
+        puzzle_unlocked_by_config = pid in unlocked_puzzles
+        round_is_unlocked = puzzle.round is None or str(puzzle.round.order_number) in unlocked_rounds
+
+        # Determine puzzle status: unlocked, gated (unlocked but round locked), or locked
+        if puzzle_unlocked_by_config and round_is_unlocked:
+            status = 'unlocked'
+        elif puzzle_unlocked_by_config and not round_is_unlocked:
+            status = 'gated'
+        else:
+            status = 'locked'
+
+        puzzle_info = {
             'puzzle': puzzle,
             'is_solved': pid in solved_puzzle_ids,
-            'is_unlocked': pid in unlocked_puzzles,
+            'is_unlocked': status == 'unlocked',
+            'is_gated': status == 'gated',
+            'status': status,
             'solve_time_mins': solve_times_mins.get(pid),
             'puzzle_hints': puzzle_hints.get(pid, 0),
+        }
+        if puzzle.round:
+            if puzzle.round.id not in round_to_puzzles:
+                round_to_puzzles[puzzle.round.id] = {
+                    'round': puzzle.round,
+                    'is_unlocked': str(puzzle.round.order_number) in unlocked_rounds,
+                    'puzzles': []
+                }
+            round_to_puzzles[puzzle.round.id]['puzzles'].append(puzzle_info)
+        else:
+            no_round_puzzles.append(puzzle_info)
+
+    # Order rounds and build final structure
+    grouped_data = []
+    if no_round_puzzles:
+        grouped_data.append({
+            'round': None,
+            'is_unlocked': True,  # No round = always accessible
+            'puzzles': no_round_puzzles
         })
+
+    for round_obj in rounds:
+        if round_obj.id in round_to_puzzles:
+            grouped_data.append(round_to_puzzles[round_obj.id])
 
     context = {
         'hunt': hunt,
-        'puzzle_data': puzzle_data,
+        'grouped_data': grouped_data,
         'time_offset_mins': time_offset_mins,
         'simulated_time': simulated_time,
         'points': points,
@@ -1214,6 +1436,8 @@ def config_tester(request, hunt):
         'parse_error': parse_error,
         'num_unlocked': len(unlocked_puzzles),
         'num_solved': len(solved_puzzle_ids),
+        'num_rounds_unlocked': len(unlocked_rounds),
+        'num_rounds': len(rounds),
     }
 
     return render(request, "staff_config_tester.html", context)

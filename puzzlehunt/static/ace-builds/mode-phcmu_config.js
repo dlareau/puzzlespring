@@ -26,6 +26,9 @@ var PhcmuConfigHighlightRules = function () {
                 caseInsensitive: true
             }, {
                 token: "constant.language",
+                regex: "[Rr](\\d+)\\b",
+            }, {
+                token: "constant.language",
                 regex: "[Pp]#\\d+\\b",
             }, {
                 token: "constant.language",

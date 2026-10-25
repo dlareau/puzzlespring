@@ -7,13 +7,17 @@
   staff_content: Displays time controls, results summary, and puzzle state table
 @context:
   hunt: The current Hunt object
-  puzzle_data: List of dicts with puzzle info and simulated state
+  grouped_data: List of round groups, each with round info and list of puzzle dicts
   time_offset_mins: Current simulated time offset in minutes (integer)
   simulated_time: Absolute simulated datetime
   points: Accumulated points
   hints: Accumulated hints
   earned_badges: List of earned badge texts
   parse_error: Config parse error message if any
+  num_unlocked: Number of unlocked puzzles
+  num_solved: Number of solved puzzles
+  num_rounds_unlocked: Number of unlocked rounds
+  num_rounds: Total number of rounds
 {% endcomment %}
 
 {% load static %}
@@ -31,7 +35,14 @@
 
 
 {% block staff_content %}
-<div id="config-tester-content">
+<div id="config-tester-content"
+     hx-trigger="recalculate"
+     hx-get=""
+     hx-target="this"
+     hx-select="#config-tester-content > *"
+     hx-swap="morph:innerHTML"
+     hx-sync="this:replace"
+     hx-ext="alpine-morph">
 <style>
   .solve-time-input {
     width: 80px;
@@ -50,7 +61,7 @@
   }
 </style>
 
-<div x-data="configTester()" class="columns is-multiline" hx-ext="alpine-morph">
+<div x-data="configTester()" class="columns is-multiline">
   <!-- Time Control Section -->
   <div class="column is-12">
     <div class="box">
@@ -113,6 +124,14 @@
             <p class="title">{{ hints }}</p>
           </div>
         </div>
+        {% if num_rounds > 0 %}
+        <div class="level-item has-text-centered">
+          <div>
+            <p class="heading">Rounds Unlocked</p>
+            <p class="title">{{ num_rounds_unlocked }}</p>
+          </div>
+        </div>
+        {% endif %}
       </div>
       {% if parse_error %}
         <div class="notification is-danger mt-3">
@@ -164,42 +183,65 @@
         </tr>
       </thead>
       <tbody>
-        {% for item in puzzle_data %}
-        <tr class="puzzle-row">
-          <td class="mono">{{ item.puzzle.order_number }}</td>
-          <td class="mono"><strong>P{{ item.puzzle.id }}</strong></td>
-          <td>{{ item.puzzle.name }}</td>
-          <td class="has-text-centered">
-            <input type="checkbox"
-                   class="switch is-rounded is-success"
-                   id="solve-toggle-{{ item.puzzle.id }}"
-                   x-model="solvedPuzzles['{{ item.puzzle.id }}']"
-                   @change="onSolvedChange('{{ item.puzzle.id }}')">
-            <label for="solve-toggle-{{ item.puzzle.id }}"></label>
-          </td>
-          <td>
-            <input class="input is-small solve-time-input" type="text"
-                   :value="formatTime(solveTimes['{{ item.puzzle.id }}'])"
-                   @change="parseAndSetSolveTime('{{ item.puzzle.id }}', $event.target.value)"
-                   @keyup.enter="parseAndSetSolveTime('{{ item.puzzle.id }}', $event.target.value)"
-                   x-bind:disabled="!solvedPuzzles['{{ item.puzzle.id }}']"
-                   placeholder="+0:00">
-          </td>
-          <td class="has-text-centered">
-            {% if item.is_unlocked %}
-              <span class="tag is-success">Unlocked</span>
-            {% else %}
-              <span class="tag is-light">Locked</span>
-            {% endif %}
-          </td>
-          <td class="has-text-centered">
-            {% if item.puzzle_hints > 0 %}
-              <span class="tag is-info">{{ item.puzzle_hints }}</span>
-            {% else %}
-              <span class="has-text-grey">0</span>
-            {% endif %}
-          </td>
-        </tr>
+        {% for group in grouped_data %}
+          <!-- Round Header Row -->
+          <tr class="has-background-light">
+            <td colspan="7">
+              <div class="is-flex is-align-items-center" style="gap: 0.5rem;">
+                {% if group.round %}
+                  <strong class="mono">R{{ group.round.order_number }}</strong>
+                  <span class="has-text-weight-semibold">{{ group.round.name }}</span>
+                  {% if group.is_unlocked %}
+                    <span class="tag is-success is-small">Unlocked</span>
+                  {% else %}
+                    <span class="tag is-light is-small">Locked</span>
+                  {% endif %}
+                {% else %}
+                  <span class="has-text-grey-dark has-text-weight-semibold">No Round</span>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          <!-- Puzzle Rows for this Round -->
+          {% for item in group.puzzles %}
+          <tr class="puzzle-row">
+            <td class="mono">{{ item.puzzle.order_number }}</td>
+            <td class="mono"><strong>P{{ item.puzzle.id }}</strong></td>
+            <td>{{ item.puzzle.name }}</td>
+            <td class="has-text-centered">
+              <input type="checkbox"
+                     class="switch is-rounded is-success"
+                     id="solve-toggle-{{ item.puzzle.id }}"
+                     x-model="solvedPuzzles['{{ item.puzzle.id }}']"
+                     @change="onSolvedChange('{{ item.puzzle.id }}')">
+              <label for="solve-toggle-{{ item.puzzle.id }}"></label>
+            </td>
+            <td>
+              <input class="input is-small solve-time-input" type="text"
+                     :value="formatTime(solveTimes['{{ item.puzzle.id }}'])"
+                     @change="parseAndSetSolveTime('{{ item.puzzle.id }}', $event.target.value)"
+                     @keyup.enter="parseAndSetSolveTime('{{ item.puzzle.id }}', $event.target.value)"
+                     x-bind:disabled="!solvedPuzzles['{{ item.puzzle.id }}']"
+                     placeholder="+0:00">
+            </td>
+            <td class="has-text-centered">
+              {% if item.is_unlocked %}
+                <span class="tag is-success">Unlocked</span>
+              {% elif item.is_gated %}
+                <span class="tag is-warning">Gated</span>
+              {% else %}
+                <span class="tag is-light">Locked</span>
+              {% endif %}
+            </td>
+            <td class="has-text-centered">
+              {% if item.puzzle_hints > 0 %}
+                <span class="tag is-info">{{ item.puzzle_hints }}</span>
+              {% else %}
+                <span class="has-text-grey">0</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
         {% empty %}
         <tr>
           <td colspan="7" class="has-text-centered has-text-grey">
@@ -219,14 +261,14 @@ function configTester() {
   return {
     timeOffset: {{ time_offset_mins }},  // integer minutes
     solvedPuzzles: {
-      {% for item in puzzle_data %}
+      {% for group in grouped_data %}{% for item in group.puzzles %}
       '{{ item.puzzle.id }}': {{ item.is_solved|yesno:"true,false" }},
-      {% endfor %}
+      {% endfor %}{% endfor %}
     },
     solveTimes: {
-      {% for item in puzzle_data %}
+      {% for group in grouped_data %}{% for item in group.puzzles %}
       '{{ item.puzzle.id }}': {{ item.solve_time_mins|default_if_none:"null" }},
-      {% endfor %}
+      {% endfor %}{% endfor %}
     },
 
     formatTime(mins) {
@@ -304,11 +346,11 @@ function configTester() {
 
       history.replaceState(null, '', '?' + params.toString());
 
-      htmx.ajax('GET', '?' + params.toString(), {
-        target: '#config-tester-content',
-        select: '#config-tester-content > *',
-        swap: 'morph:innerHTML'
-      });
+      // Update the hx-get attribute and trigger the request
+      // hx-sync="this:replace" will cancel any in-flight request
+      const target = document.querySelector('#config-tester-content');
+      target.setAttribute('hx-get', '?' + params.toString());
+      htmx.trigger(target, 'recalculate');
     }
   }
 }

@@ -201,6 +201,13 @@ def email_backend_configured():
     return bool(settings.EMAIL_CONFIGURED)
 
 
+@register.filter
+def round_unlocked(rounds, round_number):
+    if rounds is None:
+        return False
+    return any([x.order_number == round_number for x in rounds])
+
+
 @register.simple_tag(takes_context=True)
 def hunt_back_url(context, hunt_pk):
     """
@@ -222,3 +229,46 @@ def hunt_back_url(context, hunt_pk):
         return referer
     
     return reverse('puzzlehunt:hunt_view', args=[hunt_pk])
+
+
+@register.tag
+def with_puzzle(parser, token):
+    """
+    Renders contents only if a puzzle with the given order_number exists.
+    Usage: {% with_puzzle puzzles 60 as puzzle %}...{% endwith_puzzle %}
+    """
+    bits = token.split_contents()
+    if len(bits) != 5 or bits[3] != 'as':
+        raise template.TemplateSyntaxError("Usage: {% with_puzzle puzzles order_number as varname %}")
+    nodelist = parser.parse(('endwith_puzzle',))
+    parser.delete_first_token()
+    return WithPuzzleNode(bits[1], bits[2], bits[4], nodelist)
+
+
+class WithPuzzleNode(template.Node):
+    def __init__(self, puzzles_var, order_num, context_var, nodelist):
+        self.puzzles_var = template.Variable(puzzles_var)
+        self.order_num = template.Variable(order_num)
+        self.context_var = context_var
+        self.nodelist = nodelist
+
+    def render(self, context):
+        try:
+            puzzles = self.puzzles_var.resolve(context)
+            order_num = self.order_num.resolve(context)
+        except template.VariableDoesNotExist:
+            return ''
+
+        puzzle = None
+        if puzzles:
+            for p in puzzles:
+                if p.order_number == order_num:
+                    puzzle = p
+                    break
+
+        if puzzle is None:
+            return ''
+
+        with context.push():
+            context[self.context_var] = puzzle
+            return self.nodelist.render(context)

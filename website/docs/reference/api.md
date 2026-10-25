@@ -180,6 +180,18 @@ _URL Patterns:_
 _Parameters:_
 - `pk`: any
 
+### <u>round_view</u>
+
+_Description:_ A view to render round templates. Does permission checks and determines which puzzles
+within the round to display, then renders the appropriate template.
+
+_URL Patterns:_
+- `hunt/<hunt:hunt>/round/<int:order_number>/view/`
+
+_Parameters:_
+- `hunt`: any
+- `order_number`: any
+
 ## Info Views
 
 ### <u>archive</u>
@@ -206,12 +218,12 @@ _URL Patterns:_
 _Parameters:_
 - `pk`: any
 
-### <u>notification_toggle</u>
+### <u>notification_edit</u>
 
-_Description:_ No description available.
+_Description:_ Handle editing of notification subscription.
 
 _URL Patterns:_
-- `notifications/<int:pk>/toggle/`
+- `notifications/<int:pk>/edit/`
 
 _Parameters:_
 - `pk`: any
@@ -582,7 +594,7 @@ _Parameters:_
 
 _Description:_ View function to display puzzles for the current hunt.
 
-This view fetches puzzles for a given hunt.
+This view fetches puzzles for a given hunt, grouped by round if rounds exist.
 The puzzles are then rendered in the 'staff_hunt_puzzles.html' template.
 
 Args:
@@ -600,6 +612,16 @@ _Description:_ No description available.
 
 _URL Patterns:_
 - `staff/hunt/<hunt-fallback:hunt>/reset/`
+
+_Parameters:_
+- `hunt`: any
+
+### <u>hunt_rounds</u>
+
+_Description:_ Staff page for creating, editing, and deleting a hunt's rounds and choosing their puzzles. 
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/rounds/`
 
 _Parameters:_
 - `hunt`: any
@@ -653,6 +675,17 @@ _URL Patterns:_
 _Parameters:_
 - `hunt`: any
 
+### <u>preview_round_template</u>
+
+_Description:_ Renders a round template preview using the puzzles and rounds the staff member marked as unlocked. 
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/template/preview/round/<int:order_number>/`
+
+_Parameters:_
+- `hunt`: any
+- `order_number`: any
+
 ### <u>preview_template</u>
 
 _Description:_ No description available.
@@ -686,6 +719,38 @@ _URL Patterns:_
 _Parameters:_
 - `hunt`: any
 
+### <u>round_create</u>
+
+_Description:_ Creates a round from the rounds page form and assigns its puzzles. 
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/rounds/create/`
+
+_Parameters:_
+- `hunt`: any
+
+### <u>round_delete</u>
+
+_Description:_ Deletes a round, unless the hunt config refers to it. Its puzzles are left without a round. 
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/rounds/<int:pk>/delete/`
+
+_Parameters:_
+- `hunt`: any
+- `pk`: any
+
+### <u>round_update</u>
+
+_Description:_ Updates a round's name, number, and puzzles from the rounds page form. 
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/rounds/<int:pk>/update/`
+
+_Parameters:_
+- `hunt`: any
+- `pk`: any
+
 ### <u>search</u>
 
 _Description:_ View function for searching users and teams.
@@ -705,6 +770,59 @@ _Description:_ View function for the staff dashboard/index page.
 
 _URL Patterns:_
 - `staff/`
+
+### <u>team_data_question_create</u>
+
+_Description:_ No description available.
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/team-data/create/`
+
+_Parameters:_
+- `hunt`: any
+
+### <u>team_data_question_delete</u>
+
+_Description:_ No description available.
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/team-data/<int:pk>/delete/`
+
+_Parameters:_
+- `hunt`: any
+- `pk`: any
+
+### <u>team_data_question_move</u>
+
+_Description:_ No description available.
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/team-data/<int:pk>/move/`
+
+_Parameters:_
+- `hunt`: any
+- `pk`: any
+
+### <u>team_data_question_update</u>
+
+_Description:_ No description available.
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/team-data/<int:pk>/update/`
+
+_Parameters:_
+- `hunt`: any
+- `pk`: any
+
+### <u>team_data_questions</u>
+
+_Description:_ Staff page for configuring the per-hunt custom team data registration questions. 
+
+_URL Patterns:_
+- `staff/hunt/<hunt-fallback:hunt>/team-data/`
+
+_Parameters:_
+- `hunt`: any
 
 ### <u>view_hunts</u>
 
@@ -727,7 +845,7 @@ _Description:_ No description available.
 
 _URL Patterns:_
 - `sse/staff/`
-- `sse/team/<str:pk>/`
+- `sse/user/<str:pk>/`
 
 ### <u>flatpage</u>
 

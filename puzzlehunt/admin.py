@@ -4,7 +4,7 @@ from django.db.models.functions import Lower
 from puzzlehunt.models import Hunt, Puzzle, Prepuzzle, Team, PuzzleStatus, Submission, User, Event,\
     Response, Hint, Update, TeamRankingRule, PuzzleFile, SolutionFile, HuntFile,\
     PrepuzzleFile, DisplayOnlyHunt, NotificationPlatform, NotificationSubscription, CannedHint,\
-    TeamDataQuestion, TeamDataAnswer
+    Round, RoundStatus, TeamDataQuestion, TeamDataAnswer
 from puzzlehunt.utils import create_media_files
 from admin_interface.models import Theme
 from django.utils.translation import gettext_lazy as _
@@ -111,6 +111,7 @@ class PuzzleAdminForm(forms.ModelForm):
         if self.instance.pk:
             self.fields["main_file"].queryset = self.instance.files.all()
             self.fields["main_solution_file"].queryset = self.instance.solution_files.all()
+            self.fields["round"].queryset = Round.objects.filter(hunt=self.instance.hunt)
 
     def clean(self):
         data = self.cleaned_data
@@ -161,7 +162,7 @@ class PuzzleAdmin(admin.ModelAdmin):
     inlines = (ResponseInline, CannedHintInline)
     fieldsets = (
         ('Basic Information', {
-            'fields': ('id', 'hunt', 'name', 'type', 'order_number')
+            'fields': ('id', 'hunt', 'round', 'name', 'type', 'order_number')
         }),
         ('Answer Settings', {
             'fields': ('answer', 'allow_spaces', 'case_sensitive', 'allow_non_alphanumeric', 'ratelimit_override')
@@ -320,6 +321,31 @@ class PuzzleStatusAdmin(admin.ModelAdmin):
         if db_field.name == "team":
             kwargs["queryset"] = Team.objects.select_related("hunt")
 
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+@admin.register(Round)
+class RoundAdmin(admin.ModelAdmin):
+    list_display = ['name', 'hunt', 'order_number']
+    list_filter = ['hunt']
+    search_fields = ['name']
+    ordering = ['hunt', 'order_number']
+    fieldsets = (
+        ('Basic Info', {'fields': ('name', 'hunt', 'order_number')}),
+        ('Template', {'fields': ('template_file',)}),
+        ('Additional Data', {'fields': ('extra_data',), 'classes': ('collapse',)}),
+    )
+
+
+@admin.register(RoundStatus)
+class RoundStatusAdmin(admin.ModelAdmin):
+    list_display = [short_team_name, 'round', 'unlock_time']
+    autocomplete_fields = ['team', 'round']
+    list_filter = ['round__hunt']
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "team":
+            kwargs["queryset"] = Team.objects.select_related("hunt")
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 

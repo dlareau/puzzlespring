@@ -29,8 +29,9 @@ Staff pages are purpose-built interfaces designed specifically for puzzle hunt m
 - **Feed**: Activity feed showing submissions, hints, and other events
 - **Hints**: Interface for managing and responding to hint requests
 - **Charts**: Visual analytics of hunt progress and team performance
-- **Hunt Template**: Editor for customizing the hunt's appearance
+- **Hunt Template**: Editor for customizing the hunt's appearance, and each round's
 - **Puzzles**: Interface for managing puzzles and their attributes
+- **Rounds**: Interface for creating rounds and choosing their puzzles
 - **Hunt Config**: Editor for puzzle unlocking rules and hunt configuration
 
 ## Django Admin Interface

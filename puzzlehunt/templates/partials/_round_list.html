@@ -1,0 +1,55 @@
+{% load crispy_forms_tags %}
+{% comment %}
+@template: _round_list.html
+@description: Renders a hunt's rounds with their puzzles, each editable/deletable via HTMX.
+@context:
+  hunt: The Hunt object
+  rounds: List of Round objects for the hunt, ordered by order_number, each with an edit_form
+{% endcomment %}
+  {% include "partial_header.html" %}
+  {% if rounds %}
+    {% for round in rounds %}
+      <div class="box p-4" x-data="{editing: false}">
+        <div x-show="!editing">
+          <div class="columns is-vcentered is-mobile is-multiline">
+            <div class="column is-narrow">
+              <span class="tag is-primary">R{{ round.order_number }}</span>
+            </div>
+            <div class="column">
+              <strong>{{ round.name }}</strong>
+              <p class="help">
+                {% for puzzle in round.puzzle_set.all %}{{ puzzle.name }}{% if not forloop.last %}, {% endif %}{% empty %}No puzzles yet{% endfor %}
+              </p>
+            </div>
+            <div class="column is-narrow">
+              <div class="buttons">
+                <a class="button is-small" href="{% url 'puzzlehunt:round_view' hunt.id round.order_number %}">
+                  <span class="icon is-small"><i class="fa fa-eye"></i></span>
+                  <span>View</span>
+                </a>
+                <a class="button is-small" href="{% url 'puzzlehunt:staff:hunt_template' hunt.id %}?round={{ round.order_number }}">
+                  <span class="icon is-small"><i class="fa fa-code"></i></span>
+                  <span>Template</span>
+                </a>
+                <button class="button is-small" @click="editing = true">
+                  <span class="icon is-small"><i class="fa fa-pencil"></i></span>
+                </button>
+                <button class="button is-small is-danger"
+                        onclick="return confirm('Delete this round? Its puzzles will no longer be in a round, and teams lose their unlock of it.')"
+                        hx-post="{% url 'puzzlehunt:staff:round_delete' hunt.id round.pk %}"
+                        hx-target="#round-list" hx-swap="innerHTML">
+                  <span class="icon is-small"><i class="fa fa-trash"></i></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div x-show="editing" x-cloak>
+          {% crispy round.edit_form %}
+          <button class="button is-small mt-2" @click="editing = false">Cancel</button>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="has-text-centered has-text-grey">No rounds configured for this hunt.</p>
+  {% endif %}

@@ -50,6 +50,7 @@ urlpatterns = [
     path('hunt/<hunt:hunt>/updates/', hunt_views.hunt_updates, name='hunt_updates'),
     path('hunt/<hunt:hunt>/prepuzzle/', hunt_views.hunt_prepuzzle, name='hunt_prepuzzle'),
     path('hunt/<hunt:hunt>/info/', hunt_views.hunt_info, name='hunt_info'),
+    path('hunt/<hunt:hunt>/round/<int:order_number>/view/', hunt_views.round_view, name='round_view'),
 
     # Prepuzzles
     path('prepuzzle/<int:pk>/view/', hunt_views.prepuzzle_view, name='prepuzzle_view'),
@@ -86,8 +87,13 @@ urlpatterns = [
         path('hunt/<hunt-fallback:hunt>/download-emails/', staff_views.download_emails, name='download_emails'),
         path('hunt/<hunt-fallback:hunt>/template/', staff_views.hunt_template, name='hunt_template'),
         path('hunt/<hunt-fallback:hunt>/template/preview/', staff_views.preview_template, name='preview_template'),
+        path('hunt/<hunt-fallback:hunt>/template/preview/round/<int:order_number>/', staff_views.preview_round_template, name='preview_round_template'),
         path('hunt/<hunt-fallback:hunt>/config/', staff_views.hunt_config, name='hunt_config'),
         path('hunt/<hunt-fallback:hunt>/config-tester/', staff_views.config_tester, name='config_tester'),
+        path('hunt/<hunt-fallback:hunt>/rounds/', staff_views.hunt_rounds, name='hunt_rounds'),
+        path('hunt/<hunt-fallback:hunt>/rounds/create/', staff_views.round_create, name='round_create'),
+        path('hunt/<hunt-fallback:hunt>/rounds/<int:pk>/update/', staff_views.round_update, name='round_update'),
+        path('hunt/<hunt-fallback:hunt>/rounds/<int:pk>/delete/', staff_views.round_delete, name='round_delete'),
         path('hunt/<hunt-fallback:hunt>/team-data/', staff_views.team_data_questions, name='team_data_questions'),
         path('hunt/<hunt-fallback:hunt>/team-data/create/', staff_views.team_data_question_create, name='team_data_question_create'),
         path('hunt/<hunt-fallback:hunt>/team-data/<int:pk>/update/', staff_views.team_data_question_update, name='team_data_question_update'),
