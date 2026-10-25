@@ -9,6 +9,51 @@ nav_order: 2
 
 PuzzleSpring includes several specialized tools for hunt management. These are accessible from the staff sidebar.
 
+## Team Data Questions
+
+The Team Data Questions page lets you configure custom registration questions for a hunt. Located in the sidebar under "Hunt Setup", next to Puzzles.
+
+Each hunt has its own independent set of questions - configuring questions on one hunt has no effect on any other hunt.
+
+### Question Types
+
+- **Text**: A free-text field, up to 200 characters
+- **Yes/No**: A toggle switch
+- **Select (single choice)**: A dropdown with a staff-defined list of options
+
+### Adding and Editing Questions
+
+Click **Add Question** to create a new question, or the pencil icon on an existing question to edit it in place. Each question has:
+
+- **Name**: The label shown to teams when registering
+- **Leaderboard Label**: An optional shorter label for the leaderboard/participant-info columns. If left blank, the question's name is used there instead.
+- **Description**: Optional help text shown under the field on the registration form
+- **Type**: Text, Yes/No, or Select
+- **Required**: Whether a team must answer this to register or update their team
+- **Visible on Leaderboard**: Whether this question's answers appear as a column on the leaderboard
+- **Groups Leaderboard**: Whether the leaderboard is split into per-answer tabs based on this question. Only one question per hunt can be used for grouping - enabling it on a question automatically disables it on any other.
+
+For **Select** questions, enter one option per line. To show different text on the leaderboard than what's shown in the dropdown, add `| shorter text` after the option, e.g.:
+
+```
+N/A (not affiliated with any group) | N/A
+Rookie
+Veteran
+```
+
+Here, teams would see the full "N/A (not affiliated with any group)" text when registering, but the leaderboard and participant-info tables would just show "N/A". Options without a `|` use the same text everywhere.
+
+### Reordering and Deleting
+
+Use the up/down arrow buttons to reorder questions - this controls both the order fields appear in on the registration form and the order of columns on the leaderboard/participant-info tables.
+
+{: .warning }
+> Deleting a question also deletes every team's answer to it. This cannot be undone.
+
+### Adding Questions to an Active Hunt
+
+Adding a question after teams have already registered doesn't retroactively require anything of existing teams - it simply appears the next time they visit their team page. Until a team answers it, they'll show as "-" on the leaderboard/participant-info, or fall into an "Unspecified" leaderboard group if the question is used for grouping.
+
 ## Config Tester
 
 The Config Tester simulates puzzle unlocking rules without affecting real team data. Use it to verify your hunt configuration before the hunt begins.
@@ -91,3 +136,7 @@ Two export options are available for regular (non-playtest) participants:
 ### Search
 
 The search box lets you find specific participants or teams by name, email, or team name. Results appear as you type.
+
+### Team Data
+
+If the hunt has any [Team Data Questions](#team-data-questions) configured, a table of every team's answers is shown below the search box, one column per question (using each question's leaderboard label, if set).

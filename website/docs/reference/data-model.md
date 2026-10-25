@@ -113,7 +113,7 @@ Fields:
 
 ## NotificationPlatform Model
 
-A platform that can be used to send notifications (Discord, Email, etc.)
+A platform that can be used to send notifications (Browser, Email, Webhook)
 
 Fields:
 - `id` (AutoField): No description available
@@ -245,7 +245,6 @@ Fields:
 - `id` (AutoField): No description available
 - `name` (CharField): The team name as it will be shown to hunt participants
 - `hunt` (ForeignKey): The hunt that the team is a part of
-- `custom_data` (CharField): A field for custom registration data
 - `join_code` (CharField): The 8 character random alphanumeric password needed for a user to join a team
 - `playtester` (BooleanField): A boolean to indicate if the team is a playtest team and will get early access
 - `playtest_start_date` (DateTimeField): The date/time at which a hunt will become available to the playtesters
@@ -265,6 +264,33 @@ Fields:
 - `id` (AutoField): No description available
 - `team` (ForeignKey): No description available
 - `user` (ForeignKey): No description available
+
+## TeamDataAnswer Model
+
+A team's answer to one TeamDataQuestion (mirrors the PuzzleStatus team/puzzle through-table) 
+
+Fields:
+- `id` (AutoField): No description available
+- `question` (ForeignKey): The question being answered
+- `team` (ForeignKey): The team that gave this answer
+- `value` (CharField): Stored answer; boolean as 'True'/'False', select as the chosen option text
+
+## TeamDataQuestion Model
+
+A per-hunt custom registration question, optionally shown on the leaderboard 
+
+Fields:
+- `id` (AutoField): No description available
+- `hunt` (ForeignKey): The hunt this question belongs to
+- `name` (CharField): The label shown to teams when registering
+- `leaderboard_label` (CharField): Optional label for the leaderboard/participant-info columns; defaults to the question name if blank
+- `description` (CharField): Optional help text shown under the field
+- `question_type` (CharField): The type of question
+- `options` (JSONField): List of {label, leaderboard_label} objects; only used when question_type is 'select'. leaderboard_label may be blank to use label everywhere
+- `question_order` (IntegerField): The order in which the question is displayed
+- `required` (BooleanField): Must a team answer this to register/update?
+- `visible_on_leaderboard` (BooleanField): Show this as a column on the leaderboard
+- `used_for_grouping` (BooleanField): Split the leaderboard by this question (only one at a time per hunt)
 
 ## TeamRankingRule Model
 

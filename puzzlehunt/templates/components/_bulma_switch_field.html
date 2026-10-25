@@ -1,16 +1,17 @@
 {% load crispy_forms_field %}
 
-<div id="div_{{ field.auto_id }}" class="{{ wrapper_class }}">
+<div id="div_{{ field.auto_id }}" class="{{ wrapper_class }}" x-data="{ checked: {% if field.value %}true{% else %}false{% endif %} }">
     <div class="field">
-        <div class="control">
-            <label class="label">{{ field.label }}</label>
-            <input type="checkbox" 
+        <label class="label">{{ field.label }}</label>
+        <div class="control is-flex is-align-items-center" style="gap: 0.5rem;">
+            <input type="checkbox"
                    name="{{ field.html_name }}"
-                   class="switch is-rounded" 
+                   class="switch is-rounded"
                    id="{{ field.auto_id }}"
-                   {% if field.value %}checked{% endif %}
+                   x-model="checked"
                    {% if field.field.required %}required{% endif %}>
             <label for="{{ field.auto_id }}"></label>
+            <span x-text="checked ? 'Yes' : 'No'"></span>
         </div>
         {% if field.help_text %}
             <p id="{{ field.auto_id }}_helptext" class="help">{{ field.help_text }}</p>

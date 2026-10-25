@@ -26,6 +26,8 @@ debug.log
 /website/docs/_site/
 /feature_planning/
 
+/backups/
+
 #temp
 filebrowser.db
 flatfiles.txt
