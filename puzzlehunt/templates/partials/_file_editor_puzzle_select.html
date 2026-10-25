@@ -8,10 +8,13 @@
     {% if hunt_has_files %}
     <option value="hunt:{{ hunt.pk }}" {% if selected_is_hunt %}selected{% endif %}>[Hunt Files]</option>
     {% endif %}
+    {% if prepuzzle %}
+    <option value="prepuzzle:{{ prepuzzle.pk }}" {% if selected_is_prepuzzle %}selected{% endif %}>[Prepuzzle Files]</option>
+    {% endif %}
     {% for puzzle in puzzles %}
     <option value="puzzle:{{ puzzle.pk }}" {% if selected_puzzle_pk == puzzle.pk %}selected{% endif %}>{{ puzzle.order_number }}. {{ puzzle.name }}</option>
     {% endfor %}
-    {% if not hunt_has_files and not puzzles %}
+    {% if not hunt_has_files and not prepuzzle and not puzzles %}
     <option value="" disabled>No editable files found</option>
     {% endif %}
   </select>

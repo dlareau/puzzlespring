@@ -90,7 +90,6 @@ def test_hunt_experience(client, setup_puzzles, normal_user):
     # Test 3: Create and join team
     response = client.post(reverse('puzzlehunt:team_create'), {
         'name': 'Test Team',
-        'custom_data': ''
     })
     assert response.status_code == 302
     team = Team.objects.get(name='Test Team')

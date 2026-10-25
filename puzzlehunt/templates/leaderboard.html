@@ -11,7 +11,10 @@
 @context:
   hunt: The Hunt object being displayed
   ruleset: List of LeaderboardRule objects defining the columns and ranking rules
+  data_questions: List of TeamDataQuestion objects visible on the leaderboard
   team_data: List of Team objects with their ranking data
+  grouping_question: TeamDataQuestion used to split the leaderboard into groups, or None
+  leaderboard_groups: List of {label, teams} dicts, present when grouping_question is set
 {% endcomment %}
 
 {% block title_meta_elements %}
@@ -35,30 +38,28 @@
   <h1 style="text-align: center;"> Leaderboard - {{hunt.name}}</h1>
   <br>
   <br>
-  {% if split_leaderboard %}
+  {% if grouping_question %}
     <div x-data="{ activeTab: 'all' }">
       <div class="tabs is-boxed">
         <ul>
           <li :class="{ 'is-active': activeTab === 'all' }">
             <a @click.prevent="activeTab = 'all'">All Teams</a>
           </li>
-          <li :class="{ 'is-active': activeTab === 'true' }">
-            <a @click.prevent="activeTab = 'true'">{{ custom_data_name }}: Yes</a>
-          </li>
-          <li :class="{ 'is-active': activeTab === 'false' }">
-            <a @click.prevent="activeTab = 'false'">{{ custom_data_name }}: No</a>
-          </li>
+          {% for group in leaderboard_groups %}
+            <li :class="{ 'is-active': activeTab === 'group-{{ forloop.counter0 }}' }">
+              <a @click.prevent="activeTab = 'group-{{ forloop.counter0 }}'">{{ group.label }}</a>
+            </li>
+          {% endfor %}
         </ul>
       </div>
       <div x-show="activeTab === 'all'">
         {% include "partials/_leaderboard_table.html" with teams=team_data %}
       </div>
-      <div x-show="activeTab === 'true'">
-        {% include "partials/_leaderboard_table.html" with teams=team_data_true %}
-      </div>
-      <div x-show="activeTab === 'false'">
-        {% include "partials/_leaderboard_table.html" with teams=team_data_false %}
-      </div>
+      {% for group in leaderboard_groups %}
+        <div x-show="activeTab === 'group-{{ forloop.counter0 }}'" x-cloak>
+          {% include "partials/_leaderboard_table.html" with teams=group.teams %}
+        </div>
+      {% endfor %}
     </div>
   {% else %}
     {% include "partials/_leaderboard_table.html" with teams=team_data %}

@@ -37,15 +37,17 @@
             </a>
             <br>
             <small>
-              <span style="display: inline-block">
-                {{ hunt.display_start_date|date:"m/d/y" }} {{ hunt.display_start_date|time:"P" }} &mdash;
-              </span>
-              <span style="display: inline-block">
-                {% if hunt.display_start_date|date != hunt.display_end_date|date %}
-                  {{ hunt.display_end_date|date:"m/d/y" }}
-                {% endif %}
-                {{ hunt.display_end_date|time:"P" }}
-              </span>
+              {% if hunt.display_start_date and hunt.display_end_date %}
+                <span style="display: inline-block">
+                  {{ hunt.display_start_date|date:"m/d/y" }} {{ hunt.display_start_date|time:"P" }} &mdash;
+                </span>
+                <span style="display: inline-block">
+                  {% if hunt.display_start_date|date != hunt.display_end_date|date %}
+                    {{ hunt.display_end_date|date:"m/d/y" }}
+                  {% endif %}
+                  {{ hunt.display_end_date|time:"P" }}
+                </span>
+              {% endif %}
             </small>
           </td>
           <td>

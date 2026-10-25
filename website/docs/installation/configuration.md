@@ -126,16 +126,6 @@ To access and modify these settings:
 
     Default: "PuzzleSpring" | Type: String
 
-#### Team Settings
-
-- `TEAM_CUSTOM_DATA_NAME`: The name of the team custom data field
-
-    Default: "" | Type: String
-
-- `TEAM_CUSTOM_DATA_DESCRIPTION`: The description of the team custom data field
-
-    Default: "" | Type: String
-
 #### Hunt Display Settings
 
 - `SINGLE_HUNT_MODE`: If enabled, only one hunt will be visible and accessible

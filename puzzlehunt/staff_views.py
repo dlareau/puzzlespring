@@ -17,7 +17,9 @@ from django.core.paginator import Paginator
 from django.forms import ValidationError
 from django.views.decorators.http import require_GET, require_POST
 from django.shortcuts import redirect, render, get_object_or_404
+from django.db import transaction
 from django.db.models import F, Max, Count, Subquery, OuterRef, PositiveIntegerField, Min
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.utils import timezone
 from django.contrib import messages
@@ -27,9 +29,11 @@ from django.http import JsonResponse
 from django.core import serializers
 
 from django_sendfile import sendfile
-from .utils import create_media_files, get_media_file_model, get_media_file_parent_model, create_hunt_export_zip, validate_hunt_zip
-from .hunt_views import protected_static
-from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile, Round
+from .utils import create_media_files, get_media_file_model, get_media_file_parent_model, create_hunt_export_zip, import_hunt_from_zip, import_hunt_from_zip, validate_hunt_zip
+from .hunt_views import protected_static, prefetch_data_answers, set_data_answer_values
+from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile, \
+    TeamDataQuestion, Prepuzzle, Round
+from .forms import TeamDataQuestionForm
 from .tasks import import_hunt_background
 from .config_parser import parse_config, process_config_rules
 
@@ -239,11 +243,17 @@ def participant_info(request, hunt):
     
     # Generate email string for clipboard
     emails_string = ', '.join([user.email for user in regular_participants])
-    
+
+    data_questions = list(hunt.teamdataquestion_set.order_by("question_order"))
+    all_teams = list(prefetch_data_answers(hunt.team_set.order_by('name'), data_questions))
+    set_data_answer_values(all_teams, data_questions)
+
     context = {
         'hunt': hunt,
         'stats': stats,
-        'emails_string': emails_string
+        'emails_string': emails_string,
+        'data_questions': data_questions,
+        'teams': all_teams,
     }
     return render(request, "staff_participant_info.html", context)
 
@@ -792,10 +802,12 @@ def view_hunts(request, hunt):
     # For each hunt, get the end date of the previous hunt
     hunts = hunts.annotate(
         prev_hunt_end=Subquery(
-            Hunt.objects.filter(
-                display_end_date__lt=OuterRef('display_start_date')
-            ).order_by('-display_end_date')
-            .values('display_end_date')[:1]
+            Hunt.objects.annotate(
+                effective_end_date=Coalesce('display_end_date', 'end_date')
+            ).filter(
+                effective_end_date__lt=Coalesce(OuterRef('display_start_date'), OuterRef('start_date'))
+            ).order_by('-effective_end_date')
+            .values('effective_end_date')[:1]
         )
     )
     
@@ -883,6 +895,104 @@ def hunt_puzzles(request, hunt):
         'puzzles_no_round': puzzles_no_round,
     }
     return render(request, "staff_hunt_puzzles.html", context)
+
+
+def _questions_with_edit_forms(hunt):
+    """ The hunt's questions, each carrying a bound-to-instance TeamDataQuestionForm for inline editing. """
+    questions = list(hunt.teamdataquestion_set.order_by('question_order'))
+    for question in questions:
+        question.edit_form = TeamDataQuestionForm(instance=question)
+    return questions
+
+
+@staff_member_required
+def team_data_questions(request, hunt):
+    """ Staff page for configuring the per-hunt custom team data registration questions. """
+    context = {
+        'hunt': hunt,
+        'questions': _questions_with_edit_forms(hunt),
+        'create_form': TeamDataQuestionForm(hunt=hunt),
+    }
+    return render(request, "staff_team_data_questions.html", context)
+
+
+@require_POST
+@staff_member_required
+def team_data_question_create(request, hunt):
+    next_order = (hunt.teamdataquestion_set.aggregate(Max('question_order'))['question_order__max'] or 0) + 1
+    form = TeamDataQuestionForm(
+        request.POST, hunt=hunt, instance=TeamDataQuestion(hunt=hunt, question_order=next_order)
+    )
+    if form.is_valid():
+        question = form.save()
+        if question.used_for_grouping:
+            hunt.teamdataquestion_set.exclude(pk=question.pk).update(used_for_grouping=False)
+        messages.success(request, "Question added.")
+    else:
+        messages.error(request, "; ".join(f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()))
+
+    if request.htmx:
+        return render(request, "partials/_team_data_question_list.html",
+                       {'hunt': hunt, 'questions': _questions_with_edit_forms(hunt)})
+    return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
+
+
+@require_POST
+@staff_member_required
+def team_data_question_update(request, hunt, pk):
+    question = get_object_or_404(TeamDataQuestion, pk=pk, hunt=hunt)
+    form = TeamDataQuestionForm(request.POST, instance=question)
+    if form.is_valid():
+        question = form.save()
+        if question.used_for_grouping:
+            hunt.teamdataquestion_set.exclude(pk=question.pk).update(used_for_grouping=False)
+        messages.success(request, "Question updated.")
+    else:
+        messages.error(request, "; ".join(f"{field}: {', '.join(errors)}" for field, errors in form.errors.items()))
+
+    if request.htmx:
+        return render(request, "partials/_team_data_question_list.html",
+                       {'hunt': hunt, 'questions': _questions_with_edit_forms(hunt)})
+    return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
+
+
+@require_POST
+@staff_member_required
+def team_data_question_delete(request, hunt, pk):
+    question = get_object_or_404(TeamDataQuestion, pk=pk, hunt=hunt)
+    question.delete()
+    messages.success(request, "Question deleted.")
+
+    if request.htmx:
+        return render(request, "partials/_team_data_question_list.html",
+                       {'hunt': hunt, 'questions': _questions_with_edit_forms(hunt)})
+    return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
+
+
+@require_POST
+@staff_member_required
+def team_data_question_move(request, hunt, pk):
+    question = get_object_or_404(TeamDataQuestion, pk=pk, hunt=hunt)
+    direction = request.POST.get('direction')
+    questions = list(hunt.teamdataquestion_set.order_by('question_order'))
+    index = next((i for i, q in enumerate(questions) if q.pk == question.pk), None)
+
+    if index is not None:
+        neighbor_index = index - 1 if direction == 'up' else index + 1
+        if 0 <= neighbor_index < len(questions):
+            neighbor = questions[neighbor_index]
+            with transaction.atomic():
+                # Swap through a placeholder value to avoid violating unique_together mid-update
+                TeamDataQuestion.objects.filter(pk=question.pk).update(question_order=-1)
+                TeamDataQuestion.objects.filter(pk=neighbor.pk).update(question_order=question.question_order)
+                TeamDataQuestion.objects.filter(pk=question.pk).update(question_order=neighbor.question_order)
+
+    if request.htmx:
+        return render(request, "partials/_team_data_question_list.html",
+                       {'hunt': hunt, 'questions': _questions_with_edit_forms(hunt)})
+    return redirect('puzzlehunt:staff:team_data_questions', hunt.pk)
+
+    return _question_list_response(request, hunt)
 
 
 @require_POST
@@ -1264,6 +1374,16 @@ def _get_puzzles_with_editable_files(hunt):
     return puzzles_with_files, hunt_has_files
 
 
+def _get_prepuzzle_with_editable_files(hunt):
+    """
+    Helper: Return the hunt's prepuzzle if it has any text-editable files, else None.
+    """
+    prepuzzle = Prepuzzle.objects.filter(hunt=hunt).first()
+    if prepuzzle and any(f.is_text_editable for f in prepuzzle.files.all()):
+        return prepuzzle
+    return None
+
+
 def _get_editable_files(parent_type, parent):
     """
     Helper: Get editable files for a parent (puzzle or hunt).
@@ -1332,7 +1452,9 @@ def file_editor(request, hunt):
             context.update({
                 'puzzles': puzzles,
                 'hunt_has_files': hunt_has_files,
+                'prepuzzle': _get_prepuzzle_with_editable_files(hunt),
                 'selected_is_hunt': preselect_type == "hunt",
+                'selected_is_prepuzzle': preselect_type == "prepuzzle",
                 'selected_puzzle_pk': preselect_parent_pk if preselect_type in ("puzzle", "solution") else None,
                 'file_entries': file_entries,
                 'selected_file_pk': int(preselect_file_pk),
@@ -1366,6 +1488,7 @@ def file_editor_puzzle_list(request):
         'hunt': hunt,
         'puzzles': puzzles_with_files,
         'hunt_has_files': hunt_has_files,
+        'prepuzzle': _get_prepuzzle_with_editable_files(hunt),
     }
     return render(request, "partials/_file_editor_puzzle_select.html", context)
 

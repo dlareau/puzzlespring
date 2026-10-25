@@ -22,8 +22,12 @@
 <div class="mb-4">
   <h1 class="has-text-centered is-size-1 is-family-sans-serif">{{ hunt.name }}</h1>
   <h3 class="has-text-centered">
-    {{ hunt.display_start_date|date:" F jS " }} {{ hunt.display_start_date|time:"h:iA" }} &ndash;
-    {{ hunt.display_end_date|date:" F jS "}}  {{ hunt.display_end_date|time:"h:iA e" }}
+    {% if hunt.display_start_date and hunt.display_end_date %}
+      {{ hunt.display_start_date|date:" F jS " }} {{ hunt.display_start_date|time:"h:iA" }} &ndash;
+      {{ hunt.display_end_date|date:" F jS "}}  {{ hunt.display_end_date|time:"h:iA e" }}
+    {% else %}
+      Date TBD
+    {% endif %}
     {% if hunt.location != "" %}
       <br>
       Kickoff location is {{ hunt.location }}
@@ -76,9 +80,13 @@
   
   <h4>How long will it last?</h4>
   <p>
-    The hunt will run from
-    {{ hunt.display_start_date|date:" F jS " }} {{ hunt.display_start_date|time:"h:iA" }} to 
-    {{ hunt.display_end_date|date:" F jS "}} {{ hunt.display_end_date|time:"h:iA e" }}.
+    {% if hunt.display_start_date and hunt.display_end_date %}
+      The hunt will run from
+      {{ hunt.display_start_date|date:" F jS " }} {{ hunt.display_start_date|time:"h:iA" }} to
+      {{ hunt.display_end_date|date:" F jS "}} {{ hunt.display_end_date|time:"h:iA e" }}.
+    {% else %}
+      This hunt hasn't been scheduled yet, but once it has this section will be updated with that information.
+    {% endif %}
   </p>
 
   <h4>I think there is an error in this puzzle.</h4>

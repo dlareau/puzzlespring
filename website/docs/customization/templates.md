@@ -224,7 +224,10 @@ _Context Variables:_
 
 - `hunt`: The Hunt object being displayed
 - `ruleset`: List of LeaderboardRule objects defining the columns and ranking rules
+- `data_questions`: List of TeamDataQuestion objects visible on the leaderboard
 - `team_data`: List of Team objects with their ranking data
+- `grouping_question`: TeamDataQuestion used to split the leaderboard into groups, or None
+- `leaderboard_groups`: List of {label, teams} dicts, present when grouping_question is set
 
 
 _Template Blocks:_
@@ -256,7 +259,7 @@ _Template Blocks:_
 
 ### <u>notification_table.html</u>
 
-_Description:_ Displays a table of notification subscriptions with platform, hunt, event types, and management controls.
+_Description:_ Displays accordion list of notification subscriptions with expandable edit controls.
 
 
 _Context Variables:_
@@ -689,6 +692,27 @@ _Template Blocks:_
 
 
 
+### <u>staff_team_data_questions.html</u>
+
+_Description:_ Staff interface for configuring per-hunt custom team data registration questions.
+
+
+_Extends:_ staff_hunt_base.html
+
+
+_Context Variables:_
+
+- `hunt`: The current Hunt object
+- `questions`: List of TeamDataQuestion objects for the hunt, ordered by question_order, each with an edit_form
+- `create_form`: TeamDataQuestionForm for adding a new question
+
+
+_Template Blocks:_
+
+- `staff_content`: Displays the ordered question list and an "add question" modal
+
+
+
 ### <u>team_detail.html</u>
 
 _Description:_ Displays team details and management interface. Shows team members, join code, and team management options.
@@ -868,8 +892,9 @@ _Description:_ Reusable leaderboard table partial for displaying team rankings.
 
 _Context Variables:_
 
-- `teams`: List of Team objects with computed_rank attribute
+- `teams`: List of Team objects with computed_rank and data_answer_values attributes
 - `ruleset`: List of LeaderboardRule objects defining the columns and ranking rules
+- `data_questions`: List of TeamDataQuestion objects visible on the leaderboard
 - `hunt`: The Hunt object being displayed
 
 
@@ -886,14 +911,51 @@ _Context Variables:_
 
 
 
-### <u>_notification_active_toggle.html</u>
+### <u>_notification_subscription_edit.html</u>
 
-_Description:_ Toggle switch for activating/deactivating notification subscriptions.
+_Description:_ Edit form for a notification subscription within the accordion.
 
 
 _Context Variables:_
 
-- `subscription`: The NotificationSubscription object to toggle
+- `subscription`: The NotificationSubscription object
+- `event_type_choices`: List of tuples containing event type choices
+
+
+
+### <u>_notification_subscription_header.html</u>
+
+_Description:_ Accordion header for a notification subscription card.
+
+
+_Context Variables:_
+
+- `subscription`: The NotificationSubscription object
+
+
+
+### <u>_notification_subscription_response.html</u>
+
+_Description:_ HTMX response wrapper that includes main content and OOB swaps.
+
+
+_Context Variables:_
+
+- `subscription`: The NotificationSubscription object
+- `event_type_choices`: List of tuples containing event type choices
+- `template`: The inner template to render ('view' or 'edit')
+
+
+
+### <u>_notification_subscription_view.html</u>
+
+_Description:_ Display view for a notification subscription's details within the accordion.
+
+
+_Context Variables:_
+
+- `subscription`: The NotificationSubscription object
+- `event_type_choices`: List of tuples containing event type choices
 
 
 
@@ -970,6 +1032,18 @@ _Context Variables:_
 
 - `puzzle`: The current Puzzle object
 - `submissions`: List of PuzzleSubmission objects for this puzzle
+
+
+
+### <u>_team_data_question_list.html</u>
+
+_Description:_ Renders the ordered list of TeamDataQuestion rows for a hunt, each editable/deletable/movable via HTMX.
+
+
+_Context Variables:_
+
+- `hunt`: The Hunt object
+- `questions`: List of TeamDataQuestion objects for the hunt, ordered by question_order, each with an edit_form
 
 
 

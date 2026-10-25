@@ -10,8 +10,7 @@ def test_team_create_view_success(client, basic_hunt, basic_user):
     url = reverse('puzzlehunt:team_create')
     
     response = client.post(url, {
-        'name': 'View Test Team',
-        'custom_data': ''
+        'name': 'View Test Team'
     })
     assert response.status_code == 302  # Redirect after success
     
@@ -31,8 +30,7 @@ def test_team_create_view_duplicate_name(client, basic_hunt, basic_user):
     url = reverse('puzzlehunt:team_create')
     
     response = client.post(url, {
-        'name': 'Existing Team',
-        'custom_data': ''
+        'name': 'Existing Team'
     })
     assert response.status_code == 200  # Returns to form with errors
     assert Team.objects.count() == 1  # No new team created
@@ -44,8 +42,7 @@ def test_team_create_view_invalid_name(client, basic_hunt, basic_user):
     url = reverse('puzzlehunt:team_create')
     
     response = client.post(url, {
-        'name': '!@#$%',
-        'custom_data': ''
+        'name': '!@#$%'
     })
     assert response.status_code == 200  # Returns to form with errors
     assert Team.objects.count() == 0
@@ -63,8 +60,7 @@ def test_team_update_view_success(client, basic_hunt, basic_user):
     url = reverse('puzzlehunt:team_update', kwargs={'pk': team.pk})
     
     response = client.post(url, {
-        'name': 'Updated Via View',
-        'custom_data': ''
+        'name': 'Updated Via View'
     }, HTTP_HX_REQUEST='true')
     
     assert response.status_code == 200
@@ -88,8 +84,7 @@ def test_team_update_view_duplicate_name(client, basic_hunt, basic_user):
     url = reverse('puzzlehunt:team_update', kwargs={'pk': team.pk})
     
     response = client.post(url, {
-        'name': 'Existing Team',
-        'custom_data': ''
+        'name': 'Existing Team'
     }, HTTP_HX_REQUEST='true')
     
     assert response.status_code == 200
@@ -113,8 +108,7 @@ def test_team_update_view_unauthorized(client, basic_hunt, basic_user):
     url = reverse('puzzlehunt:team_update', kwargs={'pk': team.pk})
     
     response = client.post(url, {
-        'name': 'Should Not Update',
-        'custom_data': ''
+        'name': 'Should Not Update'
     })
     
     assert response.status_code == 403
@@ -358,7 +352,6 @@ def test_team_update_view_invalid_non_htmx(client, basic_hunt, basic_user):
     
     response = client.post(url, {
         'name': '!@#$%',  # Invalid name
-        'custom_data': ''
     })
     
     # The view redirects even with invalid data - this appears to be a bug in the view
@@ -379,8 +372,7 @@ def test_team_update_view_success_non_htmx(client, basic_hunt, basic_user):
     url = reverse('puzzlehunt:team_update', kwargs={'pk': team.pk})
     
     response = client.post(url, {
-        'name': 'Updated Via View',
-        'custom_data': ''
+        'name': 'Updated Via View'
     })
     
     assert response.status_code == 302  # Redirect after success
@@ -400,8 +392,7 @@ def test_team_create_view_already_has_team(client, basic_hunt, basic_user):
     url = reverse('puzzlehunt:team_create')
     
     response = client.post(url, {
-        'name': 'New Team',
-        'custom_data': ''
+        'name': 'New Team'
     })
     assert response.status_code == 302  # Redirects to existing team
     assert Team.objects.count() == 1  # No new team created
