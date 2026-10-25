@@ -18,6 +18,9 @@ CACHES = {
     }
 }
 
+# Constance rejects per-process locmem caches; read config straight from the DB
+CONSTANCE_DATABASE_CACHE_BACKEND = None
+
 ASGI_APPLICATION = 'server.asgi.application'
 
 STATICFILES_DIRS = ["custom/static",]
