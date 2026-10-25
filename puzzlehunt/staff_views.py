@@ -33,7 +33,7 @@ from .utils import create_media_files, get_media_file_model, get_media_file_pare
 from .hunt_views import protected_static, prefetch_data_answers, set_data_answer_values
 from .models import Hunt, Team, Event, PuzzleStatus, Submission, Hint, User, Puzzle, SolutionFile, HuntFile, \
     TeamDataQuestion, Prepuzzle, Round
-from .forms import TeamDataQuestionForm
+from .forms import TeamDataQuestionForm, RoundForm
 from .tasks import import_hunt_background
 from .config_parser import parse_config, process_config_rules
 
@@ -906,6 +906,77 @@ def hunt_puzzles(request, hunt):
         'puzzles_no_round': puzzles_no_round,
     }
     return render(request, "staff_hunt_puzzles.html", context)
+
+
+def _round_list_response(request, hunt):
+    """ Re-renders the round list for HTMX requests, otherwise redirects back to the rounds page. """
+    if request.htmx:
+        return render(request, "partials/_round_list.html", {'hunt': hunt, 'rounds': _rounds_with_edit_forms(hunt)})
+    return redirect('puzzlehunt:staff:hunt_rounds', hunt.pk)
+
+
+def _rounds_with_edit_forms(hunt):
+    """ The hunt's rounds with their puzzles, each carrying a RoundForm for inline editing. """
+    rounds = list(hunt.round_set.order_by('order_number').prefetch_related(
+        Prefetch('puzzle_set', queryset=Puzzle.objects.order_by('order_number'))))
+    for round_obj in rounds:
+        round_obj.edit_form = RoundForm(instance=round_obj, hunt=hunt)
+    return rounds
+
+
+def _form_error_message(form):
+    return "; ".join(f"{field}: {', '.join(errors)}" for field, errors in form.errors.items())
+
+
+@staff_member_required
+def hunt_rounds(request, hunt):
+    """ Staff page for creating, editing, and deleting a hunt's rounds and choosing their puzzles. """
+    context = {
+        'hunt': hunt,
+        'rounds': _rounds_with_edit_forms(hunt),
+        'create_form': RoundForm(hunt=hunt),
+    }
+    return render(request, "staff_hunt_rounds.html", context)
+
+
+@require_POST
+@staff_member_required
+def round_create(request, hunt):
+    next_order = (hunt.round_set.aggregate(Max('order_number'))['order_number__max'] or 0) + 1
+    form = RoundForm(request.POST, hunt=hunt, instance=Round(hunt=hunt, order_number=next_order))
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Round added.")
+    else:
+        messages.error(request, _form_error_message(form))
+    return _round_list_response(request, hunt)
+
+
+@require_POST
+@staff_member_required
+def round_update(request, hunt, pk):
+    round_obj = get_object_or_404(Round, pk=pk, hunt=hunt)
+    form = RoundForm(request.POST, hunt=hunt, instance=round_obj)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Round updated.")
+    else:
+        messages.error(request, _form_error_message(form))
+    return _round_list_response(request, hunt)
+
+
+@require_POST
+@staff_member_required
+def round_delete(request, hunt, pk):
+    round_obj = get_object_or_404(Round, pk=pk, hunt=hunt)
+    remaining = hunt.round_set.exclude(pk=round_obj.pk).values_list('order_number', flat=True)
+    config_error = hunt.config_error_for_rounds(remaining)
+    if config_error:
+        messages.error(request, f"Can't delete {round_obj.name}: the hunt config would no longer be valid: {config_error}")
+    else:
+        round_obj.delete()
+        messages.success(request, "Round deleted. Its puzzles are no longer in a round.")
+    return _round_list_response(request, hunt)
 
 
 def _questions_with_edit_forms(hunt):

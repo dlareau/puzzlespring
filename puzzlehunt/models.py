@@ -447,6 +447,22 @@ class Hunt(models.Model):
     def natural_key(self):
         return (self.name, self.start_date)
     
+    def config_error_for_rounds(self, round_order_numbers):
+        """
+        Returns the config parse error that would occur if the hunt's rounds had the given order
+        numbers, or None if the config would still be valid.
+        """
+        if not self.config:
+            return None
+        from .config_parser import parse_config
+        puzzles = self.puzzle_set.values_list('id', 'order_number')
+        try:
+            parse_config(self.config, set(p[0] for p in puzzles), {p[1]: p[0] for p in puzzles},
+                         set(round_order_numbers))
+        except Exception as e:
+            return str(e)
+        return None
+
     def reset(self):
         PuzzleStatus.objects.filter(team__hunt=self).delete()
         RoundStatus.objects.filter(team__hunt=self).delete()
